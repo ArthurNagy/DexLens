@@ -59,6 +59,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -68,6 +69,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
@@ -145,6 +147,14 @@ internal fun ScannerScreen(
         onDismissResult = viewModel::onResultDismissed,
         modifier = modifier,
         camera = { aimBox ->
+            // The camera image is dark in every theme, so the status bar icons stay light while it is showing.
+            val view = LocalView.current
+            DisposableEffect(activity, view) {
+                val controller = activity?.window?.let { WindowCompat.getInsetsController(it, view) }
+                val previous = controller?.isAppearanceLightStatusBars
+                controller?.isAppearanceLightStatusBars = false
+                onDispose { previous?.let { controller.isAppearanceLightStatusBars = it } }
+            }
             val recognizer = remember { MlKitLineRecognizer() }
             DisposableEffect(recognizer) { onDispose { recognizer.close() } }
             val currentBox by rememberUpdatedState(aimBox)
