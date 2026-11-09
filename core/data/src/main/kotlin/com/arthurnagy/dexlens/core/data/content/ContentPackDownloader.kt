@@ -20,8 +20,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /** Items done so far out of [total]. */
 internal data class ContentProgress(
@@ -43,6 +44,7 @@ internal class ContentPackDownloader
         private val speciesDao: SpeciesDao,
         private val dispatchers: DispatcherProvider,
     ) {
+        @OptIn(ExperimentalAtomicApi::class)
         suspend fun download(progress: MutableStateFlow<ContentProgress>): Result<Unit, DomainError> {
             val ids = catchStorage { speciesDao.speciesIds() }.getOrElse { return Err(it) }
             val total = ids.size * ArtKind.entries.size + FLAVOR_STEP
@@ -57,7 +59,7 @@ internal class ContentPackDownloader
                     .map { (id, kind) ->
                         async(dispatchers.io) {
                             semaphore.withPermit {
-                                if (failure.get() == null) {
+                                if (failure.load() == null) {
                                     fetch(id, kind).onErr { failure.compareAndSet(null, it) }
                                     progress.advance()
                                 }
@@ -65,7 +67,7 @@ internal class ContentPackDownloader
                         }
                     }.awaitAll()
             }
-            failure.get()?.let { return Err(it) }
+            failure.load()?.let { return Err(it) }
             val flavor = if (flavorDone) Ok(Unit) else importFlavorText(progress)
             return flavor.andThen { catchStorage { files.markComplete() } }
         }

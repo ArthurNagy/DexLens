@@ -20,11 +20,15 @@ import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
 import java.io.InputStream
-import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.decrementAndFetch
+import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalAtomicApi::class)
 @RunWith(AndroidJUnit4::class)
 internal class ContentPackDownloaderTest {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
@@ -35,7 +39,7 @@ internal class ContentPackDownloaderTest {
         private val flavorCsv: String = "species_id,version_id,language_id,flavor_text\n1,1,9,Hello\n",
     ) : ContentRemoteDataSource {
         val requested = mutableListOf<Int>()
-        val active = AtomicInteger()
+        val active = AtomicInt(0)
         var peak = 0
         var flavorCalls = 0
 
@@ -45,9 +49,9 @@ internal class ContentPackDownloaderTest {
 
         private suspend fun fetch(id: Int): ByteArray {
             synchronized(this) { requested += id }
-            peak = maxOf(peak, active.incrementAndGet())
+            peak = maxOf(peak, active.incrementAndFetch())
             yield()
-            active.decrementAndGet()
+            active.decrementAndFetch()
             failOn(id)?.let { throw it }
             return byteArrayOf(1, 2, 3)
         }
