@@ -13,7 +13,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.model.ThemeMode
@@ -33,9 +32,6 @@ class MainActivity : ComponentActivity() {
     lateinit var entryProviderInstallers: Set<@JvmSuppressWildcards EntryProviderInstaller>
 
     private val viewModel: MainActivityViewModel by viewModels()
-
-    /** Set once the app has composed in the stored theme; the first frame waits for it. */
-    private var themeResolved = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,7 +57,6 @@ class MainActivity : ComponentActivity() {
                     useLightCaptionBar(!darkTheme)
                     onDispose {}
                 }
-                SideEffect { themeResolved = true }
                 AppTheme(themeMode = state.themeMode) {
                     AppNavigation(entryProviderInstallers = entryProviderInstallers)
                 }
@@ -71,16 +66,18 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Keeps the first frame from drawing until [themeResolved] (a DataStore read: milliseconds). Android 12+
-     * keeps its splash screen up meanwhile; older versions show the window background.
+     * Keeps the first frame from drawing until the stored theme is known (a DataStore read: milliseconds), so a theme
+     * picked in-app doesn't flash the system's first. Android 12+ keeps its splash screen up meanwhile; older versions
+     * show the window background.
      */
     private fun holdFirstFrameUntilThemeResolved() {
         val content = findViewById<View>(android.R.id.content)
         content.viewTreeObserver.addOnPreDrawListener(
             object : ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
-                    if (themeResolved) content.viewTreeObserver.removeOnPreDrawListener(this)
-                    return themeResolved
+                    val ready = !viewModel.container.stateFlow.value.loading
+                    if (ready) content.viewTreeObserver.removeOnPreDrawListener(this)
+                    return ready
                 }
             },
         )
