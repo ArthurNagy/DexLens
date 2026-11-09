@@ -21,4 +21,7 @@ object AppDimens {
     val maxContentWidth = 640.dp
     val genderBarHeight = 8.dp
     val treeIndent = 24.dp
+    val aimBoxCorner = 12.dp
+    val aimBoxStroke = 3.dp
+    val aimBoxCornerLength = 28.dp
 }

@@ -28,7 +28,7 @@ android-forge project rules apply here (the plugin's agents and skills check for
 
 - :core:database — Room 3: entities, DAOs, DexDatabase (prebuilt)
 
-Features: pokedex, entry
+Features: pokedex, entry, scanner
 
 ## Stack (locked — see plugin [docs/stack.md](https://github.com/arthurnagy/android-forge/blob/main/docs/stack.md))
 Jetpack Compose + Material 3 (adaptive) · Hilt · Orbit MVI (state-only) · Navigation 3 (api/impl features, Hilt `@IntoSet` entries) · kotlin-result `Result<T, DomainError>` · DataStore · Coil 3 · Timber · java.time · kotlinx-serialization · Android resources · JUnit 4 + Robolectric + Roborazzi · JaCoCo · Lint + Spotless/ktlint + compose-rules.

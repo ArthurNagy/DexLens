@@ -24,6 +24,7 @@ dependencies {
     // /android-forge-add-feature adds each one above this marker line — keep it.
     implementation(project(":feature:pokedex:impl"))
     implementation(project(":feature:entry:impl"))
+    implementation(project(":feature:scanner:impl"))
     // android-forge:feature-modules
 
     implementation(libs.androidx.compose.material3) // the phone/tablet Material 3 — :app's own, not the app convention's
@@ -37,4 +38,6 @@ dependencies {
     implementation(libs.timber)
 
     testImplementation(libs.orbit.test)
+
+    androidTestImplementation(libs.mlkit.text.recognition)
 }
