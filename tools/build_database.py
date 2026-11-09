@@ -113,6 +113,11 @@ def title_case(identifier: str) -> str:
     return " ".join(part.capitalize() for part in identifier.replace("_", "-").split("-"))
 
 
+def sentence_label(name: str) -> str:
+    """PokeAPI spells some language names in lower case, such as "Simplified chinese"."""
+    return " ".join(word if word == "and" else word[0].upper() + word[1:] for word in name.split())
+
+
 MARKUP = re.compile(r"\[([^\]]*)\]\{(\w+):([^}]+)\}")
 
 
@@ -222,7 +227,7 @@ class Builder:
             if int(row["local_language_id"]) == ENGLISH
         }
         records = [
-            {"id": int(row["id"]), "identifier": row["identifier"], "name": labels.get(row["id"], title_case(row["identifier"]))}
+            {"id": int(row["id"]), "identifier": row["identifier"], "name": sentence_label(labels.get(row["id"], title_case(row["identifier"])))}
             for row in rows(self.csv, "languages")
             if int(row["id"]) in used
         ]
