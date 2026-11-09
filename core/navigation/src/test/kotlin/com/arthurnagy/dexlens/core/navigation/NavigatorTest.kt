@@ -14,6 +14,10 @@ class NavigatorTest {
 
     private data object Detail : NavKey
 
+    private data class Entry(
+        val id: Int,
+    ) : NavKey
+
     @Test
     fun navigatePushesAndGoBackPops() {
         val backStack = NavBackStack<NavKey>(Root)
@@ -47,6 +51,20 @@ class NavigatorTest {
         assertNull(navigator.backOrNull(Root))
         val back = assertNotNull(navigator.backOrNull(Detail))
         back()
+        assertEquals(listOf(Root), backStack.toList())
+    }
+
+    // Scenario: Replacing the entry on wide window
+    @Test
+    fun navigateDetailReplacesADetailOnTop() {
+        val backStack = NavBackStack<NavKey>(Root)
+        val navigator = Navigator(backStack)
+
+        navigator.navigateDetail(Entry(1))
+        navigator.navigateDetail(Entry(2))
+
+        assertEquals(listOf(Root, Entry(2)), backStack.toList())
+        navigator.goBack()
         assertEquals(listOf(Root), backStack.toList())
     }
 }
