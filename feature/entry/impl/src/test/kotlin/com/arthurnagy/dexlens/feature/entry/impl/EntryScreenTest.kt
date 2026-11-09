@@ -16,9 +16,16 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.species.GetSpeciesDetailUseCase
+import com.arthurnagy.dexlens.core.domain.species.GetTypeChartUseCase
+import com.arthurnagy.dexlens.core.model.Form
 import com.arthurnagy.dexlens.core.model.PokemonType
+import com.arthurnagy.dexlens.core.model.SpeciesId
+import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
+import com.arthurnagy.dexlens.core.testing.FakeTypeChartRepository
 import com.arthurnagy.dexlens.core.testing.bulbasaurDetail
 import com.arthurnagy.dexlens.core.testing.sampleTypeChart
+import com.arthurnagy.dexlens.feature.entry.api.EntryKey
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -133,6 +140,42 @@ class EntryScreenTest {
     }
 
     @Test
+    fun rootScreenLoadsFromTheViewModel() {
+        val viewModel = EntryViewModel(
+            EntryKey(1),
+            GetSpeciesDetailUseCase(FakeSpeciesRepository(details = mapOf(SpeciesId(1) to detail))),
+            GetTypeChartUseCase(FakeTypeChartRepository(sampleTypeChart())),
+        )
+        composeRule.setContent { AppTheme { EntryScreen(viewModel = viewModel, onNavigateBack = {}, onOpenSpecies = {}) } }
+        composeRule.waitUntil(WAIT_MS) { composeRule.onAllNodesWithText("Seed Pokémon").fetchSemanticsNodes().isNotEmpty() }
+        composeRule.onNodeWithText("Seed Pokémon").assertExists()
+    }
+
+    @Test
+    fun formsAndOtherNamesAreListed() {
+        val variety = detail.varieties.single()
+        val forms =
+            listOf(
+                Form(1, "A", isDefault = true, isBattleOnly = false, isMega = false),
+                Form(2, "B", isDefault = false, isBattleOnly = false, isMega = false),
+            )
+        val withForms = detail.copy(varieties = listOf(variety.copy(forms = forms)))
+        show(EntryState.loaded(withForms, sampleTypeChart()))
+        scrollTo("Forms")
+        composeRule.onNodeWithText("B").assertExists()
+        scrollTo("Bulbizarre")
+        composeRule.onNodeWithText("French").assertExists()
+    }
+
+    @Test
+    fun aSpeciesWithoutEvolutionSaysSo() {
+        val lone = detail.copy(evolutionLine = detail.evolutionLine.copy(children = emptyList()))
+        show(EntryState.loaded(lone, sampleTypeChart()))
+        scrollTo("This species does not evolve.")
+        composeRule.onNodeWithText("This species does not evolve.").assertExists()
+    }
+
+    @Test
     fun abilityExpandsToFullText() {
         show(loaded)
         scrollTo("Overgrow")
@@ -167,5 +210,9 @@ class EntryScreenTest {
     fun phoneDark() {
         show(loaded)
         composeRule.onRoot().captureRoboImage()
+    }
+
+    private companion object {
+        const val WAIT_MS = 5_000L
     }
 }
