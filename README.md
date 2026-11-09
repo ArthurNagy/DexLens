@@ -96,8 +96,8 @@ Release. Add these repository secrets first:
 
 ## Credits
 
-Pokémon data, sprites and flavor text come from [PokeAPI](https://pokeapi.co/)
-([BSD-3-Clause](https://github.com/PokeAPI/pokeapi/blob/master/LICENSE.md)). Sprites and text are downloaded directly from
+Pokémon data, artwork and flavor text come from [PokeAPI](https://pokeapi.co/)
+([BSD-3-Clause](https://github.com/PokeAPI/pokeapi/blob/master/LICENSE.md)). Artwork and text are downloaded directly from
 PokeAPI's public repositories and are never part of this repository or the APK. Text recognition uses
 [ML Kit](https://developers.google.com/ml-kit).
 

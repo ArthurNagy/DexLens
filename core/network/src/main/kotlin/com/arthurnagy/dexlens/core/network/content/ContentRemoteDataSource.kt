@@ -10,8 +10,6 @@ import javax.inject.Inject
 
 /** The optional download's files, all from PokeAPI's public repositories on raw.githubusercontent.com. */
 interface ContentRemoteDataSource {
-    suspend fun sprite(id: Int): ByteArray
-
     suspend fun artwork(id: Int): ByteArray
 
     /** Streams the flavor text table to [read] without holding the whole file in memory. */
@@ -19,11 +17,6 @@ interface ContentRemoteDataSource {
 }
 
 internal interface ContentApi {
-    @GET("PokeAPI/sprites/master/sprites/pokemon/{id}.png")
-    suspend fun sprite(
-        @Path("id") id: Int,
-    ): ResponseBody
-
     @GET("PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{id}.png")
     suspend fun artwork(
         @Path("id") id: Int,
@@ -40,8 +33,6 @@ internal class RetrofitContentRemoteDataSource
         retrofit: Retrofit,
     ) : ContentRemoteDataSource {
         private val api = retrofit.create(ContentApi::class.java)
-
-        override suspend fun sprite(id: Int): ByteArray = api.sprite(id).use { it.bytes() }
 
         override suspend fun artwork(id: Int): ByteArray = api.artwork(id).use { it.bytes() }
 

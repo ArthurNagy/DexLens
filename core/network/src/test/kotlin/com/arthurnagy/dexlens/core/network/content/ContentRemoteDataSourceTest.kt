@@ -17,15 +17,13 @@ internal class ContentRemoteDataSourceTest {
     @Test
     fun requestsTheExpectedRepositoryPaths() = runTest {
         MockWebServer().use { server ->
-            repeat(3) { server.enqueue(MockResponse.Builder().code(200).body("png").build()) }
+            repeat(2) { server.enqueue(MockResponse.Builder().code(200).body("png").build()) }
             server.start()
             val source = server.source()
 
-            assertContentEquals("png".toByteArray(), source.sprite(25))
             assertContentEquals("png".toByteArray(), source.artwork(25))
             assertEquals("png", source.flavorText { it.readBytes().decodeToString() })
 
-            assertEquals("/PokeAPI/sprites/master/sprites/pokemon/25.png", server.takeRequest().url.encodedPath)
             assertEquals("/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png", server.takeRequest().url.encodedPath)
             assertEquals("/PokeAPI/pokeapi/master/data/v2/csv/pokemon_species_flavor_text.csv", server.takeRequest().url.encodedPath)
         }

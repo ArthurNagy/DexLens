@@ -252,7 +252,7 @@ private fun SpeciesRow(
         SpeciesArt(
             name = summary.name,
             types = summary.types,
-            imagePath = artwork.sprite(summary.id),
+            imagePath = artwork.artwork(summary.id),
             contentDescription = null,
             letterStyle = MaterialTheme.typography.headlineSmall,
             modifier = artModifier.size(AppDimens.listArt),

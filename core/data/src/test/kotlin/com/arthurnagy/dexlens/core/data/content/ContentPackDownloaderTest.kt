@@ -11,6 +11,7 @@ import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.After
@@ -18,6 +19,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import retrofit2.HttpException
 import retrofit2.Response
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import kotlin.concurrent.atomics.AtomicInt
@@ -32,7 +34,7 @@ import kotlin.test.assertTrue
 @RunWith(AndroidJUnit4::class)
 internal class ContentPackDownloaderTest {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
-    private val files = ContentFileStore(context)
+    private val TestScope.files get() = ContentFileStore(context, TestDispatcherProvider(testScheduler))
 
     private class FakeRemote(
         private val failOn: (Int) -> Exception? = { null },
@@ -43,11 +45,7 @@ internal class ContentPackDownloaderTest {
         var peak = 0
         var flavorCalls = 0
 
-        override suspend fun sprite(id: Int): ByteArray = fetch(id)
-
-        override suspend fun artwork(id: Int): ByteArray = fetch(id)
-
-        private suspend fun fetch(id: Int): ByteArray {
+        override suspend fun artwork(id: Int): ByteArray {
             synchronized(this) { requested += id }
             peak = maxOf(peak, active.incrementAndFetch())
             yield()
@@ -66,7 +64,7 @@ internal class ContentPackDownloaderTest {
         species = (1..count).map { SpeciesEntity(it, "s$it", 1, 4, null, 1, isBaby = false, isLegendary = false, isMythical = false) },
     )
 
-    private fun kotlinx.coroutines.test.TestScope.downloader(
+    private fun TestScope.downloader(
         remote: ContentRemoteDataSource,
         count: Int = 2,
     ): ContentPackDownloader = ContentPackDownloader(
@@ -81,32 +79,42 @@ internal class ContentPackDownloaderTest {
     private val progress = MutableStateFlow(ContentProgress(0, 0))
 
     @After
-    fun clean() = files.clear()
+    fun clean() {
+        File(context.filesDir, "content").deleteRecursively()
+    }
 
     // Scenario: Progress shown
     @Test
     fun downloadsEverythingAndReportsProgress() = runTest {
         assertEquals(Ok(Unit), downloader(FakeRemote()).download(progress))
-        assertEquals(ContentProgress(completed = 5, total = 5), progress.value)
-        assertTrue(files.exists(ArtKind.SPRITE, 1))
-        assertTrue(files.exists(ArtKind.ARTWORK, 2))
+        assertEquals(ContentProgress(completed = 3, total = 3), progress.value)
+        assertEquals(setOf(1, 2), files.storedIds())
         assertTrue(files.isFlavorImported())
         assertTrue(files.isComplete())
+    }
+
+    // Scenario: One picture for each species
+    @Test
+    fun fetchesOnePicturePerSpecies() = runTest {
+        val remote = FakeRemote()
+
+        downloader(remote).download(progress)
+
+        assertEquals(listOf(1, 2), remote.requested.sorted())
     }
 
     // Scenario: Resume skips finished files
     @Test
     fun finishedFilesAreNotFetchedAgain() = runTest {
-        files.write(ArtKind.SPRITE, 1, byteArrayOf(9))
-        files.write(ArtKind.ARTWORK, 1, byteArrayOf(9))
+        files.write(1, byteArrayOf(9))
         files.markFlavorImported()
         val remote = FakeRemote()
 
         assertEquals(Ok(Unit), downloader(remote).download(progress))
 
-        assertEquals(listOf(2, 2), remote.requested.sorted())
+        assertEquals(listOf(2), remote.requested)
         assertEquals(0, remote.flavorCalls)
-        assertEquals(ContentProgress(5, 5), progress.value)
+        assertEquals(ContentProgress(3, 3), progress.value)
     }
 
     // Scenario: Failure can be retried
@@ -116,9 +124,8 @@ internal class ContentPackDownloaderTest {
 
         assertEquals(Err(DomainError.Network.Connectivity), downloader(remote).download(progress))
 
-        assertFalse(files.exists(ArtKind.SPRITE, 2))
+        assertEquals(setOf(1), files.storedIds())
         assertFalse(files.isFlavorImported())
-        assertTrue(files.completedFileCount() >= 1)
     }
 
     @Test
@@ -128,8 +135,7 @@ internal class ContentPackDownloaderTest {
 
         assertEquals(Ok(Unit), downloader(remote).download(progress))
 
-        assertTrue(files.exists(ArtKind.SPRITE, 1))
-        assertFalse(files.exists(ArtKind.SPRITE, 2))
+        assertEquals(setOf(1), files.storedIds())
         assertTrue(files.isComplete())
     }
 
@@ -144,8 +150,6 @@ internal class ContentPackDownloaderTest {
     @Test
     fun flavorFailureIsReported() = runTest {
         val remote = object : ContentRemoteDataSource {
-            override suspend fun sprite(id: Int) = byteArrayOf()
-
             override suspend fun artwork(id: Int) = byteArrayOf()
 
             override suspend fun <T> flavorText(read: suspend (InputStream) -> T): T = throw IOException("down")

@@ -11,10 +11,10 @@ import kotlin.math.roundToInt
 
 /** Re-encodes a downloaded picture. Faked in tests, where there is no Android image codec. */
 internal fun interface ImageTranscoder {
-    /** Returns WebP bytes, scaled so the long side is at most [maxSize] when it is set. */
+    /** Returns WebP bytes, scaled so the long side is at most [maxSize]. */
     fun toWebp(
         png: ByteArray,
-        maxSize: Int?,
+        maxSize: Int,
     ): ByteArray
 }
 
@@ -23,10 +23,10 @@ internal class WebpTranscoder
     constructor() : ImageTranscoder {
         override fun toWebp(
             png: ByteArray,
-            maxSize: Int?,
+            maxSize: Int,
         ): ByteArray {
             val source = BitmapFactory.decodeByteArray(png, 0, png.size) ?: error("Not a decodable image")
-            val scaled = maxSize?.let { source.scaledToFit(it) } ?: source
+            val scaled = source.scaledToFit(maxSize)
             val output = ByteArrayOutputStream(png.size / 2)
             scaled.compress(webpFormat(), WEBP_QUALITY, output)
             if (scaled !== source) scaled.recycle()

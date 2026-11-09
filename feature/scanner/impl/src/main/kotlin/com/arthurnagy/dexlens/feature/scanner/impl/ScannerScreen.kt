@@ -463,7 +463,7 @@ private fun ResultRow(
         SpeciesArt(
             name = summary.name,
             types = summary.types,
-            imagePath = artwork.sprite(summary.id),
+            imagePath = artwork.artwork(summary.id),
             contentDescription = null,
             letterStyle = MaterialTheme.typography.titleLarge,
             modifier = Modifier.size(AppDimens.evolutionArt),
