@@ -2,6 +2,13 @@ package com.arthurnagy.dexlens.core.database
 
 import androidx.room3.Dao
 import androidx.room3.Query
+import com.arthurnagy.dexlens.core.database.entity.EggGroupEntity
+import com.arthurnagy.dexlens.core.database.entity.EvolutionEntity
+import com.arthurnagy.dexlens.core.database.entity.FormEntity
+import com.arthurnagy.dexlens.core.database.entity.LanguageEntity
+import com.arthurnagy.dexlens.core.database.entity.SpeciesEntity
+import com.arthurnagy.dexlens.core.database.entity.SpeciesNameEntity
+import com.arthurnagy.dexlens.core.database.entity.VarietyEntity
 
 /** Reads species from the prebuilt, read-only database. English (language 9) is the fallback for every name. */
 @Dao

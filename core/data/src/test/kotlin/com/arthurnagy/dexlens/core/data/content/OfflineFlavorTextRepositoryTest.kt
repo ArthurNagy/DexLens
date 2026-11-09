@@ -1,8 +1,8 @@
 package com.arthurnagy.dexlens.core.data.content
 
-import com.arthurnagy.dexlens.core.database.FlavorTextEntity
 import com.arthurnagy.dexlens.core.database.GameVersionDao
-import com.arthurnagy.dexlens.core.database.GameVersionEntity
+import com.arthurnagy.dexlens.core.database.entity.FlavorTextEntity
+import com.arthurnagy.dexlens.core.database.entity.GameVersionEntity
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.model.FlavorEntry
 import com.arthurnagy.dexlens.core.model.SpeciesId

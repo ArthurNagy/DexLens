@@ -1,7 +1,7 @@
 package com.arthurnagy.dexlens.core.data.species
 
-import com.arthurnagy.dexlens.core.database.EvolutionEntity
-import com.arthurnagy.dexlens.core.database.FormEntity
+import com.arthurnagy.dexlens.core.database.entity.EvolutionEntity
+import com.arthurnagy.dexlens.core.database.entity.FormEntity
 import com.arthurnagy.dexlens.core.model.EvolutionTrigger
 import com.arthurnagy.dexlens.core.model.Gender
 import com.arthurnagy.dexlens.core.model.PokemonType

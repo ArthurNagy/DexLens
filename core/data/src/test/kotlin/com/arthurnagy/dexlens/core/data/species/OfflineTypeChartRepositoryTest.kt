@@ -1,7 +1,7 @@
 package com.arthurnagy.dexlens.core.data.species
 
 import com.arthurnagy.dexlens.core.database.TypeChartDao
-import com.arthurnagy.dexlens.core.database.TypeEfficacyEntity
+import com.arthurnagy.dexlens.core.database.entity.TypeEfficacyEntity
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.github.michaelbull.result.Err

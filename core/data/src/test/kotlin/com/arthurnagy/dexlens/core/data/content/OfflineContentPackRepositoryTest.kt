@@ -7,8 +7,8 @@ import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
 import app.cash.turbine.test
 import com.arthurnagy.dexlens.core.data.species.FakeSpeciesDao
-import com.arthurnagy.dexlens.core.database.FlavorTextEntity
-import com.arthurnagy.dexlens.core.database.SpeciesEntity
+import com.arthurnagy.dexlens.core.database.entity.FlavorTextEntity
+import com.arthurnagy.dexlens.core.database.entity.SpeciesEntity
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.ContentPackState
 import com.arthurnagy.dexlens.core.model.SpeciesId

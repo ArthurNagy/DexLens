@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.data.species.FakeSpeciesDao
-import com.arthurnagy.dexlens.core.database.SpeciesEntity
+import com.arthurnagy.dexlens.core.database.entity.SpeciesEntity
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.network.content.ContentRemoteDataSource
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
