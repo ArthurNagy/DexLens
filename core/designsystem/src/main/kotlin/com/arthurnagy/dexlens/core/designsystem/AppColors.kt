@@ -3,10 +3,81 @@ package com.arthurnagy.dexlens.core.designsystem
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
 
-/**
- * Light + dark M3 brand color schemes. Replace with the output of Material Theme Builder:
- * https://material-foundation.github.io/material-theme-builder/
- */
-val LightScheme: ColorScheme = lightColorScheme()
-val DarkScheme: ColorScheme = darkColorScheme()
+/** DexLens's brand schemes: a teal lens colour over cool neutrals, so type colours stay the loudest thing on screen. */
+val LightScheme: ColorScheme = lightColorScheme(
+    primary = Color(0xFF006879),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFA9EDFF),
+    onPrimaryContainer = Color(0xFF001F26),
+    secondary = Color(0xFF4B6269),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFCEE7EF),
+    onSecondaryContainer = Color(0xFF061F25),
+    tertiary = Color(0xFF565D7E),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFDDE1FF),
+    onTertiaryContainer = Color(0xFF131A37),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    background = Color(0xFFF5FAFC),
+    onBackground = Color(0xFF171D1E),
+    surface = Color(0xFFF5FAFC),
+    onSurface = Color(0xFF171D1E),
+    surfaceVariant = Color(0xFFDBE4E7),
+    onSurfaceVariant = Color(0xFF3F484B),
+    outline = Color(0xFF70797B),
+    outlineVariant = Color(0xFFBFC8CB),
+    scrim = Color(0xFF000000),
+    inverseSurface = Color(0xFF2B3133),
+    inverseOnSurface = Color(0xFFECF2F3),
+    inversePrimary = Color(0xFF84D2E6),
+    surfaceDim = Color(0xFFD5DBDD),
+    surfaceBright = Color(0xFFF5FAFC),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFEFF5F6),
+    surfaceContainer = Color(0xFFE9EFF0),
+    surfaceContainerHigh = Color(0xFFE3E9EB),
+    surfaceContainerHighest = Color(0xFFDEE3E5),
+)
+
+val DarkScheme: ColorScheme = darkColorScheme(
+    primary = Color(0xFF84D2E6),
+    onPrimary = Color(0xFF003640),
+    primaryContainer = Color(0xFF004E5C),
+    onPrimaryContainer = Color(0xFFA9EDFF),
+    secondary = Color(0xFFB2CBD3),
+    onSecondary = Color(0xFF1D343A),
+    secondaryContainer = Color(0xFF334A51),
+    onSecondaryContainer = Color(0xFFCEE7EF),
+    tertiary = Color(0xFFBEC5EB),
+    onTertiary = Color(0xFF282F4D),
+    tertiaryContainer = Color(0xFF3E4565),
+    onTertiaryContainer = Color(0xFFDDE1FF),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    background = Color(0xFF0F1416),
+    onBackground = Color(0xFFDEE3E5),
+    surface = Color(0xFF0F1416),
+    onSurface = Color(0xFFDEE3E5),
+    surfaceVariant = Color(0xFF3F484B),
+    onSurfaceVariant = Color(0xFFBFC8CB),
+    outline = Color(0xFF899295),
+    outlineVariant = Color(0xFF3F484B),
+    scrim = Color(0xFF000000),
+    inverseSurface = Color(0xFFDEE3E5),
+    inverseOnSurface = Color(0xFF2B3133),
+    inversePrimary = Color(0xFF006879),
+    surfaceDim = Color(0xFF0F1416),
+    surfaceBright = Color(0xFF343A3C),
+    surfaceContainerLowest = Color(0xFF090F11),
+    surfaceContainerLow = Color(0xFF171D1E),
+    surfaceContainer = Color(0xFF1B2122),
+    surfaceContainerHigh = Color(0xFF252B2D),
+    surfaceContainerHighest = Color(0xFF303638),
+)

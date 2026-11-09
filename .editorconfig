@@ -25,6 +25,8 @@ ktlint_function_signature_body_expression_wrapping = default
 # @Composable functions are PascalCase by convention — exempt them from function-naming
 # (keeps the rule active for ordinary functions).
 ktlint_function_naming_ignore_when_annotated_with = Composable
+# Shared-element transitions cross Nav 3 entries, which can only reach this scope through a CompositionLocal.
+compose_allowed_composition_locals = LocalSharedTransitionScope
 
 [*.{yml,yaml,json,md}]
 indent_size = 2
