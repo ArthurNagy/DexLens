@@ -23,8 +23,8 @@ internal class FlavorTextImporterTest {
         FlavorTextImporter(dao, DisplayLanguage { 5 }).import(csv.byteInputStream())
 
         assertEquals(setOf(9, 5), dao.rows.map { it.languageId }.toSet())
-        assertEquals("A strange seed was planted on its back.", dao.flavorText(1, 9).single().text)
-        assertEquals("It says \"pika\"", dao.flavorText(25, 9).single().text)
+        assertEquals("A strange seed was planted on its back.", dao.rows.single { it.speciesId == 1 && it.languageId == 9 }.text)
+        assertEquals("It says \"pika\"", dao.rows.single { it.speciesId == 25 && it.languageId == 9 }.text)
     }
 
     @Test

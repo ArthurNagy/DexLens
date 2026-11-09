@@ -1,16 +1,15 @@
 package com.arthurnagy.dexlens.core.domain.content
 
-import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.UseCase
 import com.arthurnagy.dexlens.core.model.FlavorEntry
 import com.arthurnagy.dexlens.core.model.SpeciesId
-import com.github.michaelbull.result.Result
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class GetFlavorEntriesUseCase
+class ObserveFlavorEntriesUseCase
     @Inject
     constructor(
         private val repository: FlavorTextRepository,
     ) : UseCase {
-        suspend operator fun invoke(id: SpeciesId): Result<List<FlavorEntry>, DomainError> = repository.flavorEntries(id)
+        operator fun invoke(id: SpeciesId): Flow<List<FlavorEntry>> = repository.observeFlavorEntries(id)
     }

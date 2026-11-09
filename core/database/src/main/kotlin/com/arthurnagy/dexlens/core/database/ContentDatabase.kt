@@ -7,17 +7,19 @@ import androidx.room3.RoomDatabase
 import androidx.room3.Transaction
 import androidx.room3.Upsert
 import com.arthurnagy.dexlens.core.database.entity.FlavorTextEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ContentDao {
     @Upsert
     suspend fun upsertAll(rows: List<FlavorTextEntity>)
 
-    @Query("SELECT * FROM flavor_text WHERE species_id = :speciesId AND language_id = :languageId ORDER BY version_id")
-    suspend fun flavorText(
+    /** Re-emits whenever the table changes, so an open entry sees text that finishes downloading. */
+    @Query("SELECT * FROM flavor_text WHERE species_id = :speciesId AND language_id IN (:languageIds) ORDER BY version_id")
+    fun observeFlavorText(
         speciesId: Int,
-        languageId: Int,
-    ): List<FlavorTextEntity>
+        languageIds: Set<Int>,
+    ): Flow<List<FlavorTextEntity>>
 
     @Query("DELETE FROM flavor_text")
     suspend fun deleteAll()
