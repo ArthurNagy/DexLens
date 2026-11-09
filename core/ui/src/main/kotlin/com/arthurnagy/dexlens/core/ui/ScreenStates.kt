@@ -1,12 +1,10 @@
 package com.arthurnagy.dexlens.core.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -16,9 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
+import com.arthurnagy.dexlens.core.designsystem.SkeletonShimmer
 
 /** A number in the Pokédex format. */
 @Composable
@@ -28,12 +29,14 @@ fun speciesNumberLabel(number: Int): String = stringResource(R.string.core_ui_sp
 @Composable
 fun listText(items: List<String>): String = items.joinToString(stringResource(R.string.core_ui_list_separator))
 
+/** Shimmers while a page loads. [content] draws the page's shape in skeleton blocks; screen readers hear one "Loading". */
 @Composable
-fun LoadingState(modifier: Modifier = Modifier) {
+fun LoadingSkeleton(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     val description = stringResource(R.string.core_ui_loading)
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(modifier = Modifier.semanticsLabel(description))
-    }
+    SkeletonShimmer(modifier = modifier.fillMaxSize().clearAndSetSemantics { contentDescription = description }, content = content)
 }
 
 /** A centred message for empty and error states, with an optional action. */

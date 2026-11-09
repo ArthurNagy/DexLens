@@ -24,4 +24,9 @@ object AppDimens {
     val aimBoxCorner = 12.dp
     val aimBoxStroke = 3.dp
     val aimBoxCornerLength = 28.dp
+    val skeletonLineHeight = 16.dp
+    val skeletonLineShort = 64.dp
+    val skeletonLineMedium = 120.dp
+    val skeletonLineLong = 180.dp
+    val skeletonSectionHeight = 120.dp
 }

@@ -81,10 +81,24 @@ class PokedexScreenTest {
 
     // Scenario: Shows loading state
     @Test
-    fun loadingShowsIndicator() {
+    fun loadingShowsASkeleton() {
         show(PokedexState.Initial)
         composeRule.onNodeWithTag("pokedex:list").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Loading").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phoneLoading() {
+        show(PokedexState.Initial)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletLoading() {
+        show(PokedexState.Initial)
+        composeRule.onRoot().captureRoboImage()
     }
 
     // Scenario: Shows error state
