@@ -1,0 +1,15 @@
+package com.arthurnagy.dexlens.core.domain
+
+import kotlinx.coroutines.CoroutineDispatcher
+
+/**
+ * Abstraction over coroutine dispatchers so production code (use cases, repositories) never
+ * references `Dispatchers.IO/Default/Main` directly. Bound to :core:data's RealDispatcherProvider
+ * by Hilt; tests inject :core:testing's `TestDispatcherProvider(testScheduler)` — one dispatcher on
+ * the `runTest` scheduler.
+ */
+interface DispatcherProvider {
+    val main: CoroutineDispatcher
+    val io: CoroutineDispatcher
+    val default: CoroutineDispatcher
+}

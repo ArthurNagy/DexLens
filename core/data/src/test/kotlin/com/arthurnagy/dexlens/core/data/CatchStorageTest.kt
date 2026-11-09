@@ -1,0 +1,33 @@
+package com.arthurnagy.dexlens.core.data
+
+import com.arthurnagy.dexlens.core.domain.DomainError
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.test.runTest
+import java.io.IOException
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+class CatchStorageTest {
+    @Test
+    fun aSuccessfulOperationPassesItsValueThrough() = runTest {
+        assertEquals(Ok(42), catchStorage { 42 })
+    }
+
+    @Test
+    fun aFailureBecomesUnknownWithItsMessage() = runTest {
+        assertEquals(Err(DomainError.Unknown("disk full")), catchStorage { throw IOException("disk full") })
+    }
+
+    @Test
+    fun cancellationPropagates() = runTest {
+        assertFailsWith<CancellationException> { catchStorage { throw CancellationException("cancelled") } }
+    }
+
+    @Test
+    fun errorsPropagate() = runTest {
+        assertFailsWith<OutOfMemoryError> { catchStorage { throw OutOfMemoryError("out of memory") } }
+    }
+}
