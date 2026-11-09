@@ -5,16 +5,20 @@ import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.navigation3.runtime.NavKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.navigation.EntryProviderInstaller
 import com.arthurnagy.dexlens.core.navigation.Navigator
 import com.arthurnagy.dexlens.feature.pokedex.api.PokedexKey
+import com.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.serialization.Serializable
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /** The app's back stack: starts on the start destination and renders what the installed features contribute. */
 @RunWith(AndroidJUnit4::class)
@@ -61,5 +65,24 @@ class AppNavigationTest {
 
         composeRule.onNodeWithText("The list").assertExists()
         composeRule.onNodeWithText("The entry").assertExists()
+    }
+
+    // Scenario: Side by side on wide window
+    @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "w841dp-h701dp-xxhdpi")
+    fun foldableShowsBothPanes() {
+        lateinit var navigator: Navigator
+        val feature: EntryProviderInstaller = { nav ->
+            navigator = nav
+            entry<PokedexKey>(metadata = ListDetailSceneStrategy.listPane()) { Text("The list") }
+            entry<TestKey>(metadata = ListDetailSceneStrategy.detailPane()) { Text("The entry") }
+        }
+        composeRule.setContent { AppTheme { AppNavigation(entryProviderInstallers = setOf(feature)) } }
+
+        composeRule.runOnIdle { navigator.navigate(TestKey) }
+
+        composeRule.onRoot().captureRoboImage()
     }
 }

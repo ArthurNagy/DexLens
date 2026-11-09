@@ -15,6 +15,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.window.core.layout.WindowSizeClass
 import com.arthurnagy.dexlens.core.navigation.EntryProviderInstaller
@@ -41,6 +42,7 @@ internal fun AppNavigation(
     val backStack = rememberNavBackStack(PokedexKey)
     val navigator = remember(backStack) { Navigator(backStack) }
 
+    val dialogStrategy = remember { DialogSceneStrategy<NavKey>() }
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val sideBySide = adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val listDetailStrategy =
@@ -58,7 +60,7 @@ internal fun AppNavigation(
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
                     ),
-                sceneStrategies = listOf(listDetailStrategy),
+                sceneStrategies = listOf(dialogStrategy, listDetailStrategy),
                 entryProvider =
                     entryProvider {
                         entryProviderInstallers.forEach { install -> install(navigator) }

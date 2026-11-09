@@ -25,6 +25,7 @@ dependencies {
     implementation(project(":feature:pokedex:impl"))
     implementation(project(":feature:entry:impl"))
     implementation(project(":feature:scanner:impl"))
+    implementation(project(":feature:settings:impl"))
     // android-forge:feature-modules
 
     implementation(libs.androidx.compose.material3) // the phone/tablet Material 3 — :app's own, not the app convention's
@@ -36,6 +37,8 @@ dependencies {
     implementation(libs.orbit.viewmodel)
     implementation(libs.orbit.compose)
     implementation(libs.timber)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
 
     testImplementation(libs.orbit.test)
 
