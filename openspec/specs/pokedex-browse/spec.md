@@ -14,7 +14,7 @@ The home screen SHALL show all species in Pokédex order, each with its art or p
 
 #### Scenario: Shows loading state
 - **WHEN** the list has not finished loading
-- **THEN** a loading indicator is shown instead of an empty list
+- **THEN** a shimmering skeleton of the list is shown instead of an empty list
 
 #### Scenario: Shows error state
 - **WHEN** the list cannot be read
