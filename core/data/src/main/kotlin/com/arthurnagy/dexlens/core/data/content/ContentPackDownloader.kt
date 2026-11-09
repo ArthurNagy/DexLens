@@ -47,20 +47,20 @@ internal class ContentPackDownloader
         @OptIn(ExperimentalAtomicApi::class)
         suspend fun download(progress: MutableStateFlow<ContentProgress>): Result<Unit, DomainError> {
             val ids = catchStorage { speciesDao.speciesIds() }.getOrElse { return Err(it) }
-            val total = ids.size * ArtKind.entries.size + FLAVOR_STEP
-            val pending = ids.flatMap { id -> ArtKind.entries.filterNot { files.exists(it, id) }.map { kind -> id to kind } }
-            val flavorDone = files.isFlavorImported()
+            val (stored, flavorDone) = catchStorage { files.storedIds() to files.isFlavorImported() }.getOrElse { return Err(it) }
+            val total = ids.size + FLAVOR_STEP
+            val pending = ids.filterNot(stored::contains)
             progress.value = ContentProgress(total - pending.size - if (flavorDone) 0 else FLAVOR_STEP, total)
 
             val failure = AtomicReference<DomainError?>(null)
             val semaphore = Semaphore(MAX_CONCURRENT)
             supervisorScope {
                 pending
-                    .map { (id, kind) ->
+                    .map { id ->
                         async(dispatchers.io) {
                             semaphore.withPermit {
                                 if (failure.load() == null) {
-                                    fetch(id, kind).onErr { failure.compareAndSet(null, it) }
+                                    fetch(id).onErr { failure.compareAndSet(null, it) }
                                     progress.advance()
                                 }
                             }
@@ -72,13 +72,10 @@ internal class ContentPackDownloader
             return flavor.andThen { catchStorage { files.markComplete() } }
         }
 
-        private suspend fun fetch(
-            id: Int,
-            kind: ArtKind,
-        ): Result<Unit, DomainError> {
-            val png = catchNetwork { if (kind == ArtKind.SPRITE) remote.sprite(id) else remote.artwork(id) }
+        private suspend fun fetch(id: Int): Result<Unit, DomainError> {
+            val png = catchNetwork { remote.artwork(id) }
                 .getOrElse { error -> return if (error == DomainError.NotFound) Ok(Unit) else Err(error) }
-            return catchStorage { files.write(kind, id, transcoder.toWebp(png, if (kind == ArtKind.ARTWORK) ARTWORK_SIZE else null)) }
+            return catchStorage { files.write(id, transcoder.toWebp(png, ARTWORK_SIZE)) }
         }
 
         private suspend fun importFlavorText(progress: MutableStateFlow<ContentProgress>): Result<Unit, DomainError> {

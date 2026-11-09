@@ -37,8 +37,8 @@ internal class WebpTranscoderTest {
     }
 
     @Test
-    fun keepsSmallSpritesAtTheirSize() {
-        val webp = WebpTranscoder().toWebp(png(96, 96), maxSize = null)
+    fun keepsSmallerImagesAtTheirSize() {
+        val webp = WebpTranscoder().toWebp(png(96, 96), maxSize = 384)
         assertWebp(webp)
         assertEquals(96, BitmapFactory.decodeByteArray(webp, 0, webp.size).width)
     }

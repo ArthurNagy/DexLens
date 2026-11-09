@@ -18,12 +18,10 @@ sealed interface ContentPackState {
     data object Ready : ContentPackState
 }
 
-/** Where downloaded pictures live. [rootPath] is null until something has been downloaded. */
+/** Where downloaded pictures live, one per species. [rootPath] is null until the download has finished. */
 data class ArtworkLocation(
     val rootPath: String?,
 ) {
-    fun sprite(id: SpeciesId): String? = rootPath?.let { "$it/sprites/${id.value}.webp" }
-
     fun artwork(id: SpeciesId): String? = rootPath?.let { "$it/artwork/${id.value}.webp" }
 }
 

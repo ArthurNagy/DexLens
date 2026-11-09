@@ -21,7 +21,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import coil3.compose.AsyncImagePainter
+import coil3.compose.LocalPlatformContext
 import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.color
 import com.arthurnagy.dexlens.core.designsystem.onColor
@@ -49,7 +52,12 @@ fun SpeciesArt(
         modifier = modifier.clip(shape).background(brush),
         contentAlignment = Alignment.Center,
     ) {
-        val painter = rememberAsyncImagePainter(model = imagePath?.let(::File))
+        // Always the stored size, so every place a species appears shares one decoded image and the hero never waits for it.
+        val context = LocalPlatformContext.current
+        val request = remember(context, imagePath) {
+            imagePath?.let { ImageRequest.Builder(context).data(File(it)).size(Size.ORIGINAL).build() }
+        }
+        val painter = rememberAsyncImagePainter(model = request)
         val painterState by painter.state.collectAsState()
         val loaded = painterState is AsyncImagePainter.State.Success
         if (!loaded) {

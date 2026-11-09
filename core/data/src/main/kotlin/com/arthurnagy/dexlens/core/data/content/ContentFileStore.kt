@@ -1,50 +1,39 @@
 package com.arthurnagy.dexlens.core.data.content
 
 import android.content.Context
+import com.arthurnagy.dexlens.core.domain.DispatcherProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Which picture of a species a file holds. [directory] is its folder inside the content root. */
-internal enum class ArtKind(
-    val directory: String,
-) {
-    SPRITE("sprites"),
-    ARTWORK("artwork"),
-}
-
 /**
- * Downloaded pictures on disk. A file only appears at its final name once fully written, so an interrupted write can
- * never be shown as art, and a resumed download only needs to look at which final names exist.
+ * Downloaded pictures on disk, one per species. A file only appears at its final name once fully written, so an
+ * interrupted write can never be shown as art, and a resumed download only needs to look at which final names exist.
+ * Everything that touches the disk runs on the IO dispatcher, so callers can use it from any thread.
  */
 @Singleton
 internal class ContentFileStore
     @Inject
     constructor(
         @ApplicationContext context: Context,
+        private val dispatchers: DispatcherProvider,
     ) {
         val root: File = File(context.filesDir, "content")
 
+        private val artworkDirectory: File get() = File(root, ARTWORK_DIRECTORY)
         private val flavorMarker: File get() = File(root, FLAVOR_MARKER)
         private val completeMarker: File get() = File(root, COMPLETE_MARKER)
 
-        fun file(
-            kind: ArtKind,
-            id: Int,
-        ): File = File(File(root, kind.directory), "$id.webp")
+        /** Where a species' picture lives. This only builds the path and does not touch the disk. */
+        fun file(id: Int): File = File(artworkDirectory, "$id$ARTWORK_EXTENSION")
 
-        fun exists(
-            kind: ArtKind,
-            id: Int,
-        ): Boolean = file(kind, id).isFile
-
-        fun write(
-            kind: ArtKind,
+        suspend fun write(
             id: Int,
             bytes: ByteArray,
-        ) {
-            val target = file(kind, id)
+        ) = onDisk {
+            val target = file(id)
             target.parentFile?.mkdirs()
             val partial = File(target.parentFile, "${target.name}.partial")
             partial.writeBytes(bytes)
@@ -54,30 +43,39 @@ internal class ContentFileStore
             }
         }
 
-        fun completedFileCount(): Int = ArtKind.entries.sumOf { kind ->
-            File(root, kind.directory).list { _, name -> name.endsWith(".webp") }?.size ?: 0
+        /** The species whose picture is fully written. */
+        suspend fun storedIds(): Set<Int> = onDisk {
+            artworkDirectory
+                .list { _, name -> name.endsWith(ARTWORK_EXTENSION) }
+                .orEmpty()
+                .mapNotNull { it.removeSuffix(ARTWORK_EXTENSION).toIntOrNull() }
+                .toSet()
         }
 
-        fun isFlavorImported(): Boolean = flavorMarker.isFile
+        suspend fun isFlavorImported(): Boolean = onDisk { flavorMarker.isFile }
 
-        fun markFlavorImported() {
+        suspend fun markFlavorImported() = onDisk {
             root.mkdirs()
             flavorMarker.writeText("done")
         }
 
         /** A finished run, even if a file was missing upstream. */
-        fun isComplete(): Boolean = completeMarker.isFile
+        suspend fun isComplete(): Boolean = onDisk { completeMarker.isFile }
 
-        fun markComplete() {
+        suspend fun markComplete() = onDisk {
             root.mkdirs()
             completeMarker.writeText("done")
         }
 
-        fun clear() {
-            root.deleteRecursively()
+        suspend fun clear() {
+            onDisk { root.deleteRecursively() }
         }
 
+        private suspend fun <T> onDisk(block: () -> T): T = withContext(dispatchers.io) { block() }
+
         private companion object {
+            const val ARTWORK_DIRECTORY = "artwork"
+            const val ARTWORK_EXTENSION = ".webp"
             const val FLAVOR_MARKER = "flavor.done"
             const val COMPLETE_MARKER = "complete.done"
         }

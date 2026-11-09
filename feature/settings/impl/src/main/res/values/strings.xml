@@ -2,7 +2,7 @@
 <resources>
     <string name="settings_title">Settings</string>
     <string name="settings_content_title">Artwork and Pokédex text</string>
-    <string name="settings_content_description">Add official artwork, sprites and in-game Pokédex entries, fetched once from PokeAPI\'s public repositories. The app works fully without them, with placeholders instead.</string>
+    <string name="settings_content_description">Add official artwork and in-game Pokédex entries, fetched once from PokeAPI\'s public repositories. The app works fully without them, with placeholders instead.</string>
     <string name="settings_size">About %1$d MB to download, %2$d MB on this device</string>
     <string name="settings_download">Download</string>
     <string name="settings_cancel">Cancel</string>

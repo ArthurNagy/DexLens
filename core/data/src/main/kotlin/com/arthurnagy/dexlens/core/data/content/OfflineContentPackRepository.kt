@@ -9,7 +9,6 @@ import androidx.work.WorkManager
 import com.arthurnagy.dexlens.core.data.catchStorage
 import com.arthurnagy.dexlens.core.database.ContentDao
 import com.arthurnagy.dexlens.core.database.SpeciesDao
-import com.arthurnagy.dexlens.core.domain.DispatcherProvider
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.content.ContentPackRepository
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
@@ -20,9 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,7 +31,6 @@ internal class OfflineContentPackRepository
         private val files: ContentFileStore,
         private val contentDao: ContentDao,
         private val speciesDao: SpeciesDao,
-        private val dispatchers: DispatcherProvider,
     ) : ContentPackRepository {
         /** Bumped after a deletion, because no work state changes then. */
         private val refresh = MutableStateFlow(0)
@@ -43,11 +39,11 @@ internal class OfflineContentPackRepository
             combine(workManager.getWorkInfosForUniqueWorkFlow(WORK_NAME), refresh) { infos, _ -> infos.firstOrNull() }
                 .map { info -> stateFor(info) }
                 .distinctUntilChanged()
-                .flowOn(dispatchers.io)
 
         private suspend fun stateFor(info: WorkInfo?): ContentPackState {
-            val total = catchStorage { speciesDao.speciesCount() * ArtKind.entries.size + 1 }.getOr(UNKNOWN_TOTAL)
-            val completed = files.completedFileCount() + if (files.isFlavorImported()) 1 else 0
+            val total = catchStorage { speciesDao.speciesCount() + FLAVOR_STEP }.getOr(UNKNOWN_TOTAL)
+            val completed = catchStorage { files.storedIds().size + if (files.isFlavorImported()) FLAVOR_STEP else 0 }.getOr(0)
+            val complete = catchStorage { files.isComplete() }.getOr(false)
             return when {
                 info != null && (info.state == WorkInfo.State.RUNNING || info.state == WorkInfo.State.ENQUEUED) -> {
                     ContentPackState.Downloading(
@@ -56,7 +52,7 @@ internal class OfflineContentPackRepository
                     )
                 }
 
-                files.isComplete() -> {
+                complete -> {
                     ContentPackState.Ready
                 }
 
@@ -70,11 +66,10 @@ internal class OfflineContentPackRepository
             }
         }
 
+        /** Null until the pack is complete, so everything on screen switches to the real pictures together. */
         override fun observeArtwork(): Flow<ArtworkLocation> = observeState()
-            .map { state ->
-                val hasFiles = state !is ContentPackState.NotDownloaded
-                ArtworkLocation(if (hasFiles) files.root.path else null)
-            }.distinctUntilChanged()
+            .map { state -> ArtworkLocation(files.root.path.takeIf { state == ContentPackState.Ready }) }
+            .distinctUntilChanged()
 
         override fun start() {
             val request = OneTimeWorkRequestBuilder<ContentPackWorker>()
@@ -89,13 +84,14 @@ internal class OfflineContentPackRepository
 
         override suspend fun delete(): Result<Unit, DomainError> = catchStorage {
             workManager.cancelUniqueWork(WORK_NAME)
-            withContext(dispatchers.io) { files.clear() }
+            files.clear()
             contentDao.deleteAll()
             refresh.value += 1
         }
 
         private companion object {
             const val WORK_NAME = "content-pack-download"
+            const val FLAVOR_STEP = 1
 
             /** Only reached when the bundled database cannot be read. The state still follows the files on disk. */
             const val UNKNOWN_TOTAL = 0

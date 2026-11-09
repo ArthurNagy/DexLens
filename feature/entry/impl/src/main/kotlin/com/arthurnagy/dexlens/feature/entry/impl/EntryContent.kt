@@ -560,7 +560,7 @@ private fun EvolutionRow(
         SpeciesArt(
             name = node.species.name,
             types = node.species.types,
-            imagePath = artwork.sprite(node.species.id),
+            imagePath = artwork.artwork(node.species.id),
             contentDescription = null,
             letterStyle = MaterialTheme.typography.titleLarge,
             modifier = Modifier.size(AppDimens.evolutionArt),
