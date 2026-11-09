@@ -29,3 +29,6 @@ play-service-account.json
 
 # --- QA run output (android-qa screenshots and reports) ---
 build/qa/
+tools/.cache/
+__pycache__/
+*.pyc
