@@ -10,6 +10,10 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+    androidResources {
+        // Stored uncompressed so it can be memory-mapped, as AGP already does for .tflite files.
+        noCompress += "dexlens_references.bin"
+    }
 }
 
 dependencies {
