@@ -77,3 +77,10 @@ Without downloaded art, the list and the entry SHALL show type-tinted placeholde
 #### Scenario: Placeholder shown without art
 - **WHEN** a species has no downloaded art
 - **THEN** a placeholder tinted with its types is shown and no network call is made
+
+### Requirement: Loading skeleton
+While an entry loads, the app SHALL show a skeleton of the entry's layout.
+
+#### Scenario: Entry shows a skeleton while loading
+- **WHEN** an entry has not finished loading
+- **THEN** a shimmering skeleton of the entry is shown and announced as loading
