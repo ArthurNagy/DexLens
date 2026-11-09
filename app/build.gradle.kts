@@ -22,6 +22,8 @@ dependencies {
 
     // Features: depending on an impl is all it takes — its entries arrive through Hilt multibinding.
     // /android-forge-add-feature adds each one above this marker line — keep it.
+    implementation(project(":feature:pokedex:impl"))
+    implementation(project(":feature:entry:impl"))
     // android-forge:feature-modules
 
     implementation(libs.androidx.compose.material3) // the phone/tablet Material 3 — :app's own, not the app convention's

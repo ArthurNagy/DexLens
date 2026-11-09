@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pokedex_search_hint">Search name or number</string>
+    <string name="pokedex_clear_search">Clear search</string>
+    <string name="pokedex_empty_title">No Pokémon named “%1$s”</string>
+    <string name="pokedex_empty_message">Check the spelling, or try a number such as 25.</string>
+    <string name="pokedex_row_description">%1$s, %2$s, %3$s</string>
+    <string name="pokedex_detail_placeholder">Pick a Pokémon to see its entry</string>
+</resources>

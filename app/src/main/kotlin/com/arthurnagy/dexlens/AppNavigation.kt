@@ -1,8 +1,13 @@
 package com.arthurnagy.dexlens
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -11,8 +16,11 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import androidx.window.core.layout.WindowSizeClass
 import com.arthurnagy.dexlens.core.navigation.EntryProviderInstaller
 import com.arthurnagy.dexlens.core.navigation.Navigator
+import com.arthurnagy.dexlens.core.ui.LocalSharedTransitionScope
+import com.arthurnagy.dexlens.feature.pokedex.api.PokedexKey
 
 /**
  * The app's single back stack. Features never reference each other's screens: each impl module
@@ -21,34 +29,41 @@ import com.arthurnagy.dexlens.core.navigation.Navigator
  *
  * The list-detail scene strategy makes the app adaptive by default: entries a feature marks with
  * `ListDetailSceneStrategy.listPane()` / `detailPane()` metadata show side by side on wide windows
- * (tablets, unfolded foldables, desktop) and one at a time on phones. (The material3-adaptive scene
+ * (from 600dp: tablets, unfolded foldables, desktop) and one at a time on phones. (The material3-adaptive scene
  * strategies are still `@ExperimentalMaterial3AdaptiveApi`.)
  */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun AppNavigation(
     entryProviderInstallers: Set<EntryProviderInstaller>,
     modifier: Modifier = Modifier,
 ) {
-    val backStack = rememberNavBackStack(HomeKey)
+    val backStack = rememberNavBackStack(PokedexKey)
     val navigator = remember(backStack) { Navigator(backStack) }
 
-    NavDisplay<NavKey>(
-        backStack = backStack,
-        modifier = modifier,
-        onBack = navigator::goBack,
-        // Saveable state + a ViewModelStore per entry: a screen's hiltViewModel() is scoped to its
-        // entry and cleared when that entry is popped.
-        entryDecorators =
-            listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-            ),
-        sceneStrategies = listOf(rememberListDetailSceneStrategy()),
-        entryProvider =
-            entryProvider {
-                entry<HomeKey> { HomeScreen() }
-                entryProviderInstallers.forEach { install -> install(navigator) }
-            },
-    )
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val sideBySide = adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+    val listDetailStrategy =
+        rememberListDetailSceneStrategy<NavKey>(directive = calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(adaptiveInfo))
+    SharedTransitionLayout(modifier = modifier) {
+        CompositionLocalProvider(LocalSharedTransitionScope provides if (sideBySide) null else this) {
+            NavDisplay<NavKey>(
+                backStack = backStack,
+                sharedTransitionScope = this@SharedTransitionLayout,
+                onBack = navigator::goBack,
+                // Saveable state + a ViewModelStore per entry: a screen's hiltViewModel() is scoped to its
+                // entry and cleared when that entry is popped.
+                entryDecorators =
+                    listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                    ),
+                sceneStrategies = listOf(listDetailStrategy),
+                entryProvider =
+                    entryProvider {
+                        entryProviderInstallers.forEach { install -> install(navigator) }
+                    },
+            )
+        }
+    }
 }
