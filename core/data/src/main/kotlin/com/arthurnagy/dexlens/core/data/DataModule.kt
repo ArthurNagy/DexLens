@@ -1,7 +1,13 @@
 package com.arthurnagy.dexlens.core.data
 
+import com.arthurnagy.dexlens.core.data.species.DeviceDisplayLanguage
+import com.arthurnagy.dexlens.core.data.species.DisplayLanguage
+import com.arthurnagy.dexlens.core.data.species.OfflineSpeciesRepository
+import com.arthurnagy.dexlens.core.data.species.OfflineTypeChartRepository
 import com.arthurnagy.dexlens.core.domain.DispatcherProvider
 import com.arthurnagy.dexlens.core.domain.UserPreferencesRepository
+import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
+import com.arthurnagy.dexlens.core.domain.species.TypeChartRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -20,4 +26,13 @@ internal interface DataModule {
 
     @Binds
     fun bindsUserPreferencesRepository(impl: OfflineUserPreferencesRepository): UserPreferencesRepository
+
+    @Binds
+    fun bindsSpeciesRepository(impl: OfflineSpeciesRepository): SpeciesRepository
+
+    @Binds
+    fun bindsTypeChartRepository(impl: OfflineTypeChartRepository): TypeChartRepository
+
+    @Binds
+    fun bindsDisplayLanguage(impl: DeviceDisplayLanguage): DisplayLanguage
 }
