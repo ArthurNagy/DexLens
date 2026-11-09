@@ -1,22 +1,12 @@
 package com.arthurnagy.dexlens.core.database
 
-import androidx.room3.ColumnInfo
 import androidx.room3.Dao
 import androidx.room3.Database
-import androidx.room3.Entity
 import androidx.room3.Query
 import androidx.room3.RoomDatabase
 import androidx.room3.Transaction
 import androidx.room3.Upsert
-
-/** Flavor text the user chose to download. It is never bundled, so it lives apart from the prebuilt database. */
-@Entity(tableName = "flavor_text", primaryKeys = ["species_id", "version_id", "language_id"])
-data class FlavorTextEntity(
-    @ColumnInfo(name = "species_id") val speciesId: Int,
-    @ColumnInfo(name = "version_id") val versionId: Int,
-    @ColumnInfo(name = "language_id") val languageId: Int,
-    val text: String,
-)
+import com.arthurnagy.dexlens.core.database.entity.FlavorTextEntity
 
 @Dao
 interface ContentDao {

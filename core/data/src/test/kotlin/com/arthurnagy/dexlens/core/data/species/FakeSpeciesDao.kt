@@ -1,18 +1,18 @@
 package com.arthurnagy.dexlens.core.data.species
 
 import com.arthurnagy.dexlens.core.database.ChainSpeciesRow
-import com.arthurnagy.dexlens.core.database.EggGroupEntity
-import com.arthurnagy.dexlens.core.database.EvolutionEntity
-import com.arthurnagy.dexlens.core.database.FormEntity
-import com.arthurnagy.dexlens.core.database.LanguageEntity
 import com.arthurnagy.dexlens.core.database.ScanNameRow
 import com.arthurnagy.dexlens.core.database.SpeciesDao
-import com.arthurnagy.dexlens.core.database.SpeciesEntity
-import com.arthurnagy.dexlens.core.database.SpeciesNameEntity
 import com.arthurnagy.dexlens.core.database.SpeciesSearchRow
 import com.arthurnagy.dexlens.core.database.SpeciesSummaryRow
 import com.arthurnagy.dexlens.core.database.VarietyAbilityRow
-import com.arthurnagy.dexlens.core.database.VarietyEntity
+import com.arthurnagy.dexlens.core.database.entity.EggGroupEntity
+import com.arthurnagy.dexlens.core.database.entity.EvolutionEntity
+import com.arthurnagy.dexlens.core.database.entity.FormEntity
+import com.arthurnagy.dexlens.core.database.entity.LanguageEntity
+import com.arthurnagy.dexlens.core.database.entity.SpeciesEntity
+import com.arthurnagy.dexlens.core.database.entity.SpeciesNameEntity
+import com.arthurnagy.dexlens.core.database.entity.VarietyEntity
 
 /** Seeded in-memory DAO. [failure], when set, is thrown by every call. */
 internal class FakeSpeciesDao(

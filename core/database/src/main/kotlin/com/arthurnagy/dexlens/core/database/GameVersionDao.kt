@@ -2,6 +2,7 @@ package com.arthurnagy.dexlens.core.database
 
 import androidx.room3.Dao
 import androidx.room3.Query
+import com.arthurnagy.dexlens.core.database.entity.GameVersionEntity
 
 @Dao
 fun interface GameVersionDao {

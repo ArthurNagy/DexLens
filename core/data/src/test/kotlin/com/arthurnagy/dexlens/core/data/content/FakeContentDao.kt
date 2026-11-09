@@ -1,7 +1,7 @@
 package com.arthurnagy.dexlens.core.data.content
 
 import com.arthurnagy.dexlens.core.database.ContentDao
-import com.arthurnagy.dexlens.core.database.FlavorTextEntity
+import com.arthurnagy.dexlens.core.database.entity.FlavorTextEntity
 
 internal class FakeContentDao : ContentDao {
     val rows = mutableListOf<FlavorTextEntity>()

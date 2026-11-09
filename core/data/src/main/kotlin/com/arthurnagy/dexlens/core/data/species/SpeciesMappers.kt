@@ -1,12 +1,12 @@
 package com.arthurnagy.dexlens.core.data.species
 
 import com.arthurnagy.dexlens.core.database.ChainSpeciesRow
-import com.arthurnagy.dexlens.core.database.EvolutionEntity
-import com.arthurnagy.dexlens.core.database.FormEntity
 import com.arthurnagy.dexlens.core.database.SpeciesSummaryRow
-import com.arthurnagy.dexlens.core.database.TypeEfficacyEntity
 import com.arthurnagy.dexlens.core.database.VarietyAbilityRow
-import com.arthurnagy.dexlens.core.database.VarietyEntity
+import com.arthurnagy.dexlens.core.database.entity.EvolutionEntity
+import com.arthurnagy.dexlens.core.database.entity.FormEntity
+import com.arthurnagy.dexlens.core.database.entity.TypeEfficacyEntity
+import com.arthurnagy.dexlens.core.database.entity.VarietyEntity
 import com.arthurnagy.dexlens.core.model.Ability
 import com.arthurnagy.dexlens.core.model.BaseStats
 import com.arthurnagy.dexlens.core.model.EvolutionMethod

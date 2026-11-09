@@ -3,7 +3,7 @@ package com.arthurnagy.dexlens.core.data.content
 import com.arthurnagy.dexlens.core.data.species.DisplayLanguage
 import com.arthurnagy.dexlens.core.data.species.ENGLISH
 import com.arthurnagy.dexlens.core.database.ContentDao
-import com.arthurnagy.dexlens.core.database.FlavorTextEntity
+import com.arthurnagy.dexlens.core.database.entity.FlavorTextEntity
 import java.io.BufferedReader
 import java.io.InputStream
 import javax.inject.Inject
