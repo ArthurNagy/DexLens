@@ -45,6 +45,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -91,8 +93,8 @@ import com.arthurnagy.dexlens.core.ui.TypeChipRow
 import com.arthurnagy.dexlens.core.ui.listText
 import com.arthurnagy.dexlens.core.ui.speciesNumberLabel
 import com.arthurnagy.dexlens.core.ui.toMessage
-import java.util.Locale
 import com.arthurnagy.dexlens.core.ui.R as CoreUiR
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -525,12 +527,13 @@ private fun EvolutionRow(
 ) {
     val id = node.species.id.value
     val isCurrent = id == currentId
-    val methodText = if (node.methods.isEmpty()) {
-        null
-    } else {
-        node.methods.map {
-            evolutionMethodText(it)
-        }.distinct().joinToString(separator = "\n")
+    val resources = LocalResources.current
+    val methodText = remember(node.methods, resources) {
+        node.methods
+            .takeIf { it.isNotEmpty() }
+            ?.map { evolutionMethodText(it, resources) }
+            ?.distinct()
+            ?.joinToString(separator = "\n")
     }
     val description = listText(
         listOfNotNull(
