@@ -37,6 +37,7 @@
     <string name="entry_evolution_none">This species does not evolve.</string>
     <string name="entry_evolution_current">%1$s, current species</string>
     <string name="entry_forms">Forms</string>
+    <string name="entry_flavor">Pokédex entries</string>
     <string name="entry_other_names">Names in other languages</string>
     <string name="entry_art_description">Artwork of %1$s</string>
     <string name="entry_not_found_back">Go back</string>

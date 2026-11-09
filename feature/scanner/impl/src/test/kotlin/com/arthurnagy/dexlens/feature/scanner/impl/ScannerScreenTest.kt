@@ -14,12 +14,15 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
+import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
 import com.arthurnagy.dexlens.core.domain.scan.MatchDecision
 import com.arthurnagy.dexlens.core.domain.scan.MatchOutcome
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
+import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
+import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
 import com.arthurnagy.dexlens.core.testing.speciesSummary
@@ -41,6 +44,7 @@ internal class ScannerScreenTest {
     val composeRule = createComposeRule()
 
     private val ready = ScannerState.Initial.copy(loading = false)
+    private val noArt = ArtworkLocation(null)
     private val pikachu = speciesSummary(25, "Pikachu", PokemonType.ELECTRIC)
     private val pidgey = speciesSummary(16, "Pidgey", PokemonType.NORMAL, PokemonType.FLYING)
 
@@ -141,7 +145,7 @@ internal class ScannerScreenTest {
     @Test
     fun sheetOpensTheEntry() {
         var opened = 0
-        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pikachu), onOpenSpecies = { opened = it }, onDismiss = {}) } }
+        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pikachu), noArt, onOpenSpecies = { opened = it }, onDismiss = {}) } }
         composeRule.onNodeWithText("Open entry").performClick()
         assertEquals(25, opened)
     }
@@ -150,7 +154,9 @@ internal class ScannerScreenTest {
     @Test
     fun keepScanningDismisses() {
         var dismissed = false
-        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pikachu), onOpenSpecies = {}, onDismiss = { dismissed = true }) } }
+        composeRule.setContent {
+            AppTheme { ResultSheetContent(listOf(pikachu), noArt, onOpenSpecies = {}, onDismiss = { dismissed = true }) }
+        }
         composeRule.onNodeWithText("Keep scanning").performClick()
         assertTrue(dismissed)
     }
@@ -159,7 +165,9 @@ internal class ScannerScreenTest {
     @Test
     fun severalSpeciesAreChoices() {
         var opened = 0
-        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pidgey, pikachu), onOpenSpecies = { opened = it }, onDismiss = {}) } }
+        composeRule.setContent {
+            AppTheme { ResultSheetContent(listOf(pidgey, pikachu), noArt, onOpenSpecies = { opened = it }, onDismiss = {}) }
+        }
         composeRule.onNodeWithText("Which one?").assertExists()
         composeRule.onNodeWithTag("scanner:result:16").performClick()
         assertEquals(16, opened)
@@ -190,6 +198,7 @@ internal class ScannerScreenTest {
         val viewModel = ScannerViewModel(
             BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(TestCoroutineScheduler())),
             GetSpeciesListUseCase(repository),
+            ObserveArtworkUseCase(FakeContentPackRepository()),
         )
         composeRule.setContent {
             AppTheme { ScannerScreen(onNavigateBack = {}, onOpenSpecies = {}, viewModel = viewModel) }
@@ -200,6 +209,13 @@ internal class ScannerScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phone() {
+        show()
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = "w841dp-h701dp-xxhdpi")
+    fun foldable() {
         show()
         composeRule.onRoot().captureRoboImage()
     }
@@ -221,14 +237,14 @@ internal class ScannerScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phoneResult() {
-        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pikachu), onOpenSpecies = {}, onDismiss = {}) } }
+        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pikachu), noArt, onOpenSpecies = {}, onDismiss = {}) } }
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phoneChoices() {
-        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pidgey, pikachu), onOpenSpecies = {}, onDismiss = {}) } }
+        composeRule.setContent { AppTheme { ResultSheetContent(listOf(pidgey, pikachu), noArt, onOpenSpecies = {}, onDismiss = {}) } }
         composeRule.onRoot().captureRoboImage()
     }
 }

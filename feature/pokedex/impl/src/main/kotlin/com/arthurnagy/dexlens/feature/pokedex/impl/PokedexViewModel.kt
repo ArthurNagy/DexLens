@@ -1,6 +1,8 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl
 
 import androidx.lifecycle.ViewModel
+import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
+import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
@@ -8,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.orbitContainer
@@ -19,6 +22,8 @@ internal class PokedexViewModel
     @Inject
     constructor(
         private val searchSpecies: SearchSpeciesUseCase,
+        private val observeArtwork: ObserveArtworkUseCase,
+        private val observeContentOffer: ObserveContentOfferUseCase,
     ) : ViewModel(),
         OrbitContainerHost<PokedexState, PokedexState, Nothing> {
         private val queries = MutableStateFlow("")
@@ -26,6 +31,16 @@ internal class PokedexViewModel
 
         override val container = orbitContainer<PokedexState, Nothing>(PokedexState.Initial) {
             observeQueries()
+            observeArtworkLocation()
+            checkOffer()
+        }
+
+        private fun observeArtworkLocation() = intent {
+            observeArtwork().collect { location -> reduce { state.copy(artwork = location) } }
+        }
+
+        private fun checkOffer() = intent {
+            if (observeContentOffer().first()) reduce { state.copy(pendingOffer = true) }
         }
 
         private fun observeQueries() = intent {
@@ -40,6 +55,10 @@ internal class PokedexViewModel
 
         fun onQueryChanged(query: String) {
             queries.value = query
+        }
+
+        fun onOfferConsumed() = intent {
+            reduce { state.copy(pendingOffer = false) }
         }
 
         fun onRetry() = intent {

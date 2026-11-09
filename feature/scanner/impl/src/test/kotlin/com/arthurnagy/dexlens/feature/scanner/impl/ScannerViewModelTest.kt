@@ -1,6 +1,7 @@
 package com.arthurnagy.dexlens.feature.scanner.impl
 
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
 import com.arthurnagy.dexlens.core.domain.scan.MatchDecision
 import com.arthurnagy.dexlens.core.domain.scan.MatchOutcome
@@ -8,6 +9,7 @@ import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesNameHit
+import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
 import com.arthurnagy.dexlens.core.testing.speciesSummary
@@ -27,6 +29,7 @@ internal class ScannerViewModelTest {
     private fun TestScope.viewModel() = ScannerViewModel(
         BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(testScheduler)),
         GetSpeciesListUseCase(repository),
+        ObserveArtworkUseCase(FakeContentPackRepository()),
     )
 
     private fun frame(vararg lines: String) = AnalyzedFrame(

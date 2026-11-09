@@ -13,12 +13,17 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
+import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesNameHit
 import com.arthurnagy.dexlens.core.model.SpeciesSearchResult
+import com.arthurnagy.dexlens.core.model.ThemeMode
+import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
+import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import com.arthurnagy.dexlens.core.testing.speciesSummary
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -58,9 +63,10 @@ class PokedexScreenTest {
         onOpen: (Int) -> Unit = {},
         onRetry: () -> Unit = {},
         onScan: () -> Unit = {},
+        onSettings: () -> Unit = {},
     ) {
         composeRule.setContent {
-            AppTheme { PokedexContent(state, TextFieldState(), onOpen, onScan, onRetry) }
+            AppTheme { PokedexContent(state, TextFieldState(), onOpen, onScan, onSettings, onRetry) }
         }
     }
 
@@ -114,9 +120,17 @@ class PokedexScreenTest {
             summaries = summaries,
             hits = mapOf("\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu"))),
         )
-        val viewModel = PokedexViewModel(SearchSpeciesUseCase(repository))
+        val viewModel =
+            PokedexViewModel(
+                SearchSpeciesUseCase(repository),
+                ObserveArtworkUseCase(FakeContentPackRepository()),
+                ObserveContentOfferUseCase(FakeUserPreferencesRepository(ThemeMode.SYSTEM, initialOfferShown = true)),
+            )
         composeRule.setContent {
-            AppTheme { PokedexScreen(onOpenSpecies = {}, onOpenScanner = {}, canNavigateBack = false, viewModel = viewModel) }
+            AppTheme {
+                PokedexScreen(onOpenSpecies = {
+                }, onOpenScanner = {}, onOpenSettings = {}, onShowOffer = {}, canNavigateBack = false, viewModel = viewModel)
+            }
         }
         awaitRow(1)
         composeRule.onNodeWithTag("pokedex:search").performTextInput("pika")
@@ -124,6 +138,14 @@ class PokedexScreenTest {
         composeRule.onNodeWithTag("pokedex:row:25", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithTag("pokedex:clear").performClick()
         awaitRow(1)
+    }
+
+    @Test
+    fun settingsButtonOpensSettings() {
+        var opened = false
+        show(loaded, onSettings = { opened = true })
+        composeRule.onNodeWithTag("pokedex:settings").performClick()
+        assertEquals(true, opened)
     }
 
     @Test
@@ -157,6 +179,13 @@ class PokedexScreenTest {
     }
 
     @Test
+    @Config(qualifiers = "w841dp-h701dp-xxhdpi")
+    fun foldable() {
+        show(loaded)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tablet() {
         show(loaded)
@@ -167,7 +196,7 @@ class PokedexScreenTest {
     @Config(qualifiers = "+night")
     fun phoneDark() {
         composeRule.setContent {
-            AppTheme { PokedexContent(loaded, TextFieldState(), {}, {}, {}) }
+            AppTheme { PokedexContent(loaded, TextFieldState(), {}, {}, {}, {}) }
         }
         composeRule.onRoot().captureRoboImage()
     }

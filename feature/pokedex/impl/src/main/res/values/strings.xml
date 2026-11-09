@@ -7,4 +7,5 @@
     <string name="pokedex_row_description">%1$s, %2$s, %3$s</string>
     <string name="pokedex_detail_placeholder">Pick a Pokémon to see its entry</string>
     <string name="pokedex_scan">Scan</string>
+    <string name="pokedex_settings">Settings</string>
 </resources>

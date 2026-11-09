@@ -71,8 +71,10 @@ import com.arthurnagy.dexlens.core.designsystem.StatBar
 import com.arthurnagy.dexlens.core.designsystem.color
 import com.arthurnagy.dexlens.core.designsystem.typeGradient
 import com.arthurnagy.dexlens.core.model.Ability
+import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.BaseStats
 import com.arthurnagy.dexlens.core.model.EvolutionNode
+import com.arthurnagy.dexlens.core.model.FlavorEntry
 import com.arthurnagy.dexlens.core.model.GenderRatio
 import com.arthurnagy.dexlens.core.model.LocalizedName
 import com.arthurnagy.dexlens.core.model.PokemonType
@@ -156,7 +158,7 @@ private fun EntryBody(
         contentPadding = PaddingValues(bottom = AppSpacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item(key = "header") { EntryHeader(detail, variety) }
+        item(key = "header") { EntryHeader(detail, variety, state.artwork) }
         val contentModifier = Modifier.widthIn(max = AppDimens.maxContentWidth).fillMaxWidth().padding(horizontal = AppSpacing.md)
         if (detail.varieties.size > 1) {
             item(key = "varieties") {
@@ -183,7 +185,12 @@ private fun EntryBody(
             EntrySection(stringResource(R.string.entry_matchups), contentModifier) { MatchupsSection(state.matchups) }
         }
         item(key = "evolution") {
-            EntrySection(stringResource(R.string.entry_evolution), contentModifier) { EvolutionSection(detail, onOpenSpecies) }
+            EntrySection(stringResource(R.string.entry_evolution), contentModifier) {
+                EvolutionSection(detail, state.artwork, onOpenSpecies)
+            }
+        }
+        if (state.flavor.isNotEmpty()) {
+            item(key = "flavor") { EntrySection(stringResource(R.string.entry_flavor), contentModifier) { FlavorSection(state.flavor) } }
         }
         if (variety.forms.size > 1) {
             item(key = "forms") { EntrySection(stringResource(R.string.entry_forms), contentModifier) { FormsSection(variety) } }
@@ -202,6 +209,7 @@ private fun EntryBody(
 private fun EntryHeader(
     detail: SpeciesDetail,
     variety: Variety,
+    artwork: ArtworkLocation,
 ) {
     val summary = detail.summary
     val sharedScope = LocalSharedTransitionScope.current
@@ -223,7 +231,7 @@ private fun EntryHeader(
         SpeciesArt(
             name = summary.name,
             types = summary.types,
-            imagePath = null,
+            imagePath = artwork.artwork(summary.id),
             contentDescription = stringResource(R.string.entry_art_description, summary.name),
             letterStyle = MaterialTheme.typography.displayLarge,
             modifier = artModifier.size(AppDimens.headerArt),
@@ -478,6 +486,7 @@ private fun multiplierText(multiplier: Double): String = when {
 @Composable
 private fun EvolutionSection(
     detail: SpeciesDetail,
+    artwork: ArtworkLocation,
     onOpenSpecies: (Int) -> Unit,
 ) {
     val root = detail.evolutionLine
@@ -489,7 +498,7 @@ private fun EvolutionSection(
         )
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-            EvolutionTree(root, detail.summary.id.value, depth = 0, onOpenSpecies)
+            EvolutionTree(root, detail.summary.id.value, depth = 0, artwork, onOpenSpecies)
         }
     }
 }
@@ -499,10 +508,11 @@ private fun EvolutionTree(
     node: EvolutionNode,
     currentId: Int,
     depth: Int,
+    artwork: ArtworkLocation,
     onOpenSpecies: (Int) -> Unit,
 ) {
-    EvolutionRow(node, currentId, AppDimens.treeIndent * depth, onOpenSpecies)
-    node.children.forEach { child -> EvolutionTree(child, currentId, depth + 1, onOpenSpecies) }
+    EvolutionRow(node, currentId, AppDimens.treeIndent * depth, artwork, onOpenSpecies)
+    node.children.forEach { child -> EvolutionTree(child, currentId, depth + 1, artwork, onOpenSpecies) }
 }
 
 @Composable
@@ -510,6 +520,7 @@ private fun EvolutionRow(
     node: EvolutionNode,
     currentId: Int,
     indent: Dp,
+    artwork: ArtworkLocation,
     onOpenSpecies: (Int) -> Unit,
 ) {
     val id = node.species.id.value
@@ -549,7 +560,7 @@ private fun EvolutionRow(
         SpeciesArt(
             name = node.species.name,
             types = node.species.types,
-            imagePath = null,
+            imagePath = artwork.sprite(node.species.id),
             contentDescription = null,
             letterStyle = MaterialTheme.typography.titleLarge,
             modifier = Modifier.size(AppDimens.evolutionArt),
@@ -557,6 +568,22 @@ private fun EvolutionRow(
         Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
             Text(node.species.name, style = MaterialTheme.typography.titleMedium)
             methodText?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+    }
+}
+
+@Composable
+private fun FlavorSection(entries: List<FlavorEntry>) {
+    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.md)) {
+        entries.forEach { entry ->
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                Text(entry.text, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    listText(entry.games),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

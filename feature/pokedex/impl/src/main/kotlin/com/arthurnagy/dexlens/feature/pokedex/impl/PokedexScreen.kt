@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +53,7 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
+import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.SpeciesSearchResult
 import com.arthurnagy.dexlens.core.ui.LoadingState
 import com.arthurnagy.dexlens.core.ui.LocalSharedTransitionScope
@@ -69,6 +71,8 @@ import com.arthurnagy.dexlens.core.ui.R as CoreUiR
 internal fun PokedexScreen(
     onOpenSpecies: (Int) -> Unit,
     onOpenScanner: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onShowOffer: () -> Unit,
     canNavigateBack: Boolean,
     modifier: Modifier = Modifier,
     viewModel: PokedexViewModel = hiltViewModel(),
@@ -86,6 +90,13 @@ internal fun PokedexScreen(
         onBackCompleted = { textFieldState.clearText() },
     )
     val keyboard = LocalSoftwareKeyboardController.current
+    val currentShowOffer by rememberUpdatedState(onShowOffer)
+    LaunchedEffect(state.pendingOffer) {
+        if (state.pendingOffer) {
+            currentShowOffer()
+            viewModel.onOfferConsumed()
+        }
+    }
 
     PokedexContent(
         state = state,
@@ -95,6 +106,7 @@ internal fun PokedexScreen(
             onOpenSpecies(id)
         },
         onOpenScanner = onOpenScanner,
+        onOpenSettings = onOpenSettings,
         onRetry = viewModel::onRetry,
         modifier = modifier,
     )
@@ -107,6 +119,7 @@ internal fun PokedexContent(
     textFieldState: TextFieldState,
     onOpenSpecies: (Int) -> Unit,
     onOpenScanner: () -> Unit,
+    onOpenSettings: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -138,7 +151,14 @@ internal fun PokedexContent(
                             Icon(painterResource(CoreUiR.drawable.core_ui_ic_search), contentDescription = null)
                         },
                         trailingIcon = {
-                            if (textFieldState.text.isNotEmpty()) {
+                            if (textFieldState.text.isEmpty()) {
+                                IconButton(onClick = onOpenSettings, modifier = Modifier.testTag("pokedex:settings")) {
+                                    Icon(
+                                        painterResource(CoreUiR.drawable.core_ui_ic_settings),
+                                        contentDescription = stringResource(R.string.pokedex_settings),
+                                    )
+                                }
+                            } else {
                                 IconButton(onClick = { textFieldState.clearText() }, modifier = Modifier.testTag("pokedex:clear")) {
                                     Icon(
                                         painterResource(CoreUiR.drawable.core_ui_ic_close),
@@ -192,7 +212,7 @@ private fun PokedexBody(
             ),
         ) {
             items(state.results, key = { it.summary.id.value }, contentType = { "species" }) { result ->
-                SpeciesRow(result, onClick = { onOpenSpecies(result.summary.id.value) }, Modifier.animateItem())
+                SpeciesRow(result, state.artwork, onClick = { onOpenSpecies(result.summary.id.value) }, Modifier.animateItem())
             }
         }
     }
@@ -202,6 +222,7 @@ private fun PokedexBody(
 @Composable
 private fun SpeciesRow(
     result: SpeciesSearchResult,
+    artwork: ArtworkLocation,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -231,7 +252,7 @@ private fun SpeciesRow(
         SpeciesArt(
             name = summary.name,
             types = summary.types,
-            imagePath = null,
+            imagePath = artwork.sprite(summary.id),
             contentDescription = null,
             letterStyle = MaterialTheme.typography.headlineSmall,
             modifier = artModifier.size(AppDimens.listArt),
