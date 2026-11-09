@@ -1,8 +1,7 @@
 package com.arthurnagy.dexlens.feature.entry.impl
 
-import androidx.compose.material3.Text
-import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.model.EvolutionMethod
 import com.arthurnagy.dexlens.core.model.EvolutionTrigger
@@ -11,24 +10,20 @@ import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.RelativePhysicalStats
 import com.arthurnagy.dexlens.core.model.TimeOfDay
 import com.arthurnagy.dexlens.core.testing.levelUpMethod
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 internal class EvolutionTextTest {
-    @get:Rule
-    val composeRule = createComposeRule()
+    private val resources = ApplicationProvider.getApplicationContext<Context>().resources
 
     private val base: EvolutionMethod = levelUpMethod(1).copy(minLevel = null)
 
     private fun assertText(
         expected: String,
         method: EvolutionMethod,
-    ) {
-        composeRule.setContent { Text(evolutionMethodText(method)) }
-        composeRule.onNodeWithText(expected).assertExists()
-    }
+    ) = assertEquals(expected, evolutionMethodText(method, resources))
 
     private fun word(
         trigger: EvolutionTrigger,
