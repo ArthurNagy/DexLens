@@ -22,6 +22,15 @@ class Navigator(
         backStack.add(key)
     }
 
+    /**
+     * Opens [key] as a list-detail detail: it replaces a detail of the same kind already on top, so Back on a wide
+     * window goes straight to the list rather than through every entry the list opened.
+     */
+    fun navigateDetail(key: NavKey) {
+        val top = backStack.lastOrNull()
+        if (top != null && top::class == key::class) backStack[backStack.lastIndex] = key else backStack.add(key)
+    }
+
     /** Pops the top entry; never the last one (NavDisplay needs a non-empty back stack). */
     fun goBack() {
         if (canGoBack) backStack.removeAt(backStack.lastIndex)
