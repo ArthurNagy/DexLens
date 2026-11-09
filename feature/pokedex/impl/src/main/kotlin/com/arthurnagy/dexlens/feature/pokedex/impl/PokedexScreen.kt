@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +68,7 @@ import com.arthurnagy.dexlens.core.ui.R as CoreUiR
 @Composable
 internal fun PokedexScreen(
     onOpenSpecies: (Int) -> Unit,
+    onOpenScanner: () -> Unit,
     canNavigateBack: Boolean,
     modifier: Modifier = Modifier,
     viewModel: PokedexViewModel = hiltViewModel(),
@@ -92,6 +94,7 @@ internal fun PokedexScreen(
             keyboard?.hide()
             onOpenSpecies(id)
         },
+        onOpenScanner = onOpenScanner,
         onRetry = viewModel::onRetry,
         modifier = modifier,
     )
@@ -103,6 +106,7 @@ internal fun PokedexContent(
     state: PokedexState,
     textFieldState: TextFieldState,
     onOpenSpecies: (Int) -> Unit,
+    onOpenScanner: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -110,6 +114,14 @@ internal fun PokedexContent(
     val scrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onOpenScanner,
+                icon = { Icon(painterResource(CoreUiR.drawable.core_ui_ic_camera), contentDescription = null) },
+                text = { Text(stringResource(R.string.pokedex_scan)) },
+                modifier = Modifier.testTag("pokedex:scan"),
+            )
+        },
         topBar = {
             TopSearchBar(
                 state = searchBarState,

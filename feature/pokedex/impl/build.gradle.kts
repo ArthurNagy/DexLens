@@ -10,6 +10,7 @@ android {
 dependencies {
     api(project(":feature:pokedex:api"))
     implementation(project(":feature:entry:api"))
+    implementation(project(":feature:scanner:api"))
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.navigationevent.compose)
 }

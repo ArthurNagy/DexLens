@@ -14,6 +14,7 @@ import androidx.navigation3.runtime.NavKey
 import com.arthurnagy.dexlens.core.navigation.Navigator
 import com.arthurnagy.dexlens.feature.entry.api.EntryKey
 import com.arthurnagy.dexlens.feature.pokedex.api.PokedexKey
+import com.arthurnagy.dexlens.feature.scanner.api.ScannerKey
 
 /** The home list, shown beside its entry on wide windows. Opening a species replaces any entry already showing. */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -27,6 +28,10 @@ internal fun EntryProviderScope<NavKey>.pokedexEntries(navigator: Navigator) {
             },
         ),
     ) {
-        PokedexScreen(onOpenSpecies = { id -> navigator.navigateDetail(EntryKey(id)) }, canNavigateBack = navigator.canGoBack)
+        PokedexScreen(
+            onOpenSpecies = { id -> navigator.navigateDetail(EntryKey(id)) },
+            onOpenScanner = { navigator.navigate(ScannerKey) },
+            canNavigateBack = navigator.canGoBack,
+        )
     }
 }

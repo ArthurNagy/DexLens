@@ -5,6 +5,18 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
+/** Colours drawn over the live camera image, which stay the same in light and dark themes. */
+object CameraColors {
+    val background = Color.Black
+    val onCamera = Color.White
+    val scrim = Color.Black.copy(alpha = 0.55f)
+    val toolbar = Color.Black.copy(alpha = 0.45f)
+    val debugPanel = Color.Black.copy(alpha = 0.6f)
+    val debugBox = Color.Yellow
+    val debugMatched = Color.Green
+    val debugUnmatched = Color.LightGray
+}
+
 /** DexLens's brand schemes: a teal lens colour over cool neutrals, so type colours stay the loudest thing on screen. */
 val LightScheme: ColorScheme = lightColorScheme(
     primary = Color(0xFF006879),

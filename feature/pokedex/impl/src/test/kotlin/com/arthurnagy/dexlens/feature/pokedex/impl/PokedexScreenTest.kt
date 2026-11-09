@@ -3,16 +3,22 @@ package com.arthurnagy.dexlens.feature.pokedex.impl
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.model.PokemonType
+import com.arthurnagy.dexlens.core.model.SpeciesId
+import com.arthurnagy.dexlens.core.model.SpeciesNameHit
 import com.arthurnagy.dexlens.core.model.SpeciesSearchResult
+import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.speciesSummary
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -40,13 +46,21 @@ class PokedexScreenTest {
         ),
     )
 
+    private fun rowExists(id: Int) =
+        composeRule.onAllNodesWithTag("pokedex:row:$id", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
+    private fun awaitRow(id: Int) = composeRule.waitUntil(WAIT_MS) { rowExists(id) }
+
+    private fun awaitRowGone(id: Int) = composeRule.waitUntil(WAIT_MS) { !rowExists(id) }
+
     private fun show(
         state: PokedexState,
         onOpen: (Int) -> Unit = {},
         onRetry: () -> Unit = {},
+        onScan: () -> Unit = {},
     ) {
         composeRule.setContent {
-            AppTheme { PokedexContent(state, TextFieldState(), onOpen, onRetry) }
+            AppTheme { PokedexContent(state, TextFieldState(), onOpen, onScan, onRetry) }
         }
     }
 
@@ -92,6 +106,34 @@ class PokedexScreenTest {
         assertEquals(25, opened)
     }
 
+    // Scenario: Clearing restores the list
+    @Test
+    fun rootScreenSearchesAsYouTypeAndClears() {
+        val summaries = loaded.results.map { it.summary }
+        val repository = FakeSpeciesRepository(
+            summaries = summaries,
+            hits = mapOf("\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu"))),
+        )
+        val viewModel = PokedexViewModel(SearchSpeciesUseCase(repository))
+        composeRule.setContent {
+            AppTheme { PokedexScreen(onOpenSpecies = {}, onOpenScanner = {}, canNavigateBack = false, viewModel = viewModel) }
+        }
+        awaitRow(1)
+        composeRule.onNodeWithTag("pokedex:search").performTextInput("pika")
+        awaitRowGone(1)
+        composeRule.onNodeWithTag("pokedex:row:25", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag("pokedex:clear").performClick()
+        awaitRow(1)
+    }
+
+    @Test
+    fun scanButtonOpensTheCamera() {
+        var opened = false
+        show(loaded, onScan = { opened = true })
+        composeRule.onNodeWithTag("pokedex:scan").performClick()
+        assertEquals(true, opened)
+    }
+
     // Scenario: List item announces details
     @Test
     fun rowAnnouncesNumberNameAndTypes() {
@@ -125,8 +167,12 @@ class PokedexScreenTest {
     @Config(qualifiers = "+night")
     fun phoneDark() {
         composeRule.setContent {
-            AppTheme { PokedexContent(loaded, TextFieldState(), {}, {}) }
+            AppTheme { PokedexContent(loaded, TextFieldState(), {}, {}, {}) }
         }
         composeRule.onRoot().captureRoboImage()
+    }
+
+    private companion object {
+        const val WAIT_MS = 5_000L
     }
 }
