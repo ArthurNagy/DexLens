@@ -49,5 +49,5 @@ fun AppTheme(
                 LightScheme
             }
         }
-    MaterialTheme(colorScheme = colorScheme, typography = AppType.material, content = content)
+    MaterialTheme(colorScheme = colorScheme, typography = AppTypography, content = content)
 }
