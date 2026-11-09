@@ -16,7 +16,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.content.GetFlavorEntriesUseCase
+import com.arthurnagy.dexlens.core.domain.content.ObserveFlavorEntriesUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesDetailUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetTypeChartUseCase
@@ -155,7 +155,7 @@ class EntryScreenTest {
             GetSpeciesDetailUseCase(FakeSpeciesRepository(details = mapOf(SpeciesId(1) to detail))),
             GetTypeChartUseCase(FakeTypeChartRepository(sampleTypeChart())),
             ObserveArtworkUseCase(FakeContentPackRepository()),
-            GetFlavorEntriesUseCase(FakeFlavorTextRepository()),
+            ObserveFlavorEntriesUseCase(FakeFlavorTextRepository()),
         )
         composeRule.setContent { AppTheme { EntryScreen(viewModel = viewModel, onNavigateBack = {}, onOpenSpecies = {}) } }
         composeRule.waitUntil(WAIT_MS) { composeRule.onAllNodesWithText("Seed Pokémon").fetchSemanticsNodes().isNotEmpty() }

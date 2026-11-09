@@ -1,8 +1,8 @@
 package com.arthurnagy.dexlens.feature.entry.impl
 
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.content.GetFlavorEntriesUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
+import com.arthurnagy.dexlens.core.domain.content.ObserveFlavorEntriesUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesDetailUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetTypeChartUseCase
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
@@ -41,7 +41,7 @@ class EntryViewModelTest {
         GetSpeciesDetailUseCase(repository),
         GetTypeChartUseCase(charts),
         ObserveArtworkUseCase(content),
-        GetFlavorEntriesUseCase(flavor),
+        ObserveFlavorEntriesUseCase(flavor),
     )
 
     private val loaded = EntryState.loaded(detail, chart, ArtworkLocation(null), emptyList())
@@ -52,6 +52,7 @@ class EntryViewModelTest {
         viewModel().testWithInternalState(this, EntryState.Initial) {
             runOnCreate()
             expectInternalState { loaded }
+            cancelAndIgnoreRemainingItems()
         }
     }
 
@@ -81,6 +82,35 @@ class EntryViewModelTest {
             expectInternalState { loaded }
             containerHost.onSelectVariety(2)
             expectInternalState { loaded.select(mega) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Art appears when the download finishes
+    @Test
+    fun anOpenEntryPicksUpArtworkAndKeepsTheSelectedVariety() = runTest {
+        val location = ArtworkLocation("/art")
+        viewModel().testWithInternalState(this, EntryState.Initial) {
+            runOnCreate()
+            expectInternalState { loaded }
+            containerHost.onSelectVariety(2)
+            expectInternalState { loaded.select(mega) }
+            content.artwork.value = location
+            expectInternalState { loaded.select(mega).copy(artwork = location) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Flavor text appears in an open entry
+    @Test
+    fun anOpenEntryPicksUpFlavorText() = runTest {
+        val entries = listOf(FlavorEntry("A seed grows.", listOf("Red", "Blue")))
+        viewModel().testWithInternalState(this, EntryState.Initial) {
+            runOnCreate()
+            expectInternalState { loaded }
+            flavor.entries.value = entries
+            expectInternalState { loaded.copy(flavor = entries) }
+            cancelAndIgnoreRemainingItems()
         }
     }
 
@@ -103,11 +133,12 @@ class EntryViewModelTest {
             GetSpeciesDetailUseCase(repository),
             GetTypeChartUseCase(charts),
             ObserveArtworkUseCase(downloaded),
-            GetFlavorEntriesUseCase(downloadedText),
+            ObserveFlavorEntriesUseCase(downloadedText),
         )
         viewModel.testWithInternalState(this, EntryState.Initial) {
             runOnCreate()
             expectInternalState { EntryState.loaded(detail, chart, location, entries) }
+            cancelAndIgnoreRemainingItems()
         }
     }
 }
