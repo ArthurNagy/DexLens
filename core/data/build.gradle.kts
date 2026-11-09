@@ -11,6 +11,7 @@ dependencies {
     api(project(":core:domain"))
     implementation(project(":core:datastore"))
     implementation(project(":core:network"))
+    implementation(project(":core:database"))
     // android-forge:core-data-deps
     implementation(libs.timber)
 }

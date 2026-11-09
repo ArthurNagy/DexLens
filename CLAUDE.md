@@ -26,12 +26,14 @@ android-forge project rules apply here (the plugin's agents and skills check for
 ## Modules
 - :app · :core:{model,domain,data,datastore,designsystem,ui,navigation,testing} · :core:network · build-logic/
 
+- :core:database — Room 3: entities, DAOs, DexDatabase (prebuilt)
+
 Features: _(none yet — add via /android-forge-add-feature)_
 
 ## Stack (locked — see plugin [docs/stack.md](https://github.com/arthurnagy/android-forge/blob/main/docs/stack.md))
 Jetpack Compose + Material 3 (adaptive) · Hilt · Orbit MVI (state-only) · Navigation 3 (api/impl features, Hilt `@IntoSet` entries) · kotlin-result `Result<T, DomainError>` · DataStore · Coil 3 · Timber · java.time · kotlinx-serialization · Android resources · JUnit 4 + Robolectric + Roborazzi · JaCoCo · Lint + Spotless/ktlint + compose-rules.
 
-Optional in this project: Retrofit 3 + OkHttp 5 (:core:network), Room 3 (opt-in, created with the first table).
+Optional in this project: Retrofit 3 + OkHttp 5 (:core:network), Room 3 (:core:database).
 
 ## Rules the reviewer enforces (full text in the plugin docs below)
 - A feature `impl` depends only on `:core:{domain,model,ui,designsystem,navigation}` and other features' `:api` —
