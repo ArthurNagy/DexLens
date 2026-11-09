@@ -4,6 +4,7 @@ import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
+import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
@@ -14,9 +15,12 @@ import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import com.arthurnagy.dexlens.core.testing.speciesSummary
+import com.github.michaelbull.result.Result
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import org.orbitmvi.orbit.test.testWithInternalState
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class PokedexViewModelTest {
     private val pikachu = speciesSummary(25, "Pikachu", PokemonType.ELECTRIC)
@@ -51,7 +55,48 @@ class PokedexViewModelTest {
             runOnCreate()
             expectInternalState { copy(loading = false, error = null, query = "", results = results(1, 25)) }
             containerHost.onQueryChanged("pika")
-            expectInternalState { copy(query = "pika", results = results(25)) }
+            expectInternalState { copy(query = "pika") }
+            expectInternalState { copy(results = results(25)) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    @Test
+    fun anOlderAnswerNeverReplacesANewerOne() = runTest {
+        repository.hits = mapOf(
+            "\"pi\"*" to listOf(SpeciesNameHit(SpeciesId(1), "Bulbasaur")),
+            "\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu")),
+        )
+        val slowFirstQuery = CompletableDeferred<Unit>()
+        val slow = object : SpeciesRepository by repository {
+            override suspend fun searchNames(ftsQuery: String): Result<List<SpeciesNameHit>, DomainError> {
+                if (ftsQuery == "\"pi\"*") slowFirstQuery.await()
+                return repository.searchNames(ftsQuery)
+            }
+        }
+        val viewModel = PokedexViewModel(SearchSpeciesUseCase(slow), ObserveArtworkUseCase(content), ObserveContentOfferUseCase(answered))
+        viewModel.testWithInternalState(this, PokedexState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(loading = false, error = null, query = "", results = results(1, 25)) }
+            containerHost.onQueryChanged("pi")
+            expectInternalState { copy(query = "pi") }
+            containerHost.onQueryChanged("pika")
+            expectInternalState { copy(query = "pika") }
+            expectInternalState { copy(results = results(25)) }
+            slowFirstQuery.complete(Unit)
+            cancelAndIgnoreRemainingItems()
+            assertEquals(results(25), viewModel.container.stateFlow.value.results)
+        }
+    }
+
+    @Test
+    fun theSameTextIsNotSearchedAgain() = runTest {
+        viewModel().testWithInternalState(this, PokedexState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(loading = false, error = null, query = "", results = results(1, 25)) }
+            repository.nextError = DomainError.Unknown("searched again")
+            containerHost.onQueryChanged("")
+            expectNoItems()
             cancelAndIgnoreRemainingItems()
         }
     }

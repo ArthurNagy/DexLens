@@ -5,7 +5,7 @@ import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.SpeciesSearchResult
 
-/** UI state for [PokedexScreen]. [query] is the search text the current [results] answer. */
+/** UI state for [PokedexScreen]. [results] answer [query], or the query before it until the new answer arrives. */
 @Immutable
 internal data class PokedexState(
     val loading: Boolean,
