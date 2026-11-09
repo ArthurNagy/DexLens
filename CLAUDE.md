@@ -101,6 +101,7 @@ the tests the gates expect) — they load when you work in that layer.
 
 ## Project-specific overrides
 
+- Atomics: use `kotlin.concurrent.atomics`, never `java.util.concurrent.atomic` ([ADR 0012](docs/DECISIONS/0012-kotlin-atomics.md)).
 
 ## Timeline
 
