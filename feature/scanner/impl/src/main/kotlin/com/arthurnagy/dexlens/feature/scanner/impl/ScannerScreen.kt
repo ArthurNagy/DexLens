@@ -74,6 +74,7 @@ import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.designsystem.CameraColors
 import com.arthurnagy.dexlens.core.domain.scan.MatchOutcome
+import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
 import com.arthurnagy.dexlens.core.ui.MessageState
 import com.arthurnagy.dexlens.core.ui.SpeciesArt
@@ -231,7 +232,7 @@ internal fun ScannerContent(
         )
     }
     if (state.locked.isNotEmpty()) {
-        ResultSheet(state.locked, onOpenSpecies, onDismissResult)
+        ResultSheet(state.locked, state.artwork, onOpenSpecies, onDismissResult)
     }
 }
 
@@ -391,18 +392,20 @@ private fun DebugOverlay(
 @Composable
 private fun ResultSheet(
     species: List<SpeciesSummary>,
+    artwork: ArtworkLocation,
     onOpenSpecies: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        ResultSheetContent(species, onOpenSpecies, onDismiss, Modifier.navigationBarsPadding())
+        ResultSheetContent(species, artwork, onOpenSpecies, onDismiss, Modifier.navigationBarsPadding())
     }
 }
 
 @Composable
 internal fun ResultSheetContent(
     species: List<SpeciesSummary>,
+    artwork: ArtworkLocation,
     onOpenSpecies: (Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -415,7 +418,7 @@ internal fun ResultSheetContent(
             text = stringResource(if (species.size == 1) R.string.scanner_found_one else R.string.scanner_found_several),
             style = MaterialTheme.typography.titleLarge,
         )
-        species.forEach { summary -> ResultRow(summary, onClick = { onOpenSpecies(summary.id.value) }) }
+        species.forEach { summary -> ResultRow(summary, artwork, onClick = { onOpenSpecies(summary.id.value) }) }
         if (species.size == 1) {
             Button(onClick = { onOpenSpecies(species.single().id.value) }, modifier = Modifier.fillMaxWidth().testTag("scanner:open")) {
                 Text(stringResource(R.string.scanner_open_entry))
@@ -430,6 +433,7 @@ internal fun ResultSheetContent(
 @Composable
 private fun ResultRow(
     summary: SpeciesSummary,
+    artwork: ArtworkLocation,
     onClick: () -> Unit,
 ) {
     val number = speciesNumberLabel(summary.id.value)
@@ -449,7 +453,7 @@ private fun ResultRow(
         SpeciesArt(
             name = summary.name,
             types = summary.types,
-            imagePath = null,
+            imagePath = artwork.sprite(summary.id),
             contentDescription = null,
             letterStyle = MaterialTheme.typography.titleLarge,
             modifier = Modifier.size(AppDimens.evolutionArt),

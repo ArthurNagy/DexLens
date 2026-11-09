@@ -1,6 +1,7 @@
 package com.arthurnagy.dexlens.feature.scanner.impl
 
 import androidx.lifecycle.ViewModel
+import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
 import com.arthurnagy.dexlens.core.domain.scan.FrameObservation
 import com.arthurnagy.dexlens.core.domain.scan.LockOnTracker
@@ -13,6 +14,7 @@ import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.first
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.viewmodel.orbitContainer
 import javax.inject.Inject
@@ -27,6 +29,7 @@ internal class ScannerViewModel
     constructor(
         private val buildSignal: BuildSpeciesSignalUseCase,
         private val getSpeciesList: GetSpeciesListUseCase,
+        private val observeArtwork: ObserveArtworkUseCase,
     ) : ViewModel(),
         OrbitContainerHost<ScannerState, ScannerState, Nothing> {
         @Volatile
@@ -50,7 +53,8 @@ internal class ScannerViewModel
                 .onOk { (built, list) ->
                     signal = built
                     summaries = list.associateBy { it.id }
-                    reduce { state.copy(loading = false, error = null) }
+                    val artwork = observeArtwork().first()
+                    reduce { state.copy(loading = false, error = null, artwork = artwork) }
                 }.onErr { error -> reduce { state.copy(loading = false, error = error) } }
         }
 

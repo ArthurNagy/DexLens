@@ -3,6 +3,7 @@ package com.arthurnagy.dexlens.feature.scanner.impl
 import androidx.compose.runtime.Immutable
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.scan.MatchDecision
+import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
 
 /** A recognised line of text, in the coordinates of the cropped aiming-box image. */
@@ -43,10 +44,19 @@ internal data class ScannerState(
     val pendingHaptic: Boolean,
     val torchOn: Boolean,
     val debug: ScanDebug?,
+    val artwork: ArtworkLocation,
 ) {
     val paused: Boolean get() = locked.isNotEmpty()
 
     companion object {
-        val Initial = ScannerState(loading = true, error = null, locked = emptyList(), pendingHaptic = false, torchOn = false, debug = null)
+        val Initial = ScannerState(
+            loading = true,
+            error = null,
+            locked = emptyList(),
+            pendingHaptic = false,
+            torchOn = false,
+            debug = null,
+            artwork = ArtworkLocation(null),
+        )
     }
 }

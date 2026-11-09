@@ -16,11 +16,17 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.content.GetFlavorEntriesUseCase
+import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesDetailUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetTypeChartUseCase
+import com.arthurnagy.dexlens.core.model.ArtworkLocation
+import com.arthurnagy.dexlens.core.model.FlavorEntry
 import com.arthurnagy.dexlens.core.model.Form
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
+import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
+import com.arthurnagy.dexlens.core.testing.FakeFlavorTextRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeTypeChartRepository
 import com.arthurnagy.dexlens.core.testing.bulbasaurDetail
@@ -42,7 +48,7 @@ class EntryScreenTest {
     val composeRule = createComposeRule()
 
     private val detail = bulbasaurDetail()
-    private val loaded = EntryState.loaded(detail, sampleTypeChart())
+    private val loaded = EntryState.loaded(detail, sampleTypeChart(), ArtworkLocation(null), emptyList())
 
     private fun show(
         state: EntryState,
@@ -85,7 +91,8 @@ class EntryScreenTest {
     // Scenario: Genderless species
     @Test
     fun genderlessIsWorded() {
-        show(EntryState.loaded(detail.copy(genderRatio = detail.genderRatio.copy(femaleEighths = null)), sampleTypeChart()))
+        val genderless = detail.copy(genderRatio = detail.genderRatio.copy(femaleEighths = null))
+        show(EntryState.loaded(genderless, sampleTypeChart(), ArtworkLocation(null), emptyList()))
         scrollTo("Genderless")
         composeRule.onNodeWithText("Genderless").assertExists()
     }
@@ -129,7 +136,9 @@ class EntryScreenTest {
             types = listOf(PokemonType.GRASS, PokemonType.FAIRY),
             stats = detail.varieties.single().stats.copy(hp = 99),
         )
-        val withMega = EntryState.loaded(detail.copy(varieties = detail.varieties + mega), sampleTypeChart()).select(mega)
+        val withMega = EntryState
+            .loaded(detail.copy(varieties = detail.varieties + mega), sampleTypeChart(), ArtworkLocation(null), emptyList())
+            .select(mega)
         show(withMega, onSelect = { selected = it })
         composeRule.onNodeWithTag("entry:variety:1").performClick()
         assertEquals(1, selected)
@@ -145,10 +154,27 @@ class EntryScreenTest {
             EntryKey(1),
             GetSpeciesDetailUseCase(FakeSpeciesRepository(details = mapOf(SpeciesId(1) to detail))),
             GetTypeChartUseCase(FakeTypeChartRepository(sampleTypeChart())),
+            ObserveArtworkUseCase(FakeContentPackRepository()),
+            GetFlavorEntriesUseCase(FakeFlavorTextRepository()),
         )
         composeRule.setContent { AppTheme { EntryScreen(viewModel = viewModel, onNavigateBack = {}, onOpenSpecies = {}) } }
         composeRule.waitUntil(WAIT_MS) { composeRule.onAllNodesWithText("Seed Pokémon").fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNodeWithText("Seed Pokémon").assertExists()
+    }
+
+    // Scenario: Entry without flavor text
+    @Test
+    fun flavorSectionIsAbsentWithoutDownload() {
+        show(loaded)
+        composeRule.onNodeWithText("Pokédex entries").assertDoesNotExist()
+    }
+
+    @Test
+    fun flavorEntriesAreShownWithTheirGames() {
+        val flavor = listOf(FlavorEntry("A seed grows.", listOf("Red", "Blue")))
+        show(EntryState.loaded(detail, sampleTypeChart(), ArtworkLocation(null), flavor))
+        scrollTo("A seed grows.")
+        composeRule.onNodeWithText("Red, Blue").assertExists()
     }
 
     @Test
@@ -160,7 +186,7 @@ class EntryScreenTest {
                 Form(2, "B", isDefault = false, isBattleOnly = false, isMega = false),
             )
         val withForms = detail.copy(varieties = listOf(variety.copy(forms = forms)))
-        show(EntryState.loaded(withForms, sampleTypeChart()))
+        show(EntryState.loaded(withForms, sampleTypeChart(), ArtworkLocation(null), emptyList()))
         scrollTo("Forms")
         composeRule.onNodeWithText("B").assertExists()
         scrollTo("Bulbizarre")
@@ -170,7 +196,7 @@ class EntryScreenTest {
     @Test
     fun aSpeciesWithoutEvolutionSaysSo() {
         val lone = detail.copy(evolutionLine = detail.evolutionLine.copy(children = emptyList()))
-        show(EntryState.loaded(lone, sampleTypeChart()))
+        show(EntryState.loaded(lone, sampleTypeChart(), ArtworkLocation(null), emptyList()))
         scrollTo("This species does not evolve.")
         composeRule.onNodeWithText("This species does not evolve.").assertExists()
     }
@@ -194,6 +220,13 @@ class EntryScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phone() {
+        show(loaded)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = "w841dp-h701dp-xxhdpi")
+    fun foldable() {
         show(loaded)
         composeRule.onRoot().captureRoboImage()
     }
