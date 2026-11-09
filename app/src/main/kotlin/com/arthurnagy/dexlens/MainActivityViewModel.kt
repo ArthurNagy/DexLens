@@ -18,12 +18,8 @@ internal class MainActivityViewModel
         OrbitContainerHost<MainActivityState, MainActivityState, Nothing> {
         override val container =
             orbitContainer<MainActivityState, Nothing>(MainActivityState.Initial) {
-                observeTheme()
+                observeThemeMode().collect { mode -> reduce { state.copy(loading = false, themeMode = mode) } }
             }
-
-        private fun observeTheme() = intent {
-            observeThemeMode().collect { mode -> reduce { state.copy(loading = false, themeMode = mode) } }
-        }
     }
 
 internal data class MainActivityState(
