@@ -1,0 +1,13 @@
+plugins {
+    id("android-forge.android.library.compose")
+}
+
+android {
+    namespace = "com.arthurnagy.dexlens.core.ui"
+    resourcePrefix = "core_ui_"
+}
+
+dependencies {
+    api(project(":core:domain"))
+    implementation(project(":core:designsystem"))
+}

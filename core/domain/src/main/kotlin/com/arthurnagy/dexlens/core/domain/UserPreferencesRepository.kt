@@ -1,0 +1,13 @@
+package com.arthurnagy.dexlens.core.domain
+
+import com.arthurnagy.dexlens.core.model.ThemeMode
+import com.github.michaelbull.result.Result
+import kotlinx.coroutines.flow.Flow
+
+/** The user's app preferences. Implemented in :core:data (DataStore-backed). */
+interface UserPreferencesRepository {
+    /** The stored theme choice; [ThemeMode.SYSTEM] until the user picks one. Never throws. */
+    val themeMode: Flow<ThemeMode>
+
+    suspend fun setThemeMode(mode: ThemeMode): Result<Unit, DomainError>
+}
