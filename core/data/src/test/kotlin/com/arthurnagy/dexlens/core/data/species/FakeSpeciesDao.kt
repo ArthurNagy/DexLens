@@ -79,5 +79,8 @@ internal class FakeSpeciesDao(
 
     override suspend fun speciesCount(): Int = species.size
 
-    override suspend fun speciesIds(): List<Int> = species.map { it.id }
+    override suspend fun speciesIds(): List<Int> {
+        check()
+        return species.map { it.id }
+    }
 }

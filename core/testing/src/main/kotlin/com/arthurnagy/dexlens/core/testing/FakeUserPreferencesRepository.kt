@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 /** Stateful in-memory [UserPreferencesRepository]; set [failNextWrite] to make the next write fail once. */
 class FakeUserPreferencesRepository(
     initialThemeMode: ThemeMode,
+    initialOfferShown: Boolean = false,
 ) : UserPreferencesRepository {
+    private val offerShown = MutableStateFlow(initialOfferShown)
+
     private val stored = MutableStateFlow(initialThemeMode)
 
     var failNextWrite: DomainError? = null
@@ -25,6 +28,17 @@ class FakeUserPreferencesRepository(
             return Err(error)
         }
         stored.value = mode
+        return Ok(Unit)
+    }
+
+    override val contentOfferShown: Flow<Boolean> = offerShown
+
+    override suspend fun setContentOfferShown(shown: Boolean): Result<Unit, DomainError> {
+        failNextWrite?.let { error ->
+            failNextWrite = null
+            return Err(error)
+        }
+        offerShown.value = shown
         return Ok(Unit)
     }
 }
