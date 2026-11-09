@@ -10,4 +10,9 @@ interface UserPreferencesRepository {
     val themeMode: Flow<ThemeMode>
 
     suspend fun setThemeMode(mode: ThemeMode): Result<Unit, DomainError>
+
+    /** Whether the first-launch download offer has been answered. Never throws. */
+    val contentOfferShown: Flow<Boolean>
+
+    suspend fun setContentOfferShown(shown: Boolean): Result<Unit, DomainError>
 }

@@ -4,7 +4,7 @@ import androidx.room3.Dao
 import androidx.room3.Query
 
 @Dao
-interface GameVersionDao {
+fun interface GameVersionDao {
     @Query("SELECT * FROM game_version")
     suspend fun gameVersions(): List<GameVersionEntity>
 }

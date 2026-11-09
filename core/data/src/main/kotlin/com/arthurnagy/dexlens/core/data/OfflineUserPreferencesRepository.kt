@@ -17,4 +17,10 @@ internal class OfflineUserPreferencesRepository
         override val themeMode: Flow<ThemeMode> = dataSource.themeMode
 
         override suspend fun setThemeMode(mode: ThemeMode): Result<Unit, DomainError> = catchStorage { dataSource.setThemeMode(mode) }
+
+        override val contentOfferShown: Flow<Boolean> = dataSource.contentOfferShown
+
+        override suspend fun setContentOfferShown(shown: Boolean): Result<Unit, DomainError> = catchStorage {
+            dataSource.setContentOfferShown(shown)
+        }
     }

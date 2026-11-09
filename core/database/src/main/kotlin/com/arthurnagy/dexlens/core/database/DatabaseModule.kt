@@ -35,6 +35,19 @@ internal object DatabaseModule {
     @Provides
     fun provideGameVersionDao(database: DexDatabase): GameVersionDao = database.gameVersionDao()
 
+    @Provides
+    @Singleton
+    fun provideContentDatabase(
+        @ApplicationContext context: Context,
+    ): ContentDatabase = Room
+        .databaseBuilder<ContentDatabase>(context, "content.db")
+        .setDriver(BundledSQLiteDriver())
+        .setQueryCoroutineContext(Dispatchers.IO) // Room's own I/O context — the one allowed Dispatchers.* outside RealDispatcherProvider
+        .build()
+
+    @Provides
+    fun provideContentDao(database: ContentDatabase): ContentDao = database.contentDao()
+
     private const val DEX_DATABASE_NAME = "dexlens.db"
     private const val DEX_DATABASE_ASSET = "databases/dexlens.db"
 }

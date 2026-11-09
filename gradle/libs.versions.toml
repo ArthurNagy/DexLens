@@ -142,6 +142,7 @@ androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", versi
 androidx-sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "androidxSqlite" }
 # --- opt-in: background work ---
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWork" }
+androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "androidxWork" }
 androidx-hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "androidxHilt" }
 androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "androidxHilt" }
 # --- opt-in: performance (Baseline Profiles + Macrobenchmark) ---

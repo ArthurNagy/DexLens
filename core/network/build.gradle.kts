@@ -24,4 +24,5 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.timber)
+    testImplementation(libs.okhttp.mockwebserver3)
 }

@@ -2,6 +2,7 @@ package com.arthurnagy.dexlens.core.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -26,19 +27,27 @@ class UserPreferencesDataSource
     constructor(
         private val dataStore: DataStore<Preferences>,
     ) {
+        private val preferences: Flow<Preferences> = dataStore.data.retryWhen { cause, attempt ->
+            if (cause is IOException) {
+                emit(emptyPreferences())
+                delay((attempt + 1).coerceAtMost(MAX_RETRY_DELAY_SECONDS).seconds) // 1 s, 2 s, … 30 s
+                true
+            } else {
+                false
+            }
+        }
+
         val themeMode: Flow<ThemeMode> =
-            dataStore.data
-                .retryWhen { cause, attempt ->
-                    if (cause is IOException) {
-                        emit(emptyPreferences())
-                        delay((attempt + 1).coerceAtMost(MAX_RETRY_DELAY_SECONDS).seconds) // 1 s, 2 s, … 30 s
-                        true
-                    } else {
-                        false
-                    }
-                }.map { preferences ->
+            preferences
+                .map { preferences ->
                     preferences[THEME_MODE]?.let { stored -> ThemeMode.entries.firstOrNull { it.name == stored } } ?: ThemeMode.SYSTEM
                 }
+
+        val contentOfferShown: Flow<Boolean> = preferences.map { it[CONTENT_OFFER_SHOWN] ?: false }
+
+        suspend fun setContentOfferShown(shown: Boolean) {
+            dataStore.edit { it[CONTENT_OFFER_SHOWN] = shown }
+        }
 
         suspend fun setThemeMode(mode: ThemeMode) {
             dataStore.edit { it[THEME_MODE] = mode.name }
@@ -46,6 +55,7 @@ class UserPreferencesDataSource
 
         private companion object {
             val THEME_MODE = stringPreferencesKey("theme_mode")
+            val CONTENT_OFFER_SHOWN = booleanPreferencesKey("content_offer_shown")
             const val MAX_RETRY_DELAY_SECONDS = 30L
         }
     }
