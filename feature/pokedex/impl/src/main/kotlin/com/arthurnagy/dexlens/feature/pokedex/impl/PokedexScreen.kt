@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -53,9 +55,10 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
+import com.arthurnagy.dexlens.core.designsystem.SkeletonBlock
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.SpeciesSearchResult
-import com.arthurnagy.dexlens.core.ui.LoadingState
+import com.arthurnagy.dexlens.core.ui.LoadingSkeleton
 import com.arthurnagy.dexlens.core.ui.LocalSharedTransitionScope
 import com.arthurnagy.dexlens.core.ui.MessageState
 import com.arthurnagy.dexlens.core.ui.SpeciesArt
@@ -186,7 +189,7 @@ private fun PokedexBody(
     val bodyModifier = Modifier.padding(innerPadding)
     val layoutDirection = LocalLayoutDirection.current
     when {
-        state.loading -> LoadingState(bodyModifier)
+        state.loading -> SpeciesListSkeleton(bodyModifier)
 
         state.error != null -> MessageState(
             title = state.error.toMessage(),
@@ -213,6 +216,29 @@ private fun PokedexBody(
         ) {
             items(state.results, key = { it.summary.id.value }, contentType = { "species" }) { result ->
                 SpeciesRow(result, state.artwork, onClick = { onOpenSpecies(result.summary.id.value) }, Modifier.animateItem())
+            }
+        }
+    }
+}
+
+/** The list's shape while its data loads: rows laid out like [SpeciesRow]. */
+@Composable
+private fun SpeciesListSkeleton(modifier: Modifier = Modifier) {
+    LoadingSkeleton(modifier) {
+        // Taller than most windows on purpose: the rows run off the bottom, like the real list.
+        Column(Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).padding(top = AppSpacing.xs)) {
+            repeat(SKELETON_ROWS) {
+                Row(
+                    modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+                ) {
+                    SkeletonBlock(Modifier.size(AppDimens.listArt), RoundedCornerShape(AppDimens.artCorner))
+                    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+                        SkeletonBlock(Modifier.size(AppDimens.skeletonLineLong, AppDimens.skeletonLineHeight))
+                        SkeletonBlock(Modifier.size(AppDimens.skeletonLineShort, AppDimens.typeChipHeight))
+                    }
+                }
             }
         }
     }
@@ -275,3 +301,5 @@ private fun SpeciesRow(
         }
     }
 }
+
+private const val SKELETON_ROWS = 20

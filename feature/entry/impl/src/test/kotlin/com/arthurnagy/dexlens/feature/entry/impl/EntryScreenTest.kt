@@ -16,8 +16,8 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.content.ObserveFlavorEntriesUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
+import com.arthurnagy.dexlens.core.domain.content.ObserveFlavorEntriesUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesDetailUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetTypeChartUseCase
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
@@ -209,11 +209,26 @@ class EntryScreenTest {
         composeRule.onNodeWithText("Strengthens Grass moves to inflict 1.5× damage at 1/3 max HP or less.").assertExists()
     }
 
+    // Scenario: Entry shows a skeleton while loading
     @Test
-    fun loadingShowsNoList() {
+    fun loadingShowsASkeleton() {
         show(EntryState.Loading)
         composeRule.onNodeWithTag("entry:list").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Loading").assertExists()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phoneLoading() {
+        show(EntryState.Loading)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletLoading() {
+        show(EntryState.Loading)
+        composeRule.onRoot().captureRoboImage()
     }
 
     // Scenario: Placeholder shown without art

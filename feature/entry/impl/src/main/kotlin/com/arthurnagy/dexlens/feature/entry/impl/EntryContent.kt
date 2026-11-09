@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -69,6 +70,7 @@ import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.designsystem.MAX_BASE_STAT
+import com.arthurnagy.dexlens.core.designsystem.SkeletonBlock
 import com.arthurnagy.dexlens.core.designsystem.StatBar
 import com.arthurnagy.dexlens.core.designsystem.color
 import com.arthurnagy.dexlens.core.designsystem.typeGradient
@@ -84,7 +86,7 @@ import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.TypeEffectiveness
 import com.arthurnagy.dexlens.core.model.TypeMatchups
 import com.arthurnagy.dexlens.core.model.Variety
-import com.arthurnagy.dexlens.core.ui.LoadingState
+import com.arthurnagy.dexlens.core.ui.LoadingSkeleton
 import com.arthurnagy.dexlens.core.ui.LocalSharedTransitionScope
 import com.arthurnagy.dexlens.core.ui.MessageState
 import com.arthurnagy.dexlens.core.ui.SpeciesArt
@@ -93,8 +95,8 @@ import com.arthurnagy.dexlens.core.ui.TypeChipRow
 import com.arthurnagy.dexlens.core.ui.listText
 import com.arthurnagy.dexlens.core.ui.speciesNumberLabel
 import com.arthurnagy.dexlens.core.ui.toMessage
-import com.arthurnagy.dexlens.core.ui.R as CoreUiR
 import java.util.Locale
+import com.arthurnagy.dexlens.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +133,7 @@ internal fun EntryContent(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { innerPadding ->
         when (state) {
-            EntryState.Loading -> LoadingState(Modifier.padding(innerPadding))
+            EntryState.Loading -> EntrySkeleton()
 
             is EntryState.Failed -> MessageState(
                 title = state.error.toMessage(),
@@ -203,6 +205,38 @@ private fun EntryBody(
             }
         }
         item(key = "bottom") { Spacer(Modifier.navigationBarsPadding()) }
+    }
+}
+
+/** The entry's shape while its data loads: the header, then a few sections. */
+@Composable
+private fun EntrySkeleton() {
+    LoadingSkeleton {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(Alignment.Top, unbounded = true)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .statusBarsPadding()
+                .padding(top = AppSpacing.xxl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.md),
+        ) {
+            SkeletonBlock(Modifier.size(AppDimens.headerArt), RoundedCornerShape(AppDimens.artCorner))
+            SkeletonBlock(Modifier.size(AppDimens.skeletonLineShort, AppDimens.skeletonLineHeight))
+            SkeletonBlock(Modifier.size(AppDimens.skeletonLineLong, AppDimens.skeletonLineHeight))
+            SkeletonBlock(Modifier.size(AppDimens.skeletonLineMedium, AppDimens.typeChipHeight))
+            repeat(SKELETON_SECTIONS) {
+                SkeletonBlock(
+                    modifier = Modifier
+                        .widthIn(max = AppDimens.maxContentWidth)
+                        .fillMaxWidth()
+                        .padding(horizontal = AppSpacing.md)
+                        .height(AppDimens.skeletonSectionHeight),
+                    shape = RoundedCornerShape(AppDimens.cardCorner),
+                )
+            }
+        }
     }
 }
 
@@ -629,3 +663,5 @@ private const val FOUR_TIMES = 4.0
 private const val TWO_TIMES = 2.0
 private const val HALF = 0.5
 private const val DIVIDER_ALPHA = 0.5f
+
+private const val SKELETON_SECTIONS = 3
