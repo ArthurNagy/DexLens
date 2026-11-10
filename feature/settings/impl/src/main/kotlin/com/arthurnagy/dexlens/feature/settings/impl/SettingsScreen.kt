@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -76,6 +78,7 @@ internal fun SettingsScreen(
         onDownload = startWithNotifications,
         onCancelDownload = viewModel::onCancelDownload,
         onDeleteContent = viewModel::onDeleteContent,
+        onScannerEnabledChange = viewModel::onScannerEnabledChanged,
         modifier = modifier,
     )
 }
@@ -102,6 +105,7 @@ internal fun SettingsContent(
     onDownload: () -> Unit,
     onCancelDownload: () -> Unit,
     onDeleteContent: () -> Unit,
+    onScannerEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -130,6 +134,11 @@ internal fun SettingsContent(
             item {
                 Section(stringResource(R.string.settings_content_title), sectionModifier) {
                     ContentPackSection(state.content, onDownload, onCancelDownload, onDeleteContent)
+                }
+            }
+            item {
+                Section(stringResource(R.string.settings_scanner), sectionModifier) {
+                    ScannerSection(state.scannerEnabled, onScannerEnabledChange)
                 }
             }
             item { Section(stringResource(R.string.settings_theme), sectionModifier) { ThemeSection(state.themeMode, onThemeSelect) } }
@@ -222,6 +231,33 @@ internal fun ProgressRow(
         } else {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
+    }
+}
+
+@Composable
+private fun ScannerSection(
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = AppDimens.touchTargetMin)
+            .toggleable(value = enabled, onValueChange = onChange, role = Role.Switch)
+            .testTag("settings:scanner")
+            .padding(vertical = AppSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+            Text(stringResource(R.string.settings_scanner_switch), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(R.string.settings_scanner_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = null)
     }
 }
 

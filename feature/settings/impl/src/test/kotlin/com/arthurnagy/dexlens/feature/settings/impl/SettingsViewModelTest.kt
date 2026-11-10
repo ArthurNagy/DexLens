@@ -1,7 +1,9 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
+import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
@@ -25,6 +27,8 @@ class SettingsViewModelTest {
     private fun settings() = SettingsViewModel(
         ObserveThemeModeUseCase(preferences),
         SetThemeModeUseCase(preferences),
+        ObserveScannerEnabledUseCase(preferences),
+        SetScannerEnabledUseCase(preferences),
         ObserveContentPackStateUseCase(content),
         StartContentDownloadUseCase(content),
         CancelContentDownloadUseCase(content),
@@ -44,6 +48,29 @@ class SettingsViewModelTest {
             runOnCreate()
             containerHost.onThemeSelected(ThemeMode.DARK)
             expectInternalState { copy(themeMode = ThemeMode.DARK) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Scanner switch applies
+    @Test
+    fun scannerSwitchIsStored() = runTest {
+        settings().testWithInternalState(this, SettingsState.Initial) {
+            runOnCreate()
+            containerHost.onScannerEnabledChanged(false)
+            expectInternalState { copy(scannerEnabled = false) }
+            cancelAndIgnoreRemainingItems()
+        }
+        assertEquals(false, preferences.scannerEnabled.first())
+    }
+
+    @Test
+    fun aFailedScannerSwitchWriteIsReported() = runTest {
+        settings().testWithInternalState(this, SettingsState.Initial) {
+            runOnCreate()
+            preferences.failNextWrite = DomainError.Unknown("disk full")
+            containerHost.onScannerEnabledChanged(false)
+            expectInternalState { copy(pendingError = DomainError.Unknown("disk full")) }
             cancelAndIgnoreRemainingItems()
         }
     }

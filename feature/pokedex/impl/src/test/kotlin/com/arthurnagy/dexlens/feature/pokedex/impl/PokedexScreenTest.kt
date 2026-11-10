@@ -1,8 +1,29 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl
 
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -10,11 +31,22 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
+import com.arthurnagy.dexlens.core.designsystem.LightScheme
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
+import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
+import com.arthurnagy.dexlens.core.domain.scan.MatchDecision
+import com.arthurnagy.dexlens.core.domain.scan.MatchOutcome
+import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
@@ -24,32 +56,107 @@ import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
+import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
 import com.arthurnagy.dexlens.core.testing.speciesSummary
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedFrame
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedLine
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraPermission
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraStatus
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanDebug
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanState
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.scannerAreaHeight
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.topBarAlpha
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class PokedexScreenTest {
+internal class PokedexScreenTest {
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createAndroidComposeRule<ComponentActivity>()
 
+    private val pikachu = speciesSummary(25, "Pikachu", PokemonType.ELECTRIC)
+    private val pidgey = speciesSummary(16, "Pidgey", PokemonType.NORMAL, PokemonType.FLYING)
     private val loaded = PokedexState.Initial.copy(
         loading = false,
+        scannerEnabled = true,
         results = listOf(
             SpeciesSearchResult(speciesSummary(1, "Bulbasaur", PokemonType.GRASS, PokemonType.POISON), matchedName = null),
             SpeciesSearchResult(speciesSummary(4, "Charmander", PokemonType.FIRE), matchedName = null),
             SpeciesSearchResult(speciesSummary(7, "Squirtle", PokemonType.WATER), matchedName = null),
-            SpeciesSearchResult(speciesSummary(25, "Pikachu", PokemonType.ELECTRIC), matchedName = "ピカチュウ"),
+            SpeciesSearchResult(pikachu, matchedName = "ピカチュウ"),
             SpeciesSearchResult(speciesSummary(122, "Mr. Mime", PokemonType.PSYCHIC, PokemonType.FAIRY), matchedName = null),
         ),
     )
+    private val scannerOff = loaded.copy(scannerEnabled = false)
+    private val matched = loaded.copy(scan = ScanState.Initial.copy(match = listOf(pikachu)))
+    private val ready = CameraStatus(CameraPermission.GRANTED, failed = false, torchAvailable = true)
+    private val needsPermission = ready.copy(permission = CameraPermission.NEEDS_REQUEST)
+
+    private var viewfinderStarts = 0
+    private var viewfinderRunning = false
+
+    @Composable
+    private fun ViewfinderStub() {
+        DisposableEffect(Unit) {
+            viewfinderStarts++
+            viewfinderRunning = true
+            onDispose { viewfinderRunning = false }
+        }
+        Box(Modifier.fillMaxSize().background(Color.DarkGray).testTag("test:viewfinder"))
+    }
+
+    private var currentState by mutableStateOf(loaded)
+    private var homeShowing by mutableStateOf(true)
+
+    private fun show(
+        state: PokedexState = loaded,
+        text: TextFieldState = TextFieldState(),
+        camera: CameraStatus = ready,
+        canNavigateBack: Boolean = false,
+        debugEnabled: Boolean = false,
+        onOpen: (Int) -> Unit = {},
+        onRetry: () -> Unit = {},
+        onSettings: () -> Unit = {},
+        onClearMatch: () -> Unit = {},
+        onTorch: () -> Unit = {},
+        onRequest: () -> Unit = {},
+        onAppSettings: () -> Unit = {},
+    ) {
+        currentState = state
+        composeRule.setContent {
+            AppTheme {
+                if (homeShowing) {
+                    PokedexContent(
+                        state = currentState,
+                        textFieldState = text,
+                        camera = camera,
+                        canNavigateBack = canNavigateBack,
+                        onOpenSpecies = onOpen,
+                        onOpenSettings = onSettings,
+                        onRetry = onRetry,
+                        onClearMatch = onClearMatch,
+                        onToggleTorch = onTorch,
+                        onRequestPermission = onRequest,
+                        onOpenAppSettings = onAppSettings,
+                        debugEnabled = debugEnabled,
+                        viewfinder = { ViewfinderStub() },
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+    }
 
     private fun rowExists(id: Int) =
         composeRule.onAllNodesWithTag("pokedex:row:$id", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
@@ -58,22 +165,29 @@ class PokedexScreenTest {
 
     private fun awaitRowGone(id: Int) = composeRule.waitUntil(WAIT_MS) { !rowExists(id) }
 
-    private fun show(
-        state: PokedexState,
-        onOpen: (Int) -> Unit = {},
-        onRetry: () -> Unit = {},
-        onScan: () -> Unit = {},
-        onSettings: () -> Unit = {},
-    ) {
-        composeRule.setContent {
-            AppTheme { PokedexContent(state, TextFieldState(), onOpen, onScan, onSettings, onRetry) }
-        }
+    private fun tagExists(tag: String) = composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+
+    private fun expandSheet() {
+        composeRule.onNodeWithTag("pokedex:search").performTouchInput { swipeUp(startY = centerY, endY = 0f) }
+        composeRule.waitForIdle()
     }
+
+    private fun collapseSheet() {
+        composeRule.onNodeWithTag("pokedex:search").performTouchInput { swipeDown(startY = centerY, endY = bottom + SWIPE_DISTANCE) }
+        composeRule.waitForIdle()
+    }
+
+    private fun pressBack() {
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeRule.waitForIdle()
+    }
+
+    // --- The list (pokedex-browse) ---
 
     // Scenario: List in Pokédex order
     @Test
     fun rowsShowNumberAndName() {
-        show(loaded)
+        show()
         composeRule.onNodeWithText("#0001", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("Bulbasaur", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithText("Fire", useUnmergedTree = true).assertExists()
@@ -82,30 +196,18 @@ class PokedexScreenTest {
     // Scenario: Shows loading state
     @Test
     fun loadingShowsASkeleton() {
-        show(PokedexState.Initial)
+        show(PokedexState.Initial.copy(scannerEnabled = true))
         composeRule.onNodeWithTag("pokedex:list").assertDoesNotExist()
         composeRule.onNodeWithContentDescription("Loading").assertExists()
-    }
-
-    @Test
-    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
-    fun phoneLoading() {
-        show(PokedexState.Initial)
-        composeRule.onRoot().captureRoboImage()
-    }
-
-    @Test
-    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
-    fun tabletLoading() {
-        show(PokedexState.Initial)
-        composeRule.onRoot().captureRoboImage()
     }
 
     // Scenario: Shows error state
     @Test
     fun errorOffersRetry() {
         var retried = false
-        show(PokedexState.Initial.copy(loading = false, error = DomainError.Unknown("x")), onRetry = { retried = true })
+        show(PokedexState.Initial.copy(loading = false, scannerEnabled = true, error = DomainError.Unknown("x")), onRetry = {
+            retried = true
+        })
         composeRule.onNodeWithText("Try again").performClick()
         assertEquals(true, retried)
     }
@@ -113,7 +215,7 @@ class PokedexScreenTest {
     // Scenario: No results shows empty state
     @Test
     fun emptyResultsNameTheQuery() {
-        show(PokedexState.Initial.copy(loading = false, query = "zzz"))
+        show(PokedexState.Initial.copy(loading = false, scannerEnabled = true, query = "zzz"))
         composeRule.onNodeWithText("No Pokémon named “zzz”").assertExists()
     }
 
@@ -121,32 +223,51 @@ class PokedexScreenTest {
     @Test
     fun tappingARowOpensIt() {
         var opened = 0
-        show(loaded, onOpen = { opened = it })
+        show(onOpen = { opened = it })
         composeRule.onNodeWithTag("pokedex:row:25").performClick()
         assertEquals(25, opened)
     }
 
-    // Scenario: Clearing restores the list
+    // Scenario: List item announces details
     @Test
-    fun rootScreenSearchesAsYouTypeAndClears() {
+    fun rowAnnouncesNumberNameAndTypes() {
+        show()
+        composeRule.onNodeWithTag("pokedex:row:1", useUnmergedTree = true).assertContentDescriptionEquals("#0001, Bulbasaur, Grass, Poison")
+    }
+
+    // Scenario: Search other language
+    @Test
+    fun matchedNameIsShown() {
+        show()
+        composeRule.onNodeWithText("ピカチュウ", useUnmergedTree = true).assertExists()
+    }
+
+    // Scenario: Clearing restores the list
+    // Scenario: Rationale before asking
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun rootScreenSearchesAsYouTypeAndAsksForTheCameraFirst() {
         val summaries = loaded.results.map { it.summary }
         val repository = FakeSpeciesRepository(
             summaries = summaries,
             hits = mapOf("\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu"))),
         )
-        val viewModel =
-            PokedexViewModel(
-                SearchSpeciesUseCase(repository),
-                ObserveArtworkUseCase(FakeContentPackRepository()),
-                ObserveContentOfferUseCase(FakeUserPreferencesRepository(ThemeMode.SYSTEM, initialOfferShown = true)),
-            )
+        val preferences = FakeUserPreferencesRepository(ThemeMode.SYSTEM, initialOfferShown = true)
+        val viewModel = PokedexViewModel(
+            SearchSpeciesUseCase(repository),
+            ObserveArtworkUseCase(FakeContentPackRepository()),
+            ObserveContentOfferUseCase(preferences),
+            ObserveScannerEnabledUseCase(preferences),
+            BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(TestCoroutineScheduler())),
+            GetSpeciesListUseCase(repository),
+        )
         composeRule.setContent {
             AppTheme {
-                PokedexScreen(onOpenSpecies = {
-                }, onOpenScanner = {}, onOpenSettings = {}, onShowOffer = {}, canNavigateBack = false, viewModel = viewModel)
+                PokedexScreen(onOpenSpecies = {}, onOpenSettings = {}, onShowOffer = {}, canNavigateBack = false, viewModel = viewModel)
             }
         }
         awaitRow(1)
+        composeRule.onNodeWithText("Allow camera").assertExists()
         composeRule.onNodeWithTag("pokedex:search").performTextInput("pika")
         awaitRowGone(1)
         composeRule.onNodeWithTag("pokedex:row:25", useUnmergedTree = true).assertExists()
@@ -154,68 +275,665 @@ class PokedexScreenTest {
         awaitRow(1)
     }
 
+    // --- Layout ---
+
+    // Scenario: Home shows scanner and sheet
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun scannerSitsAboveTheSheet() {
+        show()
+        assertTrue(viewfinderRunning)
+        val viewfinder = composeRule.onNodeWithTag("test:viewfinder").getUnclippedBoundsInRoot()
+        val search = composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot()
+        assertEquals(viewfinder.right, composeRule.onRoot().getUnclippedBoundsInRoot().right)
+        assertTrue(search.top >= viewfinder.bottom)
+        assertEquals(((viewfinder.right - viewfinder.left) / 1.5f).value, (viewfinder.bottom - viewfinder.top).value, 1f)
+    }
+
+    // Scenario: No separate scan step
+    @Test
+    fun thereIsNoScanButton() {
+        show()
+        composeRule.onNodeWithTag("pokedex:scan").assertDoesNotExist()
+        composeRule.onNodeWithText("Scan").assertDoesNotExist()
+    }
+
+    // Scenario: Short window keeps the list reachable
+    @Test
+    fun theAreaIsCappedInAShortWindow() {
+        assertEquals(274f, scannerAreaHeight(411.dp, 914.dp, 0.dp).value, 1f)
+        assertEquals(298f, scannerAreaHeight(411.dp, 914.dp, 24.dp).value, 1f)
+        assertEquals(185f, scannerAreaHeight(914.dp, 411.dp, 0.dp).value, 1f)
+    }
+
+    // Scenario: Short window keeps the list reachable
+    @Test
+    @Config(qualifiers = "w914dp-h411dp-xxhdpi")
+    fun theSearchFieldStaysVisibleInAShortWindow() {
+        show()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertTrue(composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot().bottom <= root.bottom)
+    }
+
+    // Scenario: Wide window keeps list and entry together
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun aWideWindowShowsScannerAndSheet() {
+        show()
+        assertTrue(viewfinderRunning)
+        composeRule.onNodeWithTag("pokedex:search").assertExists()
+    }
+
+    // Scenario: Entry beside the list keeps scanning
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun anEntryBesideTheListKeepsTheCameraRunning() {
+        show(canNavigateBack = true)
+        assertTrue(viewfinderRunning)
+    }
+
+    // --- The scanner area ---
+
+    // Scenario: Hint and aiming box shown
+    @Test
+    fun showsHintAndAimingBox() {
+        show()
+        composeRule.onNodeWithText("Point at the Pokémon's name").assertExists()
+        composeRule.onNodeWithTag("pokedex:aimBox").assertExists()
+    }
+
+    // Scenario: Match named in the aiming box
+    @Test
+    fun theMatchReplacesTheHintAndIsAnnounced() {
+        show(matched)
+        composeRule.onNodeWithText("Point at the Pokémon's name").assertDoesNotExist()
+        composeRule
+            .onNodeWithTag("pokedex:scanLabel")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Text, listOf(androidx.compose.ui.text.AnnotatedString("Pikachu"))))
+    }
+
+    // Scenario: Match filters the list
+    @Test
+    fun theMatchIsTheOnlyRow() {
+        show(matched)
+        awaitRow(25)
+        assertFalse(rowExists(1))
+    }
+
+    // Scenario: Several names offered as choices
+    @Test
+    fun severalMatchesAreBothListed() {
+        show(loaded.copy(scan = ScanState.Initial.copy(match = listOf(pidgey, pikachu))))
+        awaitRow(16)
+        awaitRow(25)
+    }
+
+    // Scenario: Match opens the entry
+    @Test
+    fun tappingTheMatchOpensItsEntry() {
+        var opened = 0
+        show(matched, onOpen = { opened = it })
+        composeRule.onNodeWithTag("pokedex:row:25").performClick()
+        assertEquals(25, opened)
+    }
+
+    // Scenario: Clearing a match restores the list
+    @Test
+    fun theClearButtonClearsAMatch() {
+        var cleared = false
+        show(matched, onClearMatch = { cleared = true })
+        composeRule.onNodeWithTag("pokedex:clear").performClick()
+        assertTrue(cleared)
+    }
+
+    @Test
+    fun noClearButtonWithoutTextOrAMatch() {
+        show()
+        composeRule.onNodeWithTag("pokedex:clear").assertDoesNotExist()
+    }
+
+    // Scenario: Settings opens from the scanner area
     @Test
     fun settingsButtonOpensSettings() {
         var opened = false
-        show(loaded, onSettings = { opened = true })
+        show(onSettings = { opened = true })
         composeRule.onNodeWithTag("pokedex:settings").performClick()
         assertEquals(true, opened)
     }
 
+    // Scenario: Torch toggles
     @Test
-    fun scanButtonOpensTheCamera() {
+    fun torchButtonToggles() {
+        var toggled = false
+        show(onTorch = { toggled = true })
+        composeRule.onNodeWithContentDescription("Turn torch on").performClick()
+        assertTrue(toggled)
+    }
+
+    // Scenario: Torch toggles
+    @Test
+    fun torchButtonShowsItsCurrentState() {
+        show(loaded.copy(scan = ScanState.Initial.copy(torchOn = true)))
+        composeRule.onNodeWithContentDescription("Turn torch off").assertExists()
+    }
+
+    @Test
+    fun torchHiddenWithoutAFlash() {
+        show(camera = ready.copy(torchAvailable = false))
+        composeRule.onNodeWithTag("pokedex:torch").assertDoesNotExist()
+    }
+
+    // Scenario: Rationale before asking
+    @Test
+    fun rationaleOffersToAllowTheCamera() {
+        var requested = false
+        show(camera = needsPermission, onRequest = { requested = true })
+        composeRule.onNodeWithText("Read names with your camera").assertExists()
+        composeRule.onNodeWithText("Allow camera").performClick()
+        assertTrue(requested)
+    }
+
+    // Scenario: System dialog waits for a tap
+    @Test
+    fun theDialogIsNotRequestedUntilTheTap() {
+        var requested = false
+        show(camera = needsPermission, onRequest = { requested = true })
+        assertFalse(requested)
+        assertFalse(viewfinderRunning)
+    }
+
+    // Scenario: Denied permanently
+    @Test
+    fun permanentDenialOffersSettings() {
         var opened = false
-        show(loaded, onScan = { opened = true })
-        composeRule.onNodeWithTag("pokedex:scan").performClick()
-        assertEquals(true, opened)
+        show(camera = ready.copy(permission = CameraPermission.PERMANENTLY_DENIED), onAppSettings = { opened = true })
+        composeRule.onNodeWithText("Open settings").performClick()
+        assertTrue(opened)
     }
 
-    // Scenario: List item announces details
+    // Scenario: Search works without the camera
     @Test
-    fun rowAnnouncesNumberNameAndTypes() {
-        show(loaded)
-        composeRule.onNodeWithTag("pokedex:row:1", useUnmergedTree = true).assertContentDescriptionEquals("#0001, Bulbasaur, Grass, Poison")
+    fun theListWorksWithoutTheCamera() {
+        show(camera = needsPermission)
+        awaitRow(1)
+        composeRule.onNodeWithTag("pokedex:search").assertExists()
+        composeRule.onNodeWithTag("pokedex:torch").assertDoesNotExist()
     }
 
-    // Scenario: Search other language
+    // Scenario: Search works without the camera
     @Test
-    fun matchedNameIsShown() {
-        show(loaded)
-        composeRule.onNodeWithText("ピカチュウ", useUnmergedTree = true).assertExists()
+    fun cameraFailureIsExplainedAndTheListStays() {
+        show(camera = ready.copy(failed = true))
+        composeRule.onNodeWithText("This device has no camera DexLens can use.").assertExists()
+        awaitRow(1)
+        assertFalse(viewfinderRunning)
+    }
+
+    @Test
+    fun aMatcherFailureIsExplained() {
+        show(loaded.copy(scan = ScanState.Initial.copy(error = DomainError.Unknown("x"))))
+        assertFalse(viewfinderRunning)
+    }
+
+    @Test
+    fun debugOverlayShowsDecisions() {
+        val frame = AnalyzedFrame(listOf(AnalyzedLine("PIKACHU", 2f, 2f, 50f, 12f)), 100, 20, 1920, 1080, 42)
+        val debug = ScanDebug(frame, listOf(MatchDecision("pikachu", MatchOutcome.EXACT, setOf(SpeciesId(25)))))
+        show(loaded.copy(scan = ScanState.Initial.copy(debug = debug)), debugEnabled = true)
+        composeRule.onNodeWithText("EXACT: pikachu [25]").assertExists()
+    }
+
+    @Test
+    fun debugOverlayAbsentInRelease() {
+        val frame = AnalyzedFrame(emptyList(), 100, 20, 1920, 1080, 42)
+        val debug = ScanDebug(frame, listOf(MatchDecision("x", MatchOutcome.NO_MATCH, emptySet())))
+        show(loaded.copy(scan = ScanState.Initial.copy(debug = debug)), debugEnabled = false)
+        composeRule.onNodeWithText("NO_MATCH: x []").assertDoesNotExist()
+    }
+
+    // --- The sheet ---
+
+    // Scenario: Tapping search expands the sheet
+    // Scenario: Expanding stops the camera
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun focusingSearchExpandsTheSheetAndStopsTheCamera() {
+        show()
+        assertTrue(viewfinderRunning)
+        composeRule.onNodeWithTag("pokedex:search").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("pokedex:search").assertIsFocused()
+        assertFalse(viewfinderRunning)
+        composeRule.onNodeWithTag("pokedex:torch").assertDoesNotExist()
+        composeRule.onNodeWithTag("pokedex:aimBox").assertDoesNotExist()
+    }
+
+    // Scenario: Top bar above the expanded sheet
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun theExpandedSheetHasASurfaceColouredTopBar() {
+        show()
+        expandSheet()
+        val image = composeRule.onRoot().captureToImage().toPixelMap()
+        assertEquals(LightScheme.surface, image[image.width / 4, TOP_BAR_PIXEL])
+    }
+
+    // Scenario: Top bar above the expanded sheet
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun theCollapsedSheetLeavesTheCameraShowing() {
+        show()
+        val image = composeRule.onRoot().captureToImage().toPixelMap()
+        assertNotEquals(LightScheme.surface, image[image.width / 4, TOP_BAR_PIXEL])
+    }
+
+    // Scenario: Top bar above the expanded sheet
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun statusBarIconsFollowTheTopBar() {
+        val window = composeRule.activity.window
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        composeRule.runOnUiThread { controller.isAppearanceLightStatusBars = true }
+        show()
+        assertFalse(controller.isAppearanceLightStatusBars, "light icons over the camera")
+        expandSheet()
+        assertTrue(controller.isAppearanceLightStatusBars, "the theme's dark icons on the top bar")
+    }
+
+    // Scenario: Camera fades into the top bar
+    @Test
+    fun theCameraFadesWithTheSheet() {
+        assertEquals(0f, topBarAlpha(sheetOffset = 800f, collapsedOffset = 800f, expandedOffset = 200f))
+        assertEquals(0.5f, topBarAlpha(sheetOffset = 500f, collapsedOffset = 800f, expandedOffset = 200f))
+        assertEquals(1f, topBarAlpha(sheetOffset = 200f, collapsedOffset = 800f, expandedOffset = 200f))
+    }
+
+    // Scenario: Dragging up expands the sheet
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun draggingUpExpandsWithoutFocus() {
+        show()
+        expandSheet()
+        assertFalse(viewfinderRunning)
+        val focused = composeRule.onNodeWithTag("pokedex:search").fetchSemanticsNode().config[SemanticsProperties.Focused]
+        assertFalse(focused)
+    }
+
+    // Scenario: Settings stays while searching
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun settingsStaysAboveTheExpandedSheet() {
+        show()
+        expandSheet()
+        val settings = composeRule.onNodeWithTag("pokedex:settings").getUnclippedBoundsInRoot()
+        val search = composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot()
+        assertTrue(settings.bottom <= search.top, "settings ${settings.bottom} above search ${search.top}")
+    }
+
+    // Scenario: Collapsing restarts the camera
+    // Scenario: Torch returns with the camera
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun collapsingRestartsTheCameraWithItsTorchState() {
+        show(loaded.copy(scan = ScanState.Initial.copy(torchOn = true)))
+        expandSheet()
+        assertFalse(viewfinderRunning)
+        collapseSheet()
+        assertTrue(viewfinderRunning)
+        assertEquals(2, viewfinderStarts)
+        composeRule.onNodeWithContentDescription("Turn torch off").assertExists()
+    }
+
+    // Scenario: Covering home stops the camera
+    @Test
+    fun leavingTheScreenStopsTheCamera() {
+        show()
+        assertTrue(viewfinderRunning)
+        homeShowing = false
+        composeRule.waitForIdle()
+        assertFalse(viewfinderRunning)
+        homeShowing = true
+        composeRule.waitForIdle()
+        assertTrue(viewfinderRunning)
+    }
+
+    // Scenario: Collapsing clears the typed text
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun collapsingClearsTheTypedText() {
+        val text = TextFieldState()
+        show(text = text)
+        expandSheet()
+        composeRule.runOnUiThread { text.setTextAndPlaceCursorAtEnd("pika") }
+        collapseSheet()
+        assertEquals("", text.text.toString())
+    }
+
+    // Scenario: Back collapses the expanded sheet
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun backCollapsesTheExpandedSheet() {
+        val text = TextFieldState()
+        show(text = text)
+        expandSheet()
+        composeRule.runOnUiThread { text.setTextAndPlaceCursorAtEnd("pika") }
+        pressBack()
+        assertTrue(viewfinderRunning)
+        assertEquals("", text.text.toString())
+    }
+
+    // Scenario: Clearing text keeps the sheet expanded
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun clearingTextKeepsTheSheetExpanded() {
+        val text = TextFieldState()
+        show(text = text)
+        expandSheet()
+        composeRule.runOnUiThread { text.setTextAndPlaceCursorAtEnd("pika") }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("pokedex:clear").performClick()
+        composeRule.waitForIdle()
+        assertEquals("", text.text.toString())
+        assertFalse(viewfinderRunning)
+    }
+
+    // Scenario: Back clears a match
+    @Test
+    fun backClearsAMatchWhileCollapsed() {
+        var cleared = false
+        show(matched, onClearMatch = { cleared = true })
+        pressBack()
+        assertTrue(cleared)
+    }
+
+    // Scenario: Back clears a match
+    @Test
+    fun backLeavesAMatchWithAnEntryBesideIt() {
+        var cleared = false
+        show(matched, canNavigateBack = true, onClearMatch = { cleared = true })
+        pressBack()
+        assertFalse(cleared)
+    }
+
+    // Scenario: Match kept when the sheet is dragged
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun draggingTheSheetKeepsTheMatch() {
+        var cleared = false
+        show(matched, onClearMatch = { cleared = true })
+        expandSheet()
+        collapseSheet()
+        assertFalse(cleared)
+        awaitRow(25)
+    }
+
+    // Scenario: Returning from an entry keeps the search
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun typedTextStartsTheSheetExpandedOnReturn() {
+        val text = TextFieldState("pika")
+        show(loaded.copy(query = "pika"), text = text)
+        assertFalse(viewfinderRunning)
+        assertEquals("pika", text.text.toString())
+    }
+
+    // --- Scanner switched off ---
+
+    // Scenario: Camera stays off at launch
+    @Test
+    fun nothingStartsUntilTheSwitchIsRead() {
+        show(PokedexState.Initial.copy(loading = false, results = loaded.results))
+        assertEquals(0, viewfinderStarts)
+        composeRule.onNodeWithTag("pokedex:search").assertDoesNotExist()
+    }
+
+    // Scenario: Camera stays off at launch
+    @Test
+    fun theCameraNeverStartsWhenTheSwitchReadsOff() {
+        show(PokedexState.Initial.copy(loading = false, results = loaded.results))
+        currentState = scannerOff
+        composeRule.waitForIdle()
+        assertEquals(0, viewfinderStarts)
+        awaitRow(1)
+    }
+
+    // Scenario: Scanner off shows only the list
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun scannerOffShowsTheListBelowTheStrip() {
+        show(scannerOff)
+        assertEquals(0, viewfinderStarts)
+        composeRule.onNodeWithTag("pokedex:aimBox").assertDoesNotExist()
+        composeRule.onNodeWithTag("pokedex:torch").assertDoesNotExist()
+        val settings = composeRule.onNodeWithTag("pokedex:settings").getUnclippedBoundsInRoot()
+        val search = composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot()
+        assertTrue(settings.bottom <= search.top)
+        val before = search.top
+        collapseSheet()
+        assertEquals(before, composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot().top)
+    }
+
+    // Scenario: No permission prompt with the scanner off
+    @Test
+    fun noPermissionPromptWithTheScannerOff() {
+        show(scannerOff, camera = needsPermission)
+        composeRule.onNodeWithText("Allow camera").assertDoesNotExist()
+        composeRule.onNodeWithText("Read names with your camera").assertDoesNotExist()
+    }
+
+    // Scenario: Search works with the scanner off
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun typingSearchesWithTheScannerOff() {
+        val repository = FakeSpeciesRepository(
+            summaries = loaded.results.map { it.summary },
+            hits = mapOf("\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu"))),
+        )
+        val preferences = FakeUserPreferencesRepository(ThemeMode.SYSTEM, initialOfferShown = true, initialScannerEnabled = false)
+        val viewModel = PokedexViewModel(
+            SearchSpeciesUseCase(repository),
+            ObserveArtworkUseCase(FakeContentPackRepository()),
+            ObserveContentOfferUseCase(preferences),
+            ObserveScannerEnabledUseCase(preferences),
+            BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(TestCoroutineScheduler())),
+            GetSpeciesListUseCase(repository),
+        )
+        composeRule.setContent {
+            AppTheme {
+                PokedexScreen(onOpenSpecies = {}, onOpenSettings = {}, onShowOffer = {}, canNavigateBack = false, viewModel = viewModel)
+            }
+        }
+        awaitRow(1)
+        composeRule.onNodeWithTag("pokedex:search").performTextInput("pika")
+        awaitRowGone(1)
+        composeRule.onNodeWithTag("pokedex:row:25", useUnmergedTree = true).assertExists()
+    }
+
+    // Scenario: Search works with the scanner off
+    @Test
+    fun theClearButtonWorksWithTheScannerOff() {
+        val text = TextFieldState("pika")
+        show(scannerOff.copy(query = "pika"), text = text)
+        composeRule.onNodeWithTag("pokedex:clear").performClick()
+        composeRule.waitForIdle()
+        assertEquals("", text.text.toString())
+    }
+
+    // Scenario: Back clears typed text with the scanner off
+    @Test
+    fun backClearsTypedTextWithTheScannerOff() {
+        val text = TextFieldState("pika")
+        show(scannerOff.copy(query = "pika"), text = text)
+        pressBack()
+        assertEquals("", text.text.toString())
+    }
+
+    // Scenario: Back leaves with the scanner off
+    @Test
+    fun backIsNotHandledWithAnEmptySearchAndTheScannerOff() {
+        var offeredToSystem = false
+        show(scannerOff)
+        composeRule.runOnUiThread {
+            // Below the screen's handlers it would never run if the screen had taken Back for itself.
+            composeRule.activity.onBackPressedDispatcher.addCallback(
+                object : androidx.activity.OnBackPressedCallback(true) {
+                    override fun handleOnBackPressed() {
+                        offeredToSystem = true
+                    }
+                },
+            )
+        }
+        pressBack()
+        assertTrue(offeredToSystem)
+    }
+
+    // Scenario: Turning the scanner off keeps a search
+    @Test
+    fun theTextSurvivesTurningTheScannerOff() {
+        val text = TextFieldState("pika")
+        show(loaded.copy(query = "pika"), text = text)
+        currentState = scannerOff.copy(query = "pika")
+        composeRule.waitForIdle()
+        assertEquals("pika", text.text.toString())
+        assertEquals(0, viewfinderStarts)
+    }
+
+    // Scenario: Turning the scanner on shows the camera
+    @Test
+    fun turningTheScannerOnStartsTheCamera() {
+        show(scannerOff)
+        currentState = loaded
+        composeRule.waitForIdle()
+        assertTrue(viewfinderRunning)
+        composeRule.onNodeWithTag("pokedex:aimBox").assertExists()
+    }
+
+    // Scenario: Turning the scanner on during a search
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun turningTheScannerOnDuringASearchKeepsTheCameraOff() {
+        val text = TextFieldState("pika")
+        show(scannerOff.copy(query = "pika"), text = text)
+        currentState = loaded.copy(query = "pika")
+        composeRule.waitForIdle()
+        assertEquals("pika", text.text.toString())
+        assertEquals(0, viewfinderStarts)
+        val settings = composeRule.onNodeWithTag("pokedex:settings").getUnclippedBoundsInRoot()
+        val search = composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot()
+        // Expanded: the search field sits right below the strip, not below a 3:2 scanner area.
+        assertTrue(search.top - settings.bottom < 100.dp, "search ${search.top} below settings ${settings.bottom}")
+    }
+
+    // --- Goldens ---
+
+    private fun expanded(state: PokedexState = loaded) {
+        show(state)
+        expandSheet()
     }
 
     // Scenario: Placeholder shown without art
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phone() {
-        show(loaded)
+        show()
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = "w841dp-h701dp-xxhdpi")
     fun foldable() {
-        show(loaded)
+        show()
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tablet() {
-        show(loaded)
+        show()
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = "+night")
     fun phoneDark() {
-        composeRule.setContent {
-            AppTheme { PokedexContent(loaded, TextFieldState(), {}, {}, {}, {}) }
-        }
+        show()
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phoneLoading() {
+        show(PokedexState.Initial.copy(scannerEnabled = true))
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletLoading() {
+        show(PokedexState.Initial.copy(scannerEnabled = true))
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phoneMatch() {
+        show(matched)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletMatch() {
+        show(matched)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phoneExpanded() {
+        expanded()
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletExpanded() {
+        expanded()
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phonePermission() {
+        show(camera = needsPermission)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletPermission() {
+        show(camera = needsPermission)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phoneScannerOff() {
+        show(scannerOff)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletScannerOff() {
+        show(scannerOff)
         composeRule.onRoot().captureRoboImage()
     }
 
     private companion object {
         const val WAIT_MS = 5_000L
+        const val TOP_BAR_PIXEL = 20
+        const val SWIPE_DISTANCE = 1_500f
     }
 }

@@ -13,7 +13,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class FakeUserPreferencesRepository(
     initialThemeMode: ThemeMode,
     initialOfferShown: Boolean = false,
+    initialScannerEnabled: Boolean = true,
 ) : UserPreferencesRepository {
+    private val scannerSwitch = MutableStateFlow(initialScannerEnabled)
+
     private val offerShown = MutableStateFlow(initialOfferShown)
 
     private val stored = MutableStateFlow(initialThemeMode)
@@ -39,6 +42,17 @@ class FakeUserPreferencesRepository(
             return Err(error)
         }
         offerShown.value = shown
+        return Ok(Unit)
+    }
+
+    override val scannerEnabled: Flow<Boolean> = scannerSwitch
+
+    override suspend fun setScannerEnabled(enabled: Boolean): Result<Unit, DomainError> {
+        failNextWrite?.let { error ->
+            failNextWrite = null
+            return Err(error)
+        }
+        scannerSwitch.value = enabled
         return Ok(Unit)
     }
 }

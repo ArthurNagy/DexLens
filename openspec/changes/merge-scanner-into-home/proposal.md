@@ -10,8 +10,8 @@ lets both inputs fill one list.
 ## What Changes
 
 - The home screen shows the camera at the top, about 3:2, with a sheet below it holding the search field and the species list.
-- Tapping the search field or dragging the sheet up expands it over the camera and turns the camera fully off. Only a thin
-  dark strip with the settings button stays above the sheet.
+- Tapping the search field or dragging the sheet up expands it over the camera and turns the camera fully off. The camera area
+  fades into a top bar in the app's surface color, which keeps the settings button.
 - Collapsing the sheet, by dragging it down or pressing Back, clears the typed text and turns the camera back on.
 - A name the scanner locks onto filters the same list that search uses, and appears in the aiming box. The scanner keeps
   reading, and a different name replaces the match. A clear button in the search field returns to the full list.
@@ -20,7 +20,7 @@ lets both inputs fill one list.
 - When the camera permission is missing, the camera area explains why and offers a button. The system dialog never appears
   on its own, and search keeps working.
 - A switch in Settings, on by default, removes the scanner from the home screen. With it off, the search field and list fill
-  the screen under a thin strip with the settings button, the camera never starts, and no permission prompt appears.
+  the screen under a top bar with the settings button, the camera never starts, and no permission prompt appears.
 - **BREAKING** (internal): the Scan button, the separate camera screen, the result sheet and its "Keep scanning" action are
   removed, along with the `ScannerKey` route and the `:feature:scanner` modules. Their code moves into `:feature:pokedex`.
 

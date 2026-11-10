@@ -53,11 +53,13 @@ a battle screen flickering between one and two names can't shrink the list. Fram
 covers frames already in flight when typing starts. `paused`, `onResultDismissed` and `isPaused` are removed.
 
 ### 5. Material 3 `BottomSheetScaffold`, inset from the top
-The screen is a `BoxWithConstraints` on `CameraColors.background`, stacked in this order:
-1. The scanner area, a fixed height at the top.
-2. A `BottomSheetScaffold` with no hidden state and full `sheetMaxWidth`, with its top padded by the strip height: status bar
-   plus the button row. That padding is what stops the expanded sheet short of the settings button.
-3. The button row, at the top end.
+The screen is a `BoxWithConstraints` on `CameraColors.background`, holding two things:
+1. A `BottomSheetScaffold` with no hidden state and full `sheetMaxWidth`, whose body is the scanner area at a fixed height. It
+   has to be the body, because the scaffold's own surface takes touches and would block a permission button underneath it.
+2. The button row, at the top end.
+
+The sheet's content is sized to the window height minus the strip (status bar plus button row). That size is what stops the
+expanded sheet short of the settings button.
 
 Peek height is the window height minus the scanner area. The area's height is `min(width × 2/3 + top inset, height × 0.45)`, so it
 is 3:2 below the status bar on phones and capped in short windows such as landscape phones. Expanding simply covers the area, so
@@ -70,8 +72,8 @@ Alternative: a custom `AnchoredDraggable` sheet. It gives more control, but re-i
 actions that the scaffold already has.
 
 ### 6. The camera exists only while it can run
-`CameraViewfinder` and the recogniser are composed only when the scanner switch is on, the sheet's `currentValue` and
-`targetValue` are both `PartiallyExpanded`, permission is granted, and the camera and matcher haven't failed. Leaving composition already calls
+`CameraViewfinder` and the recogniser are composed only when the scanner switch is on, the sheet's `currentValue` is
+`PartiallyExpanded`, permission is granted, and the camera and matcher haven't failed. Leaving composition already calls
 `unbindAll()`, which turns off the camera and its privacy indicator. Phones also get "covered by an entry" for free, because the
 list entry leaves composition. The existing torch effect re-applies `torchOn` when the camera comes back. The torch button shows
 only while the viewfinder is composed.
@@ -81,8 +83,8 @@ composition when the sheet expands.
 
 ### 7. Sheet position drives search mode
 Sheet position stays in `SheetState`, not in the ViewModel, because nothing outside the composable needs it. Focus on the field
-calls `expand()`. A `snapshotFlow` on `targetValue` reaching `PartiallyExpanded` clears the text, clears focus and hides the
-keyboard, so a drag, a list fling and Back all end a search the same way. `rememberTextFieldState` and the sheet state are both
+calls `expand()`. A `snapshotFlow` on the sheet settling at `PartiallyExpanded` clears the text, clears focus and hides the
+keyboard. It waits for the sheet to settle because `targetValue` flips mid-drag, so a drag that turns back would lose the text. A drag, a list fling and Back all end a search the same way. `rememberTextFieldState` and the sheet state are both
 saveable, which keeps a search across an entry visit.
 
 Back uses one `NavigationBackHandler`, enabled when the sheet is expanded or a match is listed, and never while an entry is open
@@ -99,9 +101,10 @@ The camera's 3:2 view sits inside a portrait 9:16 frame, so the frame's full wid
 a name is at least what the full-screen scanner had.
 
 ### 9. Status bar
-On compact widths the camera runs behind the status bar, so the existing "light icons" effect moves up to the screen and applies
-for as long as the screen is composed. From 600dp the status bar also spans the detail pane, where light icons would vanish, so
-there the content starts below the status bar and the effect is not applied.
+On compact widths the camera runs behind the status bar, so the existing "light icons" effect moves up to the sheet layout and
+applies until the sheet heads for its expanded position, where the top bar is the surface color and the theme's icons are right.
+From 600dp the status bar also spans the detail pane, where light icons would vanish, so there the content starts below the
+status bar and the effect is not applied.
 
 ### 10. Permission and error messages fit the area
 `PermissionPrompt`, "no camera" and matcher-error messages render inside the scanner area on the dark background, in a
@@ -112,11 +115,11 @@ there the content starts below the status bar and the effect is not applied.
 Settings shows it as one `Switch` row. `SettingsKey` has no pane metadata, so Settings covers the home screen at every width and
 the switch only has to take effect when the home screen comes back.
 
-`PokedexState.scannerEnabled` is a `Boolean?`, `null` until DataStore's first value. While it is `null` the screen draws only its
-dark background, so neither layout appears and then jumps, and the camera can't start for someone who has switched it off. An
+`PokedexState.scannerEnabled` is a `Boolean?`, `null` until DataStore's first value. While it is `null` the screen draws only the
+surface color, so neither layout appears and then jumps, and the camera can't start for someone who has switched it off. An
 unreadable file reads as the default, so a value always arrives.
 
-With the switch off the screen doesn't use `BottomSheetScaffold`. It shows the strip, then the same search field and list in a
+With the switch off the screen doesn't use `BottomSheetScaffold`. It shows the top bar, then the same search field and list in a
 plain column, so there is nothing to drag or collapse and decision 7's focus and collapse rules don't run.
 
 `textFieldState` sits above that branch, so typed text survives the switch in both directions. The sheet starts expanded when
@@ -127,6 +130,15 @@ Alternative: keep the scanner area with a "turn on" placeholder. That spends up 
 
 Alternative: a toggle in the button row. It is closer to hand, but this is a choice people make once, and the row already limits
 how wide the aiming box can be.
+
+### 12. The camera area fades into a top bar
+A surface-colored layer sits on top of the scanner area, below the buttons, and its alpha follows the sheet's offset from 0 when
+collapsed to 1 when expanded. It reads the offset in the draw phase, so following a drag doesn't recompose the camera. The sheet
+is the same color, so the bar and the sheet read as one surface. The camera keeps running until the sheet settles, so what fades
+is the live image rather than a black frame. The buttons take the top bar's colors as the sheet heads for its expanded position.
+With the switch off the same bar is simply there.
+
+Alternative: leave a dark strip. It looked like an unfinished camera rather than part of the list screen.
 
 ## Risks / Trade-offs
 

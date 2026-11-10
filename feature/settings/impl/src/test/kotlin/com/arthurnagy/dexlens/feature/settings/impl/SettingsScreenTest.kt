@@ -1,6 +1,9 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -34,8 +37,11 @@ internal class SettingsScreenTest {
         onDownload: () -> Unit = {},
         onCancel: () -> Unit = {},
         onDelete: () -> Unit = {},
+        onScanner: (Boolean) -> Unit = {},
     ) {
-        composeRule.setContent { AppTheme { SettingsContent(state, SnackbarHostState(), {}, onTheme, onDownload, onCancel, onDelete) } }
+        composeRule.setContent {
+            AppTheme { SettingsContent(state, SnackbarHostState(), {}, onTheme, onDownload, onCancel, onDelete, onScanner) }
+        }
     }
 
     // Scenario: Download from settings
@@ -89,8 +95,26 @@ internal class SettingsScreenTest {
     fun selectingAThemeCallsBack() {
         var selected: ThemeMode? = null
         show(onTheme = { selected = it })
+        composeRule.onNodeWithTag("settings:list").performScrollToNode(hasTestTag("settings:theme:DARK"))
         composeRule.onNodeWithTag("settings:theme:DARK").performClick()
         assertEquals(ThemeMode.DARK, selected)
+    }
+
+    // Scenario: Scanner switch applies
+    @Test
+    fun scannerSwitchShowsItsStateAndCallsBack() {
+        var changed: Boolean? = null
+        show(onScanner = { changed = it })
+        composeRule.onNodeWithTag("settings:list").performScrollToNode(hasTestTag("settings:scanner"))
+        composeRule.onNodeWithTag("settings:scanner").assertIsOn().performClick()
+        assertEquals(false, changed)
+    }
+
+    @Test
+    fun scannerSwitchShowsWhenOff() {
+        show(state = SettingsState.Initial.copy(scannerEnabled = false))
+        composeRule.onNodeWithTag("settings:list").performScrollToNode(hasTestTag("settings:scanner"))
+        composeRule.onNodeWithTag("settings:scanner").assertIsOff()
     }
 
     // Scenario: Credits shown

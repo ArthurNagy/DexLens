@@ -11,6 +11,9 @@
     <string name="settings_progress">%1$d of %2$d</string>
     <string name="settings_interrupted">The download stopped. Finished items are kept.</string>
     <string name="settings_ready">Downloaded and available offline.</string>
+    <string name="settings_scanner">Scanner</string>
+    <string name="settings_scanner_switch">Scanner on home screen</string>
+    <string name="settings_scanner_description">Shows the camera above the list. Turn it off to use DexLens as a plain list. The camera stays off and DexLens won\'t ask for access.</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light</string>

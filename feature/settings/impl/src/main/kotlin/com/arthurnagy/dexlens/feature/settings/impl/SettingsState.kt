@@ -8,10 +8,16 @@ import com.arthurnagy.dexlens.core.model.ThemeMode
 @Immutable
 internal data class SettingsState(
     val themeMode: ThemeMode,
+    val scannerEnabled: Boolean,
     val content: ContentPackState,
     val pendingError: DomainError?,
 ) {
     companion object {
-        val Initial = SettingsState(themeMode = ThemeMode.SYSTEM, content = ContentPackState.NotDownloaded, pendingError = null)
+        val Initial = SettingsState(
+            themeMode = ThemeMode.SYSTEM,
+            scannerEnabled = true,
+            content = ContentPackState.NotDownloaded,
+            pendingError = null,
+        )
     }
 }
