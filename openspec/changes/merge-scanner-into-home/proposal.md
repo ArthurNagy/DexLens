@@ -19,17 +19,21 @@ lets both inputs fill one list.
 - The aiming box becomes a near-square centred in the camera area, instead of a thin strip.
 - When the camera permission is missing, the camera area explains why and offers a button. The system dialog never appears
   on its own, and search keeps working.
+- A switch in Settings, on by default, removes the scanner from the home screen. With it off, the search field and list fill
+  the screen under a thin strip with the settings button, the camera never starts, and no permission prompt appears.
 - **BREAKING** (internal): the Scan button, the separate camera screen, the result sheet and its "Keep scanning" action are
   removed, along with the `ScannerKey` route and the `:feature:scanner` modules. Their code moves into `:feature:pokedex`.
 
 ## Capabilities
 
 ### New Capabilities
-- `home-screen`: the combined home layout, the sheet's two positions, when the camera runs, and how a manual search ends.
+- `home-screen`: the combined home layout, the sheet's two positions, when the camera runs, how a manual search ends, and the
+  layout with the scanner switched off.
 
 ### Modified Capabilities
 - `camera-name-recognition`: matches appear in the home list instead of a result sheet, scanning continues after a match, and
   permission prompts, the torch and the aiming box live in the camera area.
+- `app-settings`: Settings gains the switch for the home screen scanner.
 
 ## Non-goals
 
@@ -42,7 +46,9 @@ lets both inputs fill one list.
 
 - `:feature:pokedex:impl` takes in the camera code, CameraX and ML Kit dependencies, the camera permission and the two model
   files. `:feature:scanner:api` and `:impl` are deleted. `:app`, `:core:designsystem` and `settings.gradle.kts` change to match.
+- `:core:domain`, `:core:data`, `:core:datastore`, `:core:testing` and `:feature:settings:impl` gain the scanner preference and
+  its switch.
 - The model files move to `feature/pokedex/impl/src/main/assets/`, so future model updates are copied there.
-- The camera now starts when the app opens, once permission has been granted. The README's privacy notes and screenshots, and
-  Flow 3 in `docs/MVP_SPEC.md`, are updated.
+- The camera now starts when the app opens, once permission has been granted, unless the switch is off. The README's privacy
+  notes and screenshots, and Flow 3 in `docs/MVP_SPEC.md`, are updated.
 - A new ADR records why the scanner joined the Pokédex feature.

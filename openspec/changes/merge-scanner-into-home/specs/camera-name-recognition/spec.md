@@ -77,7 +77,7 @@ A species SHALL be locked only after it appears in several recent frames, and un
 - **THEN** the list does not change and scanning continues
 
 ### Requirement: Camera permission
-The scanner area SHALL explain why the camera is needed and SHALL handle denial without blocking the rest of the app.
+While the scanner is switched on, the scanner area SHALL explain why the camera is needed and SHALL handle denial without blocking the rest of the app.
 
 #### Scenario: Rationale before asking
 - **WHEN** the camera permission has not been granted

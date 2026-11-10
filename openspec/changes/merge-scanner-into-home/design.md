@@ -70,8 +70,8 @@ Alternative: a custom `AnchoredDraggable` sheet. It gives more control, but re-i
 actions that the scaffold already has.
 
 ### 6. The camera exists only while it can run
-`CameraViewfinder` and the recogniser are composed only when the sheet's `currentValue` and `targetValue` are both
-`PartiallyExpanded`, permission is granted, and the camera and matcher haven't failed. Leaving composition already calls
+`CameraViewfinder` and the recogniser are composed only when the scanner switch is on, the sheet's `currentValue` and
+`targetValue` are both `PartiallyExpanded`, permission is granted, and the camera and matcher haven't failed. Leaving composition already calls
 `unbindAll()`, which turns off the camera and its privacy indicator. Phones also get "covered by an entry" for free, because the
 list entry leaves composition. The existing torch effect re-applies `torchOn` when the camera comes back. The torch button shows
 only while the viewfinder is composed.
@@ -86,7 +86,8 @@ keyboard, so a drag, a list fling and Back all end a search the same way. `remem
 saveable, which keeps a search across an entry visit.
 
 Back uses one `NavigationBackHandler`, enabled when the sheet is expanded or a match is listed, and never while an entry is open
-beside the list. Expanded collapses first, otherwise it clears the match.
+beside the list. Expanded collapses first, otherwise it clears the match. With the scanner switched off there is no sheet or
+match, so the handler is enabled only for typed text, which is what it does today.
 
 ### 8. Near-square aiming box that avoids the controls
 `aimBoxFor` takes the top inset and the width reserved for the button row, and returns fractions as before. The box is centred
@@ -106,9 +107,31 @@ there the content starts below the status bar and the effect is not applied.
 `PermissionPrompt`, "no camera" and matcher-error messages render inside the scanner area on the dark background, in a
 `verticalScroll` so they stay reachable when the area is capped to a short height.
 
+### 11. The scanner switch replaces the layout
+`UserPreferencesRepository` gains `scannerEnabled`, true until changed, next to the theme, with an observe and a set use case.
+Settings shows it as one `Switch` row. `SettingsKey` has no pane metadata, so Settings covers the home screen at every width and
+the switch only has to take effect when the home screen comes back.
+
+`PokedexState.scannerEnabled` is a `Boolean?`, `null` until DataStore's first value. While it is `null` the screen draws only its
+dark background, so neither layout appears and then jumps, and the camera can't start for someone who has switched it off. An
+unreadable file reads as the default, so a value always arrives.
+
+With the switch off the screen doesn't use `BottomSheetScaffold`. It shows the strip, then the same search field and list in a
+plain column, so there is nothing to drag or collapse and decision 7's focus and collapse rules don't run.
+
+`textFieldState` sits above that branch, so typed text survives the switch in both directions. The sheet starts expanded when
+there is typed text, which keeps "collapsed means scanning" true when the switch is turned on during a search. When the value
+changes to `false`, the ViewModel clears the match, the lock history and the torch in one reduce.
+
+Alternative: keep the scanner area with a "turn on" placeholder. That spends up to 45% of the window on nothing.
+
+Alternative: a toggle in the button row. It is closer to hand, but this is a choice people make once, and the row already limits
+how wide the aiming box can be.
+
 ## Risks / Trade-offs
 
-- [The camera starts on every launch, using battery and showing the privacy indicator] → It runs only while visible, and the README says so.
+- [The camera starts on every launch, using battery and showing the privacy indicator] → It runs only while visible, a switch in Settings turns it off, and the README says so.
+- [The screen shows only its background until the stored value arrives] → The first read is one small local file, and the list is still loading at that point. Check a cold start during QA.
 - [A larger box reads more text, so a game's Pokédex list could lock several names at once] → The list handles many matches, and the 3-of-5 rule is unchanged. Check on real game screens during QA, and tighten `aimBoxFor` if needed.
 - [A larger crop makes recognition slower] → `STRATEGY_KEEP_ONLY_LATEST` drops frames instead of queueing them. The debug overlay shows milliseconds per frame.
 - [A fling down at the top of the list collapses the sheet and clears typed text] → Accepted, for one consistent rule: collapsed means scanning.
