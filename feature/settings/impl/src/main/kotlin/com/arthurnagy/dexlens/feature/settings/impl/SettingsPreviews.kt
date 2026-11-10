@@ -12,5 +12,5 @@ import com.arthurnagy.dexlens.core.designsystem.AppTheme
 @Preview(name = "Foldable", device = Devices.FOLDABLE)
 @Composable
 private fun SettingsPreview() {
-    AppTheme { SettingsContent(SettingsState.Initial, SnackbarHostState(), {}, {}, {}, {}, {}) }
+    AppTheme { SettingsContent(SettingsState.Initial, SnackbarHostState(), {}, {}, {}, {}, {}, {}) }
 }

@@ -14,7 +14,6 @@ import androidx.navigation3.runtime.NavKey
 import com.arthurnagy.dexlens.core.navigation.Navigator
 import com.arthurnagy.dexlens.feature.entry.api.EntryKey
 import com.arthurnagy.dexlens.feature.pokedex.api.PokedexKey
-import com.arthurnagy.dexlens.feature.scanner.api.ScannerKey
 import com.arthurnagy.dexlens.feature.settings.api.ContentOfferKey
 import com.arthurnagy.dexlens.feature.settings.api.SettingsKey
 
@@ -32,7 +31,6 @@ internal fun EntryProviderScope<NavKey>.pokedexEntries(navigator: Navigator) {
     ) {
         PokedexScreen(
             onOpenSpecies = { id -> navigator.navigateDetail(EntryKey(id)) },
-            onOpenScanner = { navigator.navigate(ScannerKey) },
             onOpenSettings = { navigator.navigate(SettingsKey) },
             onShowOffer = { navigator.navigate(ContentOfferKey) },
             canNavigateBack = navigator.canGoBack,

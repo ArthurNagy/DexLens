@@ -15,4 +15,9 @@ interface UserPreferencesRepository {
     val contentOfferShown: Flow<Boolean>
 
     suspend fun setContentOfferShown(shown: Boolean): Result<Unit, DomainError>
+
+    /** Whether the home screen has a scanner; true until the user turns it off. Never throws. */
+    val scannerEnabled: Flow<Boolean>
+
+    suspend fun setScannerEnabled(enabled: Boolean): Result<Unit, DomainError>
 }

@@ -21,9 +21,25 @@ object AppDimens {
     val maxContentWidth = 640.dp
     val genderBarHeight = 8.dp
     val treeIndent = 24.dp
-    val aimBoxCorner = 12.dp
+    val aimBoxCorner = 20.dp
     val aimBoxStroke = 3.dp
-    val aimBoxCornerLength = 28.dp
+    val aimBoxCornerLength = 36.dp
+
+    /** Height of the button row at the top of the home screen's scanner area. */
+    val scannerButtonRowHeight = 56.dp
+
+    /** Width of that row. The aiming box stays this far from both sides, so it stays centred and clear of the buttons. */
+    val scannerButtonRowWidth = 104.dp
+
+    /** Material's bottom sheet drag handle, with its padding. */
+    val sheetDragHandleHeight = 48.dp
+
+    /** Width over height of the scanner area below the status bar. */
+    val scannerAreaAspectRatio = 3f / 2f
+
+    /** The most of the window's height the scanner area may take, so short windows keep the list reachable. */
+    val scannerAreaMaxHeightFraction = 0.45f
+
     val skeletonLineHeight = 16.dp
     val skeletonLineShort = 64.dp
     val skeletonLineMedium = 120.dp

@@ -45,6 +45,12 @@ class UserPreferencesDataSource
 
         val contentOfferShown: Flow<Boolean> = preferences.map { it[CONTENT_OFFER_SHOWN] ?: false }
 
+        val scannerEnabled: Flow<Boolean> = preferences.map { it[SCANNER_ENABLED] ?: true }
+
+        suspend fun setScannerEnabled(enabled: Boolean) {
+            dataStore.edit { it[SCANNER_ENABLED] = enabled }
+        }
+
         suspend fun setContentOfferShown(shown: Boolean) {
             dataStore.edit { it[CONTENT_OFFER_SHOWN] = shown }
         }
@@ -56,6 +62,7 @@ class UserPreferencesDataSource
         private companion object {
             val THEME_MODE = stringPreferencesKey("theme_mode")
             val CONTENT_OFFER_SHOWN = booleanPreferencesKey("content_offer_shown")
+            val SCANNER_ENABLED = booleanPreferencesKey("scanner_enabled")
             const val MAX_RETRY_DELAY_SECONDS = 30L
         }
     }

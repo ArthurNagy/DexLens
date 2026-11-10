@@ -34,6 +34,25 @@ class OfflineUserPreferencesRepositoryTest {
     }
 
     @Test
+    fun storesAndEmitsTheScannerSwitch() = runTest {
+        val dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) {
+            tmpFolder.newFolder().resolve("prefs.preferences_pb")
+        }
+        val repository = OfflineUserPreferencesRepository(UserPreferencesDataSource(dataStore))
+
+        assertEquals(true, repository.scannerEnabled.first())
+        assertEquals(Ok(Unit), repository.setScannerEnabled(false))
+        assertEquals(false, repository.scannerEnabled.first())
+    }
+
+    @Test
+    fun aFailedScannerSwitchWriteBecomesUnknown() = runTest {
+        val repository = OfflineUserPreferencesRepository(UserPreferencesDataSource(FailingDataStore))
+
+        assertEquals(Err(DomainError.Unknown("disk full")), repository.setScannerEnabled(false))
+    }
+
+    @Test
     fun aFailedWriteBecomesUnknown() = runTest {
         val repository = OfflineUserPreferencesRepository(UserPreferencesDataSource(FailingDataStore))
 

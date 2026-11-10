@@ -42,7 +42,7 @@ the scanner switched off.
 
 ### Requirement: Sheet expands for manual search
 While the scanner is switched on, focusing the search field or dragging the sheet up SHALL expand the sheet over the
-scanner area, leaving a thin strip above it.
+scanner area, leaving a top bar above it.
 
 #### Scenario: Tapping search expands the sheet
 - **WHEN** the search field is tapped
@@ -52,13 +52,21 @@ scanner area, leaving a thin strip above it.
 - **WHEN** the sheet is dragged up
 - **THEN** the sheet expands and the keyboard stays closed
 
+#### Scenario: Top bar above the expanded sheet
+- **WHEN** the sheet is expanded
+- **THEN** the area above it, including behind the status bar, is the app's surface color, and the status bar icons stay readable
+
+#### Scenario: Camera fades into the top bar
+- **WHEN** the sheet moves between its positions
+- **THEN** the camera area fades toward the top bar color as the sheet rises and back as it falls
+
 ### Requirement: Camera runs only while it can be seen
 The camera SHALL be fully off whenever the sheet is expanded or the scanner area is not on screen, and SHALL run
 otherwise once the camera permission has been granted.
 
 #### Scenario: Expanding stops the camera
 - **WHEN** the sheet expands
-- **THEN** the camera turns off, the strip above the sheet is a plain dark bar and the torch button is hidden
+- **THEN** the camera turns off and the torch button is hidden
 
 #### Scenario: Collapsing restarts the camera
 - **WHEN** the sheet returns to its collapsed position
@@ -100,12 +108,12 @@ A switch in Settings SHALL decide whether the home screen has a scanner, and it 
 - **THEN** the home screen shows the scanner area
 
 ### Requirement: Home without the scanner
-With the scanner switched off, the home screen SHALL show the search field and the species list below a thin strip
+With the scanner switched off, the home screen SHALL show the search field and the species list below a top bar
 holding the settings button, with no scanner area and no sheet to drag.
 
 #### Scenario: Scanner off shows only the list
 - **WHEN** the home screen shows with the scanner switched off
-- **THEN** the search field and the list fill the window below the strip, the settings button is visible and the list cannot be dragged down
+- **THEN** the search field and the list fill the window below the top bar, the settings button is visible and the list cannot be dragged down
 
 #### Scenario: Search works with the scanner off
 - **WHEN** text is typed with the scanner switched off

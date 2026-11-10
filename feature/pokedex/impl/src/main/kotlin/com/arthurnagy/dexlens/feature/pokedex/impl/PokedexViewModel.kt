@@ -1,9 +1,17 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl
 
 import androidx.lifecycle.ViewModel
+import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
+import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
+import com.arthurnagy.dexlens.core.domain.scan.FrameObservation
+import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedFrame
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanDebug
+import com.github.michaelbull.result.andThen
+import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,7 +21,10 @@ import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.orbitContainer
 import javax.inject.Inject
 
-/** Searches as the query changes. [PokedexState.query] is the only copy of the query. */
+/**
+ * Fills one list from two inputs: the typed query and the camera. [PokedexState.query] is the only copy of the query.
+ * [onFrame] runs on the camera's analysis thread, so the matcher never touches the main thread.
+ */
 @HiltViewModel
 internal class PokedexViewModel
     @Inject
@@ -21,11 +32,16 @@ internal class PokedexViewModel
         private val searchSpecies: SearchSpeciesUseCase,
         private val observeArtwork: ObserveArtworkUseCase,
         private val observeContentOffer: ObserveContentOfferUseCase,
+        private val observeScannerEnabled: ObserveScannerEnabledUseCase,
+        private val buildSignal: BuildSpeciesSignalUseCase,
+        private val getSpeciesList: GetSpeciesListUseCase,
     ) : ViewModel(),
         OrbitContainerHost<PokedexState, PokedexState, Nothing> {
         override val container = orbitContainer<PokedexState, Nothing>(PokedexState.Initial) {
             observeArtworkLocation()
+            observeScannerSwitch()
             checkOffer()
+            loadMatcher()
             search(state.query)
         }
 
@@ -33,8 +49,26 @@ internal class PokedexViewModel
             observeArtwork().collect { location -> reduce { state.copy(artwork = location) } }
         }
 
+        /** Turning the scanner off also ends what it was doing, so turning it back on starts clean. */
+        private fun observeScannerSwitch() = intent {
+            observeScannerEnabled().collect { enabled ->
+                reduce {
+                    val scan = if (enabled) state.scan else state.scan.withoutMatch().copy(torchOn = false, debug = null)
+                    state.copy(scannerEnabled = enabled, scan = scan)
+                }
+            }
+        }
+
         private fun checkOffer() = intent {
             if (observeContentOffer().first()) reduce { state.copy(pendingOffer = true) }
+        }
+
+        private fun loadMatcher() = intent {
+            buildSignal()
+                .andThen { built -> getSpeciesList().map { list -> built to list } }
+                .onOk { (built, list) ->
+                    reduce { state.copy(scan = state.scan.copy(error = null, signal = built, speciesById = list.associateBy { it.id })) }
+                }.onErr { error -> reduce { state.copy(scan = state.scan.copy(error = error)) } }
         }
 
         /** A slower answer to an older query is dropped, so results always match the text. */
@@ -51,10 +85,40 @@ internal class PokedexViewModel
             reduce { if (state.query == query) state.update() else state }
         }
 
+        /** Typed text takes over from a match in the same step, so the two never disagree. */
         fun onQueryChanged(query: String) = intent {
             if (query == state.query) return@intent
-            reduce { state.copy(query = query) }
+            reduce { state.copy(query = query, scan = if (query.isBlank()) state.scan else state.scan.withoutMatch()) }
             search(query)
+        }
+
+        /** Called for every analysed frame. [debugEnabled] keeps the trace out of release state. */
+        fun onFrame(
+            frame: AnalyzedFrame,
+            debugEnabled: Boolean,
+        ) {
+            val current = container.stateFlow.value
+            val signal = current.scan.signal ?: return
+            if (!current.scanning) return
+            val result = signal.analyze(FrameObservation(frame.lines.map { it.text }))
+            val candidates = result.candidates.map { it.speciesId }.toSet()
+            val debug = if (debugEnabled) ScanDebug(frame, result.decisions) else null
+            // Checked again here: typing may have started while the frame was being read.
+            intent { reduce { if (state.scanning) state.copy(scan = state.scan.afterFrame(candidates, debug)) else state } }
+        }
+
+        private val PokedexState.scanning: Boolean get() = scannerEnabled == true && query.isBlank()
+
+        fun onMatchCleared() = intent {
+            reduce { state.copy(scan = state.scan.withoutMatch()) }
+        }
+
+        fun onHapticConsumed() = intent {
+            reduce { state.copy(scan = state.scan.copy(pendingHaptic = false)) }
+        }
+
+        fun onTorchToggled() = intent {
+            reduce { state.copy(scan = state.scan.copy(torchOn = !state.scan.torchOn)) }
         }
 
         fun onOfferConsumed() = intent {

@@ -47,9 +47,11 @@ None. Free and open source (MIT), distributed as a signed APK on GitHub Releases
 2. Tap a result. The entry opens, with a shared-element transition on phones or beside the list on large screens.
 
 ### Flow 3: Scan a game
-1. Open the camera and point the aiming box at the Pokémon's name on the game screen.
-2. After several frames agree, the phone vibrates and a result sheet appears.
-3. Open the entry from the sheet, or pick one when several names are visible.
+1. Open the app, where the camera is at the top of the home screen, and point the aiming box at the Pokémon's name.
+2. After several frames agree, the phone vibrates and the home list shows only that Pokémon.
+3. Open the entry from the list. When several names are visible, all of them are listed.
+4. Scanning continues, so a different name replaces the match. The clear button returns to the full list.
+5. Anyone who only wants the list can turn the scanner off in Settings, and the camera then never starts.
 
 ## Critical technical considerations
 - Offline first: no network call apart from the optional download, and the README states the hosts contacted.

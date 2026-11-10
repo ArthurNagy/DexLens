@@ -1,7 +1,9 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import androidx.lifecycle.ViewModel
+import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
+import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
@@ -20,6 +22,8 @@ internal class SettingsViewModel
     constructor(
         private val observeThemeMode: ObserveThemeModeUseCase,
         private val setThemeMode: SetThemeModeUseCase,
+        private val observeScannerEnabled: ObserveScannerEnabledUseCase,
+        private val setScannerEnabled: SetScannerEnabledUseCase,
         private val observeContent: ObserveContentPackStateUseCase,
         private val startDownload: StartContentDownloadUseCase,
         private val cancelDownload: CancelContentDownloadUseCase,
@@ -28,11 +32,16 @@ internal class SettingsViewModel
         OrbitContainerHost<SettingsState, SettingsState, Nothing> {
         override val container = orbitContainer<SettingsState, Nothing>(SettingsState.Initial) {
             observeTheme()
+            observeScannerSwitch()
             observeContentState()
         }
 
         private fun observeTheme() = intent {
             observeThemeMode().collect { mode -> reduce { state.copy(themeMode = mode) } }
+        }
+
+        private fun observeScannerSwitch() = intent {
+            observeScannerEnabled().collect { enabled -> reduce { state.copy(scannerEnabled = enabled) } }
         }
 
         private fun observeContentState() = intent {
@@ -41,6 +50,10 @@ internal class SettingsViewModel
 
         fun onThemeSelected(mode: ThemeMode) = intent {
             setThemeMode(mode).onErr { error -> reduce { state.copy(pendingError = error) } }
+        }
+
+        fun onScannerEnabledChanged(enabled: Boolean) = intent {
+            setScannerEnabled(enabled).onErr { error -> reduce { state.copy(pendingError = error) } }
         }
 
         fun onDownload() = intent {

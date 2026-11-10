@@ -35,6 +35,15 @@ class UserPreferencesDataSourceTest {
     }
 
     @Test
+    fun scannerIsOnUntilTurnedOffThenTheStoredValue() = runTest {
+        val dataSource = UserPreferencesDataSource(dataStore())
+
+        assertEquals(true, dataSource.scannerEnabled.first())
+        dataSource.setScannerEnabled(false)
+        assertEquals(false, dataSource.scannerEnabled.first())
+    }
+
+    @Test
     fun aCorruptFileReadsAsTheDefaultsAndTheNextWriteReplacesIt() = runTest {
         val file = tmpFolder.newFolder().resolve("prefs.preferences_pb").apply { writeBytes(byteArrayOf(-1, -1, -1, -1)) }
         val dataSource = UserPreferencesDataSource(dataStore(file))

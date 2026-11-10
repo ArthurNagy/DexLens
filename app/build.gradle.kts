@@ -28,7 +28,6 @@ dependencies {
     // /android-forge-add-feature adds each one above this marker line — keep it.
     implementation(project(":feature:pokedex:impl"))
     implementation(project(":feature:entry:impl"))
-    implementation(project(":feature:scanner:impl"))
     implementation(project(":feature:settings:impl"))
     // android-forge:feature-modules
 

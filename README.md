@@ -2,7 +2,7 @@
 
 DexLens is an open-source, offline-first Pokémon reference for Android. All 1,025 species ship inside the app, so
 browsing, searching and reading an entry work in airplane mode from the first launch. Point the camera at a Pokémon RPG,
-from Game Boy to Switch, and it reads the name on the screen and opens the entry.
+from Game Boy to Switch, and it reads the name on the screen and lists that Pokémon on the home screen.
 
 **[Download the latest APK from GitHub Releases](https://github.com/arthurnagy/DexLens/releases/latest)**
 
@@ -18,7 +18,8 @@ from Game Boy to Switch, and it reads the name on the screen and opens the entry
   Pokédex numbers (`25`, `#025`) and names in other languages.
 - **Type matchups.** Weaknesses, resistances and immunities computed on the device from the type chart.
 - **Camera name recognition.** Bundled text recognition reads the name inside an aiming box, tolerates common misreads,
-  and locks on only when several frames agree. No connection needed.
+  and locks on only when several frames agree. It sits on the home screen above the list, and can be turned off in
+  Settings. No connection needed.
 - **Optional artwork and Pokédex text.** A one-time, resumable download. Without it, type-tinted placeholders are used
   and everything else works the same.
 - **Adaptive.** Phone, tablet and foldable, with a list-detail layout, shared-element transition, predictive back,
@@ -30,7 +31,9 @@ DexLens has no accounts, ads, analytics or crash reporting.
 
 - **Network.** The only network use is the optional download, and only after you start it. It contacts one host,
   `raw.githubusercontent.com`. The app's HTTP client refuses every other host and does not follow redirects.
-- **Camera.** Frames are processed on the device by a model bundled in the APK. Nothing is stored or sent.
+- **Camera.** Once you allow it, the camera starts when the app opens and runs only while the scanner area is on screen.
+  Frames are processed on the device by a model bundled in the APK. Nothing is stored or sent. Turn off "Scanner on home
+  screen" in Settings and the camera never starts and DexLens doesn't ask for access.
 - **ML Kit usage data.** Google documents that
   [ML Kit collects device and app information, per-installation identifiers and usage metrics](https://developers.google.com/ml-kit/android-data-disclosure)
   and sends them over HTTPS. DexLens removes the `datatransport` components that perform that upload, so the data is
@@ -45,10 +48,9 @@ Kotlin, Jetpack Compose and Material 3, on the [android-forge](https://github.co
 
 ```
 :app                     composition root, Nav 3 back stack, list-detail scene
-:feature:pokedex         home list and search
+:feature:pokedex         home screen: list, search, CameraX preview and ML Kit recognition
 :feature:entry           full species entry
-:feature:scanner         CameraX preview, ML Kit recognition, result sheet
-:feature:settings        optional download, theme, credits
+:feature:settings        optional download, scanner switch, theme, credits
 :core:domain             use cases, repository interfaces, name matcher, lock-on tracker
 :core:data               repositories, downloader, WorkManager worker
 :core:database           Room 3: prebuilt Pokédex with FTS5 search, and a writable database for downloaded text
