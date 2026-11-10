@@ -32,7 +32,7 @@ Recorded in ADR 0013.
 
 ### 2. One ViewModel, with scan state nested in `PokedexState`
 `PokedexViewModel` takes over `ScannerViewModel`'s use cases and intents. `ScannerState` becomes a nested `ScanState` value
-holding the matcher, lock history, match, torch and debug data, and it keeps `afterFrame` as a pure reducer, so most of its
+holding the matcher, lock history, match and torch, and it keeps `afterFrame` as a pure reducer, so most of its
 tests carry over. `artwork` and the species map stop being duplicated.
 
 Alternative: two ViewModels bridged by the screen. That needs state copied between them through a `LaunchedEffect`, and leaves a
@@ -91,10 +91,12 @@ Back uses one `NavigationBackHandler`, enabled when the sheet is expanded or a m
 beside the list. Expanded collapses first, otherwise it clears the match. With the scanner switched off there is no sheet or
 match, so the handler is enabled only for typed text, which is what it does today.
 
-### 8. Near-square aiming box that avoids the controls
-`aimBoxFor` takes the top inset and the width reserved for the button row, and returns fractions as before. The box is centred
-horizontally, centred in the space below the status bar, about 80% of that height, and no wider than the space left clear of the
-buttons. That is roughly 205 × 195 dp on a Pixel 6. The hint and the matched names share one label just inside the box's bottom
+### 8. An aiming box that uses the area and avoids the controls
+`aimBoxFor` takes the top inset and the button row's height and width, and returns fractions as before. The box is centred left
+to right and is the larger of two candidates. One starts below the button row and spans the width less a 16 dp margin, up to 1.5
+times as wide as it is tall. The other is a near-square about 80% of the height below the status bar, held the button row's
+width from both sides. The first wins on portrait phones (about 303 × 202 dp on a Pixel 6), the second in short areas such as a
+phone in landscape, where dropping below the buttons would make the box shorter. The hint and the matched names share one label just inside the box's bottom
 edge, marked as a polite live region.
 
 The camera's 3:2 view sits inside a portrait 9:16 frame, so the frame's full width still spans the screen, and pixel density on
@@ -132,11 +134,13 @@ Alternative: a toggle in the button row. It is closer to hand, but this is a cho
 how wide the aiming box can be.
 
 ### 12. The camera area fades into a top bar
-A surface-colored layer sits on top of the scanner area, below the buttons, and its alpha follows the sheet's offset from 0 when
-collapsed to 1 when expanded. It reads the offset in the draw phase, so following a drag doesn't recompose the camera. The sheet
-is the same color, so the bar and the sheet read as one surface. The camera keeps running until the sheet settles, so what fades
+A `surfaceContainer` layer sits on top of the scanner area, below the buttons, and its alpha follows the sheet's offset from 0
+when collapsed to 1 when expanded. It reads the offset in the draw phase, so following a drag doesn't recompose the camera. The
+sheet stays `surface`, so the bar reads as a band of its own above the list, the color Material 3 gives a top app bar with
+content scrolled under it. The camera keeps running until the sheet settles, so what fades
 is the live image rather than a black frame. The buttons take the top bar's colors as the sheet heads for its expanded position.
-With the switch off the same bar is simply there.
+"DexLens" sits at the bar's start with the same alpha as the layer, so it isn't drawn over the camera, and screen readers find
+it as a heading only once the bar is showing. With the switch off the same bar is simply there.
 
 Alternative: leave a dark strip. It looked like an unfinished camera rather than part of the list screen.
 
@@ -145,7 +149,7 @@ Alternative: leave a dark strip. It looked like an unfinished camera rather than
 - [The camera starts on every launch, using battery and showing the privacy indicator] → It runs only while visible, a switch in Settings turns it off, and the README says so.
 - [The screen shows only its background until the stored value arrives] → The first read is one small local file, and the list is still loading at that point. Check a cold start during QA.
 - [A larger box reads more text, so a game's Pokédex list could lock several names at once] → The list handles many matches, and the 3-of-5 rule is unchanged. Check on real game screens during QA, and tighten `aimBoxFor` if needed.
-- [A larger crop makes recognition slower] → `STRATEGY_KEEP_ONLY_LATEST` drops frames instead of queueing them. The debug overlay shows milliseconds per frame.
+- [A larger crop makes recognition slower] → `STRATEGY_KEEP_ONLY_LATEST` drops frames instead of queueing them.
 - [A fling down at the top of the list collapses the sheet and clears typed text] → Accepted, for one consistent rule: collapsed means scanning.
 - [The list can change while reaching for a row, if the camera catches another name] → A new lock needs 3 of 5 frames and must add a species.
 - [`BottomSheetScaffold` measures with the IME in ways that vary by M3 version] → Covered by a device check of keyboard behaviour in QA.

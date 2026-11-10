@@ -11,10 +11,6 @@ object CameraColors {
     val onCamera = Color.White
     val scrim = Color.Black.copy(alpha = 0.55f)
     val toolbar = Color.Black.copy(alpha = 0.45f)
-    val debugPanel = Color.Black.copy(alpha = 0.6f)
-    val debugBox = Color.Yellow
-    val debugMatched = Color.Green
-    val debugUnmatched = Color.LightGray
 }
 
 /** DexLens's brand schemes: a teal lens colour over cool neutrals, so type colours stay the loudest thing on screen. */

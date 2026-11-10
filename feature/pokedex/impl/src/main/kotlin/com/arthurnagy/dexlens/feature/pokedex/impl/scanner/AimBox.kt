@@ -15,22 +15,48 @@ internal data class AimBox(
 )
 
 /**
- * A near-square, centred in the [width] × [height] camera area below its [topInset]. It takes about 80% of that height,
- * and stays [reservedWidth] from both sides so that it clears the button row at the top end while staying centred.
+ * The largest box, centred left to right in the [width] × [height] camera area, that stays clear of the status bar
+ * ([topInset]) and of the button row at the top end, which is [buttonRowHeight] tall and [reservedWidth] wide.
+ *
+ * It is the larger of two boxes. One starts below the button row and spans the width less [margin] on each side, up to
+ * half again as wide as it is tall, which suits a name and wins on most phones. The other is a near-square beside the
+ * buttons, held [reservedWidth] from both sides, which wins in short areas such as a phone in landscape.
  */
 internal fun aimBoxFor(
     width: Float,
     height: Float,
     topInset: Float,
     reservedWidth: Float,
+    buttonRowHeight: Float,
+    margin: Float,
 ): AimBox {
-    val available = height - topInset
-    val boxWidth = min(width - 2f * reservedWidth, available * HEIGHT_SHARE * WIDTH_OVER_HEIGHT).coerceAtLeast(1f)
-    val boxHeight = boxWidth / WIDTH_OVER_HEIGHT
-    val left = (width - boxWidth) / 2f
-    val top = topInset + (available - boxHeight) / 2f
-    return AimBox(left = left / width, top = top / height, right = (left + boxWidth) / width, bottom = (top + boxHeight) / height)
+    val belowButtons = run {
+        val top = topInset + buttonRowHeight
+        val boxHeight = (height - top - margin).coerceAtLeast(1f)
+        val boxWidth = min(width - 2f * margin, boxHeight * MAX_WIDTH_OVER_HEIGHT).coerceAtLeast(1f)
+        Placed(top, boxWidth, boxHeight)
+    }
+    val besideButtons = run {
+        val available = height - topInset
+        val boxWidth = min(width - 2f * reservedWidth, available * HEIGHT_SHARE * NEAR_SQUARE).coerceAtLeast(1f)
+        val boxHeight = boxWidth / NEAR_SQUARE
+        Placed(topInset + (available - boxHeight) / 2f, boxWidth, boxHeight)
+    }
+    val box = maxOf(belowButtons, besideButtons, compareBy { it.width * it.height })
+    val left = (width - box.width) / 2f
+    return AimBox(
+        left = left / width,
+        top = box.top / height,
+        right = (left + box.width) / width,
+        bottom = (box.top + box.height) / height,
+    )
 }
+
+private data class Placed(
+    val top: Float,
+    val width: Float,
+    val height: Float,
+)
 
 /** Integer region of the image buffer. */
 internal data class CropRegion(
@@ -99,7 +125,8 @@ internal fun lumaCropToNv21(
 }
 
 private const val HEIGHT_SHARE = 0.8f
-private const val WIDTH_OVER_HEIGHT = 1.05f
+private const val NEAR_SQUARE = 1.05f
+private const val MAX_WIDTH_OVER_HEIGHT = 1.5f
 private const val ROTATION_90 = 90
 private const val ROTATION_180 = 180
 private const val ROTATION_270 = 270

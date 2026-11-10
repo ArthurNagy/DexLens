@@ -6,8 +6,6 @@ import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
 import com.arthurnagy.dexlens.core.domain.scan.LockOnTracker
-import com.arthurnagy.dexlens.core.domain.scan.MatchDecision
-import com.arthurnagy.dexlens.core.domain.scan.MatchOutcome
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
@@ -24,8 +22,6 @@ import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
 import com.arthurnagy.dexlens.core.testing.speciesSummary
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedFrame
-import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedLine
-import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanDebug
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
 import kotlinx.coroutines.CompletableDeferred
@@ -73,14 +69,7 @@ internal class PokedexViewModelTest {
         GetSpeciesListUseCase(speciesRepository),
     )
 
-    private fun frame(vararg lines: String) = AnalyzedFrame(
-        lines = lines.map { AnalyzedLine(it, 0f, 0f, 10f, 10f) },
-        cropWidth = 100,
-        cropHeight = 20,
-        bufferWidth = 1920,
-        bufferHeight = 1080,
-        processingMillis = 5,
-    )
+    private fun frame(vararg lines: String) = AnalyzedFrame(lines.toList())
 
     private fun PokedexState.seen(vararg seen: SpeciesSummary) = copy(
         scan = scan.copy(
@@ -112,7 +101,7 @@ internal class PokedexViewModelTest {
 
     /** A home screen with Pikachu already matched and its haptic played. */
     private fun matched(block: suspend Context.(PokedexState) -> Unit) = home {
-        repeat(3) { containerHost.onFrame(frame("PIKACHU"), debugEnabled = false) }
+        repeat(3) { containerHost.onFrame(frame("PIKACHU")) }
         skipItems(2)
         expectInternalState { lockedOn(pikachu) }
         containerHost.onHapticConsumed()
@@ -252,7 +241,7 @@ internal class PokedexViewModelTest {
     // Scenario: Lock after repeated frames
     @Test
     fun threeMatchingFramesLock() = home {
-        repeat(3) { containerHost.onFrame(frame("PIKACHU"), debugEnabled = false) }
+        repeat(3) { containerHost.onFrame(frame("PIKACHU")) }
         expectInternalState { seen(pikachu) }
         expectInternalState { seen(pikachu) }
         expectInternalState { lockedOn(pikachu) }
@@ -261,9 +250,9 @@ internal class PokedexViewModelTest {
     // Scenario: Single frame does not lock
     @Test
     fun oneFrameDoesNotLock() = home {
-        containerHost.onFrame(frame("PIKACHU"), debugEnabled = false)
+        containerHost.onFrame(frame("PIKACHU"))
         expectInternalState { seen(pikachu) }
-        containerHost.onFrame(frame("nothing here"), debugEnabled = false)
+        containerHost.onFrame(frame("nothing here"))
         expectInternalState { seen() }
         expectNoItems()
     }
@@ -271,7 +260,7 @@ internal class PokedexViewModelTest {
     // Scenario: Several names offered as choices
     @Test
     fun twoSpeciesAreListedInNumberOrder() = home {
-        repeat(3) { containerHost.onFrame(frame("PIKACHU", "PIDGEY"), debugEnabled = false) }
+        repeat(3) { containerHost.onFrame(frame("PIKACHU", "PIDGEY")) }
         expectInternalState { seen(pikachu, pidgey) }
         expectInternalState { seen(pikachu, pidgey) }
         expectInternalState { lockedOn(pidgey, pikachu) }
@@ -281,7 +270,7 @@ internal class PokedexViewModelTest {
     // Scenario: Nickname keeps scanning
     @Test
     fun unknownTextKeepsScanning() = home {
-        repeat(6) { containerHost.onFrame(frame("SPARKY"), debugEnabled = false) }
+        repeat(6) { containerHost.onFrame(frame("SPARKY")) }
         expectNoItems()
     }
 
@@ -308,7 +297,7 @@ internal class PokedexViewModelTest {
         containerHost.onQueryChanged("zzz")
         expectInternalState { copy(query = "zzz") }
         expectInternalState { copy(results = emptyList()) }
-        containerHost.onFrame(frame("PIKACHU"), debugEnabled = false)
+        containerHost.onFrame(frame("PIKACHU"))
         expectNoItems()
     }
 
@@ -330,24 +319,9 @@ internal class PokedexViewModelTest {
     }
 
     @Test
-    fun debugFramesAreExposedOnlyWhenEnabled() = home {
-        val debugFrame = frame("PIKACHU")
-        containerHost.onFrame(debugFrame, debugEnabled = true)
-        expectInternalState {
-            seen(pikachu).let { seen ->
-                seen.copy(
-                    scan = seen.scan.copy(
-                        debug = ScanDebug(debugFrame, listOf(MatchDecision("pikachu", MatchOutcome.EXACT, setOf(SpeciesId(25))))),
-                    ),
-                )
-            }
-        }
-    }
-
-    @Test
     fun framesBeforeTheIndexLoadsAreIgnored() = runTest {
         viewModel().testWithInternalState(this, PokedexState.Initial) {
-            containerHost.onFrame(frame("PIKACHU"), debugEnabled = false)
+            containerHost.onFrame(frame("PIKACHU"))
             expectNoItems()
         }
     }
@@ -379,7 +353,7 @@ internal class PokedexViewModelTest {
     fun framesAreIgnoredWithTheScannerOff() = home {
         preferences.setScannerEnabled(false)
         expectInternalState { copy(scannerEnabled = false) }
-        containerHost.onFrame(frame("PIKACHU"), debugEnabled = false)
+        containerHost.onFrame(frame("PIKACHU"))
         expectNoItems()
     }
 }

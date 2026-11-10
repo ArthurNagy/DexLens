@@ -116,7 +116,7 @@ The scanner area SHALL show an aiming box, a hint to point at the Pokémon's nam
 
 #### Scenario: Aiming box clear of the controls
 - **WHEN** the camera is running in any window size
-- **THEN** the aiming box does not overlap the status bar or the buttons, and it is close to square
+- **THEN** the aiming box is centred, does not overlap the status bar or the buttons, and is no more than half again as wide as it is tall
 
 ## REMOVED Requirements
 

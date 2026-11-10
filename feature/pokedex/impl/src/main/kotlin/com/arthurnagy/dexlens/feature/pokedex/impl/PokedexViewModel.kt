@@ -9,7 +9,6 @@ import com.arthurnagy.dexlens.core.domain.scan.FrameObservation
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedFrame
-import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanDebug
 import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onErr
@@ -53,7 +52,7 @@ internal class PokedexViewModel
         private fun observeScannerSwitch() = intent {
             observeScannerEnabled().collect { enabled ->
                 reduce {
-                    val scan = if (enabled) state.scan else state.scan.withoutMatch().copy(torchOn = false, debug = null)
+                    val scan = if (enabled) state.scan else state.scan.withoutMatch().copy(torchOn = false)
                     state.copy(scannerEnabled = enabled, scan = scan)
                 }
             }
@@ -92,19 +91,15 @@ internal class PokedexViewModel
             search(query)
         }
 
-        /** Called for every analysed frame. [debugEnabled] keeps the trace out of release state. */
-        fun onFrame(
-            frame: AnalyzedFrame,
-            debugEnabled: Boolean,
-        ) {
+        /** Called for every analysed frame. */
+        fun onFrame(frame: AnalyzedFrame) {
             val current = container.stateFlow.value
             val signal = current.scan.signal ?: return
             if (!current.scanning) return
-            val result = signal.analyze(FrameObservation(frame.lines.map { it.text }))
+            val result = signal.analyze(FrameObservation(frame.lines))
             val candidates = result.candidates.map { it.speciesId }.toSet()
-            val debug = if (debugEnabled) ScanDebug(frame, result.decisions) else null
             // Checked again here: typing may have started while the frame was being read.
-            intent { reduce { if (state.scanning) state.copy(scan = state.scan.afterFrame(candidates, debug)) else state } }
+            intent { reduce { if (state.scanning) state.copy(scan = state.scan.afterFrame(candidates)) else state } }
         }
 
         private val PokedexState.scanning: Boolean get() = scannerEnabled == true && query.isBlank()

@@ -19,7 +19,7 @@ internal class ScanStateTest {
     private fun ScanState.frames(
         count: Int,
         vararg seen: SpeciesSummary,
-    ): ScanState = (1..count).fold(this) { state, _ -> state.afterFrame(seen.mapTo(mutableSetOf()) { it.id }, frameDebug = null) }
+    ): ScanState = (1..count).fold(this) { state, _ -> state.afterFrame(seen.mapTo(mutableSetOf()) { it.id }) }
 
     // Scenario: Analysis continues during a match
     @Test

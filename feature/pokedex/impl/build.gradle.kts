@@ -5,9 +5,6 @@ plugins {
 android {
     namespace = "com.arthurnagy.dexlens.feature.pokedex.impl"
     resourcePrefix = "pokedex_"
-    buildFeatures {
-        buildConfig = true
-    }
 }
 
 dependencies {

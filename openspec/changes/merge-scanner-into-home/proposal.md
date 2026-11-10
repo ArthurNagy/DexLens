@@ -16,7 +16,7 @@ lets both inputs fill one list.
 - A name the scanner locks onto filters the same list that search uses, and appears in the aiming box. The scanner keeps
   reading, and a different name replaces the match. A clear button in the search field returns to the full list.
 - Settings and the torch move to the top end of the camera area. The torch hides while the camera is off.
-- The aiming box becomes a near-square centred in the camera area, instead of a thin strip.
+- The aiming box becomes a large box centred in the camera area, instead of a thin strip.
 - When the camera permission is missing, the camera area explains why and offers a button. The system dialog never appears
   on its own, and search keeps working.
 - A switch in Settings, on by default, removes the scanner from the home screen. With it off, the search field and list fill
@@ -37,7 +37,7 @@ lets both inputs fill one list.
 
 ## Non-goals
 
-- Image recognition of sprites. The encoder files stay bundled and unused, but the near-square box is the region it will need.
+- Image recognition of sprites. The encoder files stay bundled and unused, but the larger box is the region it will need.
 - A history of past scans. Only the current match is listed.
 - Changing how names are matched, or how many frames it takes to lock.
 - Changing the entry screen, settings, or the list-detail layout on wide windows.
