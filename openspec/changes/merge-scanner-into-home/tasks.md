@@ -19,17 +19,25 @@
 - [ ] 3.5 `:feature:pokedex:impl`: wire focus-to-expand, collapse-ends-search, the back handler, composing the camera only while collapsed, and the status bar rule; verify with screen tests tagged `Tapping search expands the sheet`, `Dragging up expands the sheet`, `Settings stays while searching`, `Expanding stops the camera`, `Collapsing restarts the camera`, `Covering home stops the camera`, `Entry beside the list keeps scanning`, `Wide window keeps list and entry together`, `Collapsing clears the typed text`, `Back collapses the expanded sheet`, `Clearing text keeps the sheet expanded`, `Returning from an entry keeps the search`, `Back clears a match` and `Match kept when the sheet is dragged`
 - [ ] 3.6 `:feature:pokedex:impl`: update previews and record phone and tablet Roborazzi goldens for scanning, match, expanded search, permission, loading and dark theme with `./gradlew recordRoborazziDebug`, and review each image
 
-## 4. Remove the separate scanner
+## 4. Scanner switch
 
-- [ ] 4.1 `:feature:scanner:api`, `:feature:scanner:impl`, `:feature:pokedex:impl`, `:app`: delete both scanner modules with their goldens and `ScannerKey`, remove the `onOpenScanner` path, and update `settings.gradle.kts` and the build files; verify with `./gradlew assembleDebug`, and that nothing references `feature:scanner` outside the OpenSpec archive
-- [ ] 4.2 Docs: add `docs/DECISIONS/0013-scanner-in-pokedex-feature.md`, update Flow 3 in `docs/MVP_SPEC.md`, the feature list in `CLAUDE.md`, and the README's module table and privacy notes; verify by searching those files for "result sheet" and `:feature:scanner`
-- [ ] 4.3 Replace `docs/screenshots/home.png` and `docs/screenshots/scan.png` with captures of the new home screen, and verify the README shows them
+- [ ] 4.1 `:core:domain`, `:core:datastore`, `:core:data`, `:core:testing`: add the `scannerEnabled` preference, true until changed, with its observe and set use cases and the fake; verify with `UserPreferencesDataSourceTest`, `OfflineUserPreferencesRepositoryTest` and the use-case tests
+- [ ] 4.2 `:feature:settings:impl`: add the switch row, its state, intent and string; verify with `SettingsViewModelTest` and a `SettingsScreenTest` tagged `Scanner switch applies`, and re-record the Settings goldens
+- [ ] 4.3 `:feature:pokedex:impl`: observe the preference as a nullable `scannerEnabled`, and clear the match, lock history and torch when it turns off; verify with ViewModel tests tagged `Scanner on by default` and `Turning the scanner off clears a match`
+- [ ] 4.4 `:feature:pokedex:impl`: show only the background until the value is known, add the plain layout for the switched-off state, and start the sheet expanded when there is typed text; verify with screen tests tagged `Scanner off shows only the list`, `Search works with the scanner off`, `Back clears typed text with the scanner off`, `Back leaves with the scanner off`, `Camera stays off at launch`, `No permission prompt with the scanner off`, `Turning the scanner off keeps a search`, `Turning the scanner on shows the camera` and `Turning the scanner on during a search`
+- [ ] 4.5 `:feature:pokedex:impl`: record phone and tablet Roborazzi goldens for the switched-off state with `./gradlew recordRoborazziDebug`, and review each image
 
-## 5. Verify
+## 5. Remove the separate scanner
 
-- [ ] 5.1 Local gate: `./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`
-- [ ] 5.2 Run the `android-reviewer` agent on the diff and fix what it finds, then re-run the local gate
-- [ ] 5.3 Run the `android-qa` agent for the layout journeys on phone and tablet emulators; camera recognition on real game screens needs the Pixel 6, so ask before installing there
+- [ ] 5.1 `:feature:scanner:api`, `:feature:scanner:impl`, `:feature:pokedex:impl`, `:app`: delete both scanner modules with their goldens and `ScannerKey`, remove the `onOpenScanner` path, and update `settings.gradle.kts` and the build files; verify with `./gradlew assembleDebug`, and that nothing references `feature:scanner` outside the OpenSpec archive
+- [ ] 5.2 Docs: add `docs/DECISIONS/0013-scanner-in-pokedex-feature.md`, update Flow 3 in `docs/MVP_SPEC.md`, the feature list in `CLAUDE.md`, and the README's module table and privacy notes, saying how to turn the scanner off; verify by searching those files for "result sheet" and `:feature:scanner`
+- [ ] 5.3 Replace `docs/screenshots/home.png` and `docs/screenshots/scan.png` with captures of the new home screen, and verify the README shows them
+
+## 6. Verify
+
+- [ ] 6.1 Local gate: `./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`
+- [ ] 6.2 Run the `android-reviewer` agent on the diff and fix what it finds, then re-run the local gate
+- [ ] 6.3 Run the `android-qa` agent for the layout journeys on phone and tablet emulators; camera recognition on real game screens needs the Pixel 6, so ask before installing there
 
 ## Workflow follow-up
 
