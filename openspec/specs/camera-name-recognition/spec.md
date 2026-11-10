@@ -65,53 +65,53 @@ A species SHALL be locked only after it appears in several recent frames, and un
 
 #### Scenario: Several names offered as choices
 - **WHEN** two species both reach the lock threshold
-- **THEN** both are offered as choices
+- **THEN** both are listed in Pokédex order
 
 #### Scenario: Nickname keeps scanning
 - **WHEN** only text that is not a species name is seen
-- **THEN** no result is shown and scanning continues
-
-### Requirement: Result sheet
-On lock the app SHALL give haptic feedback, pause analysis and show a sheet that opens the entry.
-
-#### Scenario: Result opens the entry
-- **WHEN** a species is locked and the user taps it in the sheet
-- **THEN** its entry opens
-
-#### Scenario: Analysis pauses during result
-- **WHEN** the result sheet is showing
-- **THEN** frames are not analysed until the sheet is dismissed
-
-#### Scenario: Dismissing resumes scanning
-- **WHEN** the result sheet is dismissed
-- **THEN** scanning resumes with the lock history cleared
+- **THEN** the list does not change and scanning continues
 
 ### Requirement: Camera permission
-The screen SHALL explain why the camera is needed and SHALL handle denial without blocking the rest of the app.
+While the scanner is switched on, the scanner area SHALL explain why the camera is needed and SHALL handle denial without blocking the rest of the app.
 
 #### Scenario: Rationale before asking
 - **WHEN** the camera permission has not been granted
-- **THEN** an explanation and a button to grant it are shown
+- **THEN** an explanation and a button to grant it are shown in the scanner area
 
 #### Scenario: Denied permanently
 - **WHEN** the permission is denied and the system will no longer ask
-- **THEN** a button to open the app's settings is shown
+- **THEN** a button to open the app's settings is shown in the scanner area
+
+#### Scenario: System dialog waits for a tap
+- **WHEN** the app opens without the camera permission
+- **THEN** the system permission dialog does not appear until the user taps the button
+
+#### Scenario: Search works without the camera
+- **WHEN** the camera permission is missing or the device has no usable camera
+- **THEN** the list and search work as usual, and the scanner area says why it is empty
 
 ### Requirement: Camera controls and guidance
-The screen SHALL show an aiming box, a hint to point at the Pokémon's name and, when the camera has a flash, a torch
-toggle, and only the aiming box SHALL be analysed.
+The scanner area SHALL show an aiming box, a hint to point at the Pokémon's name and, while the camera is running on a device with a flash, a torch toggle, and only the aiming box SHALL be analysed.
 
 #### Scenario: Hint and aiming box shown
-- **WHEN** the camera is running
+- **WHEN** the camera is running and nothing is matched
 - **THEN** the aiming box and the hint "Point at the Pokémon's name" are visible
 
 #### Scenario: Torch toggles
 - **WHEN** the torch button is tapped on a camera with a flash
 - **THEN** the torch changes state and the button reflects it
 
+#### Scenario: Torch returns with the camera
+- **WHEN** the torch was on and the camera restarts after the sheet collapses
+- **THEN** the torch is on again
+
 #### Scenario: Crop follows the aiming box
 - **WHEN** a frame is analysed in any device orientation
 - **THEN** only the sensor region under the aiming box is sent to recognition
+
+#### Scenario: Aiming box clear of the controls
+- **WHEN** the camera is running in any window size
+- **THEN** the aiming box is centred, does not overlap the status bar or the buttons, and is no more than half again as wide as it is tall
 
 ### Requirement: Works offline with on-device recognition
 Recognition SHALL run entirely on the device with a model bundled in the app, with no download and no network.
@@ -119,3 +119,56 @@ Recognition SHALL run entirely on the device with a model bundled in the app, wi
 #### Scenario: Recognition in airplane mode
 - **WHEN** the device has no network on first launch
 - **THEN** text recognition still returns results
+
+### Requirement: Matches shown in the home list
+On lock the app SHALL give haptic feedback, list the locked species in the home list in place of the full list, and name them in the aiming box.
+
+#### Scenario: Match filters the list
+- **WHEN** a species is locked
+- **THEN** the phone vibrates and the home list shows only the locked species
+
+#### Scenario: Match named in the aiming box
+- **WHEN** a species is locked
+- **THEN** its name replaces the hint in the aiming box and screen readers announce it
+
+#### Scenario: Match opens the entry
+- **WHEN** a species is locked and the user taps it in the list
+- **THEN** its entry opens
+
+### Requirement: Scanning continues after a match
+Analysis SHALL keep running after a lock. A match SHALL stay listed until a lock adds a species it does not include, or the user clears or replaces it.
+
+#### Scenario: Analysis continues during a match
+- **WHEN** a match is listed and the camera is running
+- **THEN** frames are still analysed
+
+#### Scenario: Different name replaces the match
+- **WHEN** a match is listed and a species outside it locks
+- **THEN** the list shows the new lock and the phone vibrates
+
+#### Scenario: Same name changes nothing
+- **WHEN** a match is listed and a lock contains only species already listed
+- **THEN** the list does not change and the phone does not vibrate
+
+#### Scenario: Match stays when the name leaves
+- **WHEN** a match is listed and its name is no longer in the camera's view
+- **THEN** the match stays listed
+
+### Requirement: Clearing or replacing a match
+The user SHALL be able to return from a match to the full list, and typed text SHALL always take over from a match.
+
+#### Scenario: Clearing a match restores the list
+- **WHEN** the clear button in the search field is tapped while a match is listed
+- **THEN** the full list is shown and the hint returns to the aiming box
+
+#### Scenario: Back clears a match
+- **WHEN** Back is pressed while a match is listed, the sheet is collapsed and no entry is open beside it
+- **THEN** the full list is shown and the app stays open
+
+#### Scenario: Typing replaces a match
+- **WHEN** the user types in the search field while a match is listed
+- **THEN** the match is cleared and the list answers the typed text
+
+#### Scenario: Match kept when the sheet is dragged
+- **WHEN** a match is listed and the sheet is dragged up and back down without typing
+- **THEN** the match is still listed
