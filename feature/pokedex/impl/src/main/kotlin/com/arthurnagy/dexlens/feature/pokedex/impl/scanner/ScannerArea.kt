@@ -3,7 +3,6 @@ package com.arthurnagy.dexlens.feature.pokedex.impl.scanner
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -17,6 +16,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -52,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -63,7 +64,6 @@ import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.designsystem.CameraColors
 import com.arthurnagy.dexlens.core.designsystem.DarkScheme
-import com.arthurnagy.dexlens.core.domain.scan.MatchOutcome
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
 import com.arthurnagy.dexlens.core.ui.MessageState
 import com.arthurnagy.dexlens.core.ui.listText
@@ -107,7 +107,6 @@ internal fun ScannerArea(
     topBarAlpha: () -> Float,
     height: Dp,
     topInset: Dp,
-    debugEnabled: Boolean,
     onRequestPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -123,6 +122,8 @@ internal fun ScannerArea(
                 height = constraints.maxHeight.toFloat(),
                 topInset = with(density) { topInset.toPx() },
                 reservedWidth = with(density) { AppDimens.scannerButtonRowWidth.toPx() },
+                buttonRowHeight = with(density) { AppDimens.scannerButtonRowHeight.toPx() },
+                margin = with(density) { AppSpacing.md.toPx() },
             )
         }
         when {
@@ -151,7 +152,6 @@ internal fun ScannerArea(
                             bottom = areaHeight * (1f - aimBox.bottom) + AppSpacing.sm,
                         ),
                 )
-                if (debugEnabled) scan.debug?.let { DebugOverlay(it, aimBox, topInset, Modifier.fillMaxSize()) }
             }
         }
         // Read while drawing, so following the sheet doesn't recompose the camera on every frame.
@@ -159,7 +159,7 @@ internal fun ScannerArea(
             Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = topBarAlpha() }
-                .background(MaterialTheme.colorScheme.surface),
+                .background(MaterialTheme.colorScheme.surfaceContainer),
         )
     }
 }
@@ -196,7 +196,7 @@ internal fun ScannerButtons(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val containerColor by animateColorAsState(if (onTopBar) MaterialTheme.colorScheme.surface else CameraColors.toolbar)
+    val containerColor by animateColorAsState(if (onTopBar) MaterialTheme.colorScheme.surfaceContainer else CameraColors.toolbar)
     val contentColor by animateColorAsState(if (onTopBar) MaterialTheme.colorScheme.onSurface else CameraColors.onCamera)
     val colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = containerColor, contentColor = contentColor)
     Row(
@@ -220,6 +220,33 @@ internal fun ScannerButtons(
             Icon(painterResource(CoreUiR.drawable.core_ui_ic_settings), contentDescription = stringResource(R.string.pokedex_settings))
         }
     }
+}
+
+/**
+ * The app's name at the start of the top bar. [alpha] follows the camera's fade into the bar, and screen readers find
+ * the title only while it is [visible], so it isn't announced over the camera.
+ */
+@Composable
+internal fun TopBarTitle(
+    visible: Boolean,
+    topInset: Dp,
+    modifier: Modifier = Modifier,
+    alpha: () -> Float = { 1f },
+) {
+    Text(
+        text = stringResource(R.string.pokedex_title),
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+        modifier = modifier
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Start))
+            .padding(top = topInset, start = AppSpacing.md)
+            .height(AppDimens.scannerButtonRowHeight)
+            .wrapContentHeight(Alignment.CenterVertically)
+            .graphicsLayer { this.alpha = alpha() }
+            .testTag("pokedex:title")
+            .then(if (visible) Modifier.semantics { heading() } else Modifier.clearAndSetSemantics {}),
+    )
 }
 
 @Composable
@@ -325,58 +352,3 @@ private fun DrawScope.drawCornerBrackets(
     }
     drawPath(brackets, CameraColors.onCamera, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
 }
-
-/** Debug builds only: recognised lines in the aiming box and what the matcher decided, for tuning on real screens. */
-@Composable
-private fun DebugOverlay(
-    debug: ScanDebug,
-    box: AimBox,
-    topInset: Dp,
-    modifier: Modifier = Modifier,
-) {
-    val frame = debug.frame
-    Box(modifier) {
-        Canvas(Modifier.fillMaxSize()) {
-            val left = size.width * box.left
-            val top = size.height * box.top
-            val scaleX = size.width * (box.right - box.left) / frame.cropWidth
-            val scaleY = size.height * (box.bottom - box.top) / frame.cropHeight
-            frame.lines.forEach { line ->
-                drawRect(
-                    color = CameraColors.debugBox,
-                    topLeft = Offset(left + line.left * scaleX, top + line.top * scaleY),
-                    size = Size((line.right - line.left) * scaleX, (line.bottom - line.top) * scaleY),
-                    style = Stroke(width = DEBUG_STROKE),
-                )
-            }
-        }
-        Column(
-            Modifier
-                .padding(top = topInset + AppDimens.scannerButtonRowHeight, start = AppSpacing.sm, end = AppSpacing.sm)
-                .background(CameraColors.debugPanel)
-                .padding(AppSpacing.sm),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-        ) {
-            Text(
-                text = with(frame) { "$bufferWidth×$bufferHeight crop $cropWidth×$cropHeight $processingMillis ms" },
-                color = CameraColors.onCamera,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            debug.decisions.take(MAX_DEBUG_LINES).forEach { decision ->
-                val color = when (decision.outcome) {
-                    MatchOutcome.EXACT, MatchOutcome.CONFUSABLE, MatchOutcome.FUZZY -> CameraColors.debugMatched
-                    MatchOutcome.AMBIGUOUS -> CameraColors.debugBox
-                    MatchOutcome.IGNORED, MatchOutcome.NO_MATCH -> CameraColors.debugUnmatched
-                }
-                Text(
-                    text = "${decision.outcome}: ${decision.text} ${decision.speciesIds.map { it.value }}",
-                    color = color,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-    }
-}
-
-private const val DEBUG_STROKE = 3f
-private const val MAX_DEBUG_LINES = 12

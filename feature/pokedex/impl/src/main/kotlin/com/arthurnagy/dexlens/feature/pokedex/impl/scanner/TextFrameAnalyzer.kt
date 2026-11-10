@@ -1,6 +1,5 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl.scanner
 
-import android.os.SystemClock
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 
@@ -11,7 +10,7 @@ internal fun interface LineRecognizer {
         width: Int,
         height: Int,
         rotationDegrees: Int,
-    ): List<AnalyzedLine>?
+    ): List<String>?
 }
 
 /**
@@ -22,7 +21,6 @@ internal class TextFrameAnalyzer(
     private val recognizer: LineRecognizer,
     private val aimBox: () -> AimBox,
     private val onFrame: (AnalyzedFrame) -> Unit,
-    private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) : ImageAnalysis.Analyzer {
     override fun analyze(image: ImageProxy) {
         try {
@@ -33,27 +31,12 @@ internal class TextFrameAnalyzer(
     }
 
     private fun process(image: ImageProxy) {
-        val started = clock()
         val rotation = image.imageInfo.rotationDegrees
         val view = image.cropRect
         val region = cropRegion(view.left, view.top, view.right, view.bottom, rotation, aimBox())
         val plane = image.planes[0]
         val nv21 = lumaCropToNv21(plane.buffer, plane.rowStride, region)
         val lines = recognizer.recognize(nv21, region.width, region.height, rotation) ?: return
-        val upright = rotation == 0 || rotation == HALF_TURN
-        onFrame(
-            AnalyzedFrame(
-                lines = lines,
-                cropWidth = if (upright) region.width else region.height,
-                cropHeight = if (upright) region.height else region.width,
-                bufferWidth = image.width,
-                bufferHeight = image.height,
-                processingMillis = clock() - started,
-            ),
-        )
-    }
-
-    private companion object {
-        const val HALF_TURN = 180
+        onFrame(AnalyzedFrame(lines))
     }
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="pokedex_title" translatable="false">DexLens</string>
     <string name="pokedex_search_hint">Search name or number</string>
     <string name="pokedex_clear_search">Clear search</string>
     <string name="pokedex_empty_title">No Pokémon named “%1$s”</string>

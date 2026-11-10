@@ -54,7 +54,7 @@ scanner area, leaving a top bar above it.
 
 #### Scenario: Top bar above the expanded sheet
 - **WHEN** the sheet is expanded
-- **THEN** the area above it, including behind the status bar, is the app's surface color, and the status bar icons stay readable
+- **THEN** the area above it, including behind the status bar, is a top bar color slightly different from the sheet's, with the app's name at its start, and the status bar icons stay readable
 
 #### Scenario: Camera fades into the top bar
 - **WHEN** the sheet moves between its positions
@@ -109,7 +109,7 @@ A switch in Settings SHALL decide whether the home screen has a scanner, and it 
 
 ### Requirement: Home without the scanner
 With the scanner switched off, the home screen SHALL show the search field and the species list below a top bar
-holding the settings button, with no scanner area and no sheet to drag.
+holding the app's name and the settings button, with no scanner area and no sheet to drag.
 
 #### Scenario: Scanner off shows only the list
 - **WHEN** the home screen shows with the scanner switched off

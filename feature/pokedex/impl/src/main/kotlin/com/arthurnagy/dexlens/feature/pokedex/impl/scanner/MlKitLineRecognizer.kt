@@ -21,14 +21,11 @@ internal class MlKitLineRecognizer(
         width: Int,
         height: Int,
         rotationDegrees: Int,
-    ): List<AnalyzedLine>? {
+    ): List<String>? {
         val input = InputImage.fromByteArray(nv21, width, height, rotationDegrees, InputImage.IMAGE_FORMAT_NV21)
         return try {
             val text = Tasks.await(recognizer.process(input), RECOGNITION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-            text.textBlocks.flatMap { it.lines }.mapNotNull { line ->
-                val box = line.boundingBox ?: return@mapNotNull null
-                AnalyzedLine(line.text, box.left.toFloat(), box.top.toFloat(), box.right.toFloat(), box.bottom.toFloat())
-            }
+            text.textBlocks.flatMap { it.lines }.map { it.text }
         } catch (e: CancellationException) {
             // The sheet expanded and closed the recognizer while this frame was running.
             Timber.d(e, "text recognition cancelled")

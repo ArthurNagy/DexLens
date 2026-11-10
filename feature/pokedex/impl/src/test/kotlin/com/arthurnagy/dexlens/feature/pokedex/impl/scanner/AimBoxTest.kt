@@ -46,7 +46,7 @@ internal class AimBoxTest {
 
     // Scenario: Aiming box clear of the controls
     @Test
-    fun boxIsCloseToSquareAndClearOfTheControlsInEveryWindow() {
+    fun boxIsCentredAndClearOfTheControlsInEveryWindow() {
         // Pixel 6 portrait, a phone in landscape with a capped area, a small phone and a tablet's list pane, in pixels.
         val windows = listOf(
             Window(width = 1080f, height = 793f, topInset = 73f),
@@ -55,23 +55,37 @@ internal class AimBoxTest {
             Window(width = 1200f, height = 800f, topInset = 0f),
         )
         windows.forEach { window ->
-            val box = aimBoxFor(window.width, window.height, window.topInset, reservedWidth = RESERVED)
+            val box = aimBoxFor(window.width, window.height, window.topInset, RESERVED, ROW_HEIGHT, MARGIN)
             val width = (box.right - box.left) * window.width
             val height = (box.bottom - box.top) * window.height
-            assertEquals(1.05f, width / height, 0.01f, "$window")
+            assertTrue(width / height in 1.04f..1.51f, "proportions in $window")
             assertTrue(box.top * window.height > window.topInset, "below the status bar in $window")
+            assertTrue(box.bottom * window.height < window.height, "inside the area in $window")
             assertEquals(box.left, 1f - box.right, 0.001f, "centred in $window")
-            assertTrue(box.left * window.width >= RESERVED - 1f || height <= (window.height - window.topInset) * 0.81f, "$window")
-            assertTrue((1f - box.right) * window.width >= RESERVED - 1f, "clear of the buttons in $window")
+            val belowButtons = box.top * window.height >= window.topInset + ROW_HEIGHT - 1f
+            val besideButtons = (1f - box.right) * window.width >= RESERVED - 1f
+            assertTrue(belowButtons || besideButtons, "clear of the buttons in $window")
         }
     }
 
+    // Scenario: Aiming box clear of the controls
     @Test
-    fun boxOnAPixel6IsAbout205By195Dp() {
+    fun aPortraitPhoneGetsAWideBoxBelowTheButtons() {
         val density = 2.625f
-        val box = aimBoxFor(411.4f * density, 298f * density, 24f * density, reservedWidth = 104f * density)
-        assertEquals(203.4f, (box.right - box.left) * 411.4f, 1f)
-        assertEquals(193.7f, (box.bottom - box.top) * 298f, 1f)
+        val box = aimBoxFor(411.4f * density, 298f * density, 24f * density, 104f * density, 56f * density, 16f * density)
+        assertEquals(303f, (box.right - box.left) * 411.4f, 1f)
+        assertEquals(202f, (box.bottom - box.top) * 298f, 1f)
+        assertEquals(80f, box.top * 298f, 1f)
+    }
+
+    // Scenario: Aiming box clear of the controls
+    @Test
+    fun aShortLandscapeAreaKeepsTheNearSquareBesideTheButtons() {
+        val box = aimBoxFor(2400f, 486f, 0f, RESERVED, ROW_HEIGHT, MARGIN)
+        val width = (box.right - box.left) * 2400f
+        val height = (box.bottom - box.top) * 486f
+        assertEquals(1.05f, width / height, 0.01f)
+        assertTrue(box.top * 486f < ROW_HEIGHT, "beside the button row, not below it")
     }
 
     private data class Window(
@@ -93,5 +107,7 @@ internal class AimBoxTest {
 
     private companion object {
         const val RESERVED = 273f
+        const val ROW_HEIGHT = 147f
+        const val MARGIN = 42f
     }
 }

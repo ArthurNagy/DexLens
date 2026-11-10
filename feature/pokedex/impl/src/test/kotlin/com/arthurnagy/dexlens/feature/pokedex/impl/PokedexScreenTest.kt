@@ -20,9 +20,12 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -44,8 +47,6 @@ import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
-import com.arthurnagy.dexlens.core.domain.scan.MatchDecision
-import com.arthurnagy.dexlens.core.domain.scan.MatchOutcome
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.model.PokemonType
@@ -58,11 +59,8 @@ import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
 import com.arthurnagy.dexlens.core.testing.speciesSummary
-import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedFrame
-import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedLine
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraPermission
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraStatus
-import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanDebug
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanState
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.scannerAreaHeight
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.topBarAlpha
@@ -124,7 +122,6 @@ internal class PokedexScreenTest {
         text: TextFieldState = TextFieldState(),
         camera: CameraStatus = ready,
         canNavigateBack: Boolean = false,
-        debugEnabled: Boolean = false,
         onOpen: (Int) -> Unit = {},
         onRetry: () -> Unit = {},
         onSettings: () -> Unit = {},
@@ -149,7 +146,6 @@ internal class PokedexScreenTest {
                         onToggleTorch = onTorch,
                         onRequestPermission = onRequest,
                         onOpenAppSettings = onAppSettings,
-                        debugEnabled = debugEnabled,
                         viewfinder = { ViewfinderStub() },
                     )
                 }
@@ -476,22 +472,6 @@ internal class PokedexScreenTest {
         assertFalse(viewfinderRunning)
     }
 
-    @Test
-    fun debugOverlayShowsDecisions() {
-        val frame = AnalyzedFrame(listOf(AnalyzedLine("PIKACHU", 2f, 2f, 50f, 12f)), 100, 20, 1920, 1080, 42)
-        val debug = ScanDebug(frame, listOf(MatchDecision("pikachu", MatchOutcome.EXACT, setOf(SpeciesId(25)))))
-        show(loaded.copy(scan = ScanState.Initial.copy(debug = debug)), debugEnabled = true)
-        composeRule.onNodeWithText("EXACT: pikachu [25]").assertExists()
-    }
-
-    @Test
-    fun debugOverlayAbsentInRelease() {
-        val frame = AnalyzedFrame(emptyList(), 100, 20, 1920, 1080, 42)
-        val debug = ScanDebug(frame, listOf(MatchDecision("x", MatchOutcome.NO_MATCH, emptySet())))
-        show(loaded.copy(scan = ScanState.Initial.copy(debug = debug)), debugEnabled = false)
-        composeRule.onNodeWithText("NO_MATCH: x []").assertDoesNotExist()
-    }
-
     // --- The sheet ---
 
     // Scenario: Tapping search expands the sheet
@@ -516,7 +496,12 @@ internal class PokedexScreenTest {
         show()
         expandSheet()
         val image = composeRule.onRoot().captureToImage().toPixelMap()
-        assertEquals(LightScheme.surface, image[image.width / 4, TOP_BAR_PIXEL])
+        assertEquals(LightScheme.surfaceContainer, image[image.width / 4, TOP_BAR_PIXEL])
+        // The sheet keeps the plain surface, so the bar reads as its own band above it.
+        val searchTop = with(composeRule.density) {
+            composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot().top.roundToPx()
+        }
+        assertEquals(LightScheme.surface, image[image.width / 4, searchTop - SHEET_PIXEL_ABOVE_SEARCH])
     }
 
     // Scenario: Top bar above the expanded sheet
@@ -525,7 +510,20 @@ internal class PokedexScreenTest {
     fun theCollapsedSheetLeavesTheCameraShowing() {
         show()
         val image = composeRule.onRoot().captureToImage().toPixelMap()
-        assertNotEquals(LightScheme.surface, image[image.width / 4, TOP_BAR_PIXEL])
+        assertNotEquals(LightScheme.surfaceContainer, image[image.width / 4, TOP_BAR_PIXEL])
+    }
+
+    // Scenario: Top bar above the expanded sheet
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun theTitleAppearsOnlyOnTheTopBar() {
+        show()
+        composeRule.onNodeWithText("DexLens").assertDoesNotExist()
+        expandSheet()
+        val title = composeRule.onNode(hasText("DexLens") and isHeading())
+        title.assertIsDisplayed()
+        val settings = composeRule.onNodeWithTag("pokedex:settings").getUnclippedBoundsInRoot()
+        assertTrue(title.getUnclippedBoundsInRoot().right <= settings.left, "title beside settings")
     }
 
     // Scenario: Top bar above the expanded sheet
@@ -706,6 +704,7 @@ internal class PokedexScreenTest {
         assertEquals(0, viewfinderStarts)
         composeRule.onNodeWithTag("pokedex:aimBox").assertDoesNotExist()
         composeRule.onNodeWithTag("pokedex:torch").assertDoesNotExist()
+        composeRule.onNode(hasText("DexLens") and isHeading()).assertIsDisplayed()
         val settings = composeRule.onNodeWithTag("pokedex:settings").getUnclippedBoundsInRoot()
         val search = composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot()
         assertTrue(settings.bottom <= search.top)
@@ -934,6 +933,7 @@ internal class PokedexScreenTest {
     private companion object {
         const val WAIT_MS = 5_000L
         const val TOP_BAR_PIXEL = 20
+        const val SHEET_PIXEL_ABOVE_SEARCH = 4
         const val SWIPE_DISTANCE = 1_500f
     }
 }

@@ -71,7 +71,7 @@ private class FakeImageProxy(
 @RunWith(AndroidJUnit4::class)
 internal class TextFrameAnalyzerTest {
     private val box = AimBox(0.1f, 0.4f, 0.9f, 0.6f)
-    private val line = AnalyzedLine("PIKACHU", 0f, 0f, 1f, 1f)
+    private val line = "PIKACHU"
 
     private fun image(rotation: Int = 90) = FakeImageProxy(2000, 1000, rotation, Rect(0, 0, 2000, 1000))
 
@@ -87,7 +87,6 @@ internal class TextFrameAnalyzerTest {
             },
             aimBox = { box },
             onFrame = { frame = it },
-            clock = { 100L },
         )
         val image = image()
 
@@ -95,8 +94,6 @@ internal class TextFrameAnalyzerTest {
 
         assertEquals(listOf(400 * 800 * 3 / 2, 400, 800, 90), requested)
         assertEquals(listOf(line), frame?.lines)
-        assertEquals(800, frame?.cropWidth)
-        assertEquals(400, frame?.cropHeight)
         assertTrue(image.closed)
     }
 

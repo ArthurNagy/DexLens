@@ -57,7 +57,9 @@ import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -119,6 +121,7 @@ import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.MlKitLineRecognizer
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScannerArea
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScannerButtons
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.TextFrameAnalyzer
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.TopBarTitle
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.scannerAreaHeight
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.topBarAlpha
 import kotlinx.coroutines.flow.drop
@@ -181,7 +184,6 @@ internal fun PokedexScreen(
             context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
         },
         modifier = modifier,
-        debugEnabled = BuildConfig.DEBUG,
         viewfinder = { aimBox ->
             val recognizer = remember { MlKitLineRecognizer() }
             DisposableEffect(recognizer) { onDispose { recognizer.close() } }
@@ -190,7 +192,7 @@ internal fun PokedexScreen(
                 TextFrameAnalyzer(
                     recognizer = recognizer,
                     aimBox = { currentBox },
-                    onFrame = { frame -> viewModel.onFrame(frame, debugEnabled = BuildConfig.DEBUG) },
+                    onFrame = viewModel::onFrame,
                 )
             }
             CameraViewfinder(
@@ -270,14 +272,20 @@ internal fun PokedexContent(
     onRequestPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    debugEnabled: Boolean = false,
     viewfinder: @Composable (AimBox) -> Unit,
 ) {
     val wide = isWideWindow()
     val topInset = if (wide) AppSpacing.none else WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val listActions = ListActions(onOpenSpecies, onRetry, onClearMatch)
     // Nothing but the surface until the switch has been read, so neither layout appears and then jumps.
-    val background = if (state.scannerEnabled == true) CameraColors.background else MaterialTheme.colorScheme.surface
+    val background = when (state.scannerEnabled) {
+        true -> CameraColors.background
+
+        false -> MaterialTheme.colorScheme.surfaceContainer
+
+        // The top bar, behind the list's surface.
+        null -> MaterialTheme.colorScheme.surface
+    }
     BoxWithConstraints((if (wide) modifier.statusBarsPadding() else modifier).fillMaxSize().background(background)) {
         when (state.scannerEnabled) {
             null -> Unit
@@ -295,7 +303,6 @@ internal fun PokedexContent(
                 onToggleTorch = onToggleTorch,
                 onRequestPermission = onRequestPermission,
                 onOpenAppSettings = onOpenAppSettings,
-                debugEnabled = debugEnabled,
                 viewfinder = viewfinder,
             )
 
@@ -327,7 +334,6 @@ private fun ScannerHome(
     onToggleTorch: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
-    debugEnabled: Boolean,
     viewfinder: @Composable (AimBox) -> Unit,
 ) {
     // Text can already be there when the switch is turned on mid-search, and collapsed always means scanning.
@@ -368,13 +374,14 @@ private fun ScannerHome(
     val collapsedOffset = with(LocalDensity.current) { areaHeight.toPx() }
     val expandedOffset = with(LocalDensity.current) { stripHeight.toPx() }
 
-    // The status bar icons and the buttons change at the fade's midpoint, when the top bar has become the brighter of the two.
-    var overTopBar by remember { mutableStateOf(sheetState.currentValue == SheetValue.Expanded) }
+    // A copy of the fade for what sits outside the scaffold, which can be measured before the sheet has an offset.
+    var fade by remember { mutableFloatStateOf(if (sheetState.currentValue == SheetValue.Expanded) 1f else 0f) }
     LaunchedEffect(sheetState, collapsedOffset, expandedOffset) {
         withFrameNanos {} // The sheet has no offset until it has been laid out once.
-        snapshotFlow { topBarAlpha(sheetState.requireOffset(), collapsedOffset, expandedOffset) > TOP_BAR_MIDPOINT }
-            .collect { overTopBar = it }
+        snapshotFlow { topBarAlpha(sheetState.requireOffset(), collapsedOffset, expandedOffset) }.collect { fade = it }
     }
+    // The status bar icons and the buttons change at the fade's midpoint, when the top bar has become the brighter of the two.
+    val overTopBar by remember { derivedStateOf { fade > TOP_BAR_MIDPOINT } }
     if (!isWideWindow() && !overTopBar) LightStatusBarIcons()
     Box(Modifier.fillMaxSize()) {
         BottomSheetScaffold(
@@ -402,12 +409,17 @@ private fun ScannerHome(
                 topBarAlpha = { topBarAlpha(sheetState.requireOffset(), collapsedOffset, expandedOffset) },
                 height = areaHeight,
                 topInset = topInset,
-                debugEnabled = debugEnabled,
                 onRequestPermission = onRequestPermission,
                 onOpenAppSettings = onOpenAppSettings,
                 viewfinder = viewfinder,
             )
         }
+        TopBarTitle(
+            visible = overTopBar,
+            topInset = topInset,
+            alpha = { fade },
+            modifier = Modifier.align(Alignment.TopStart),
+        )
         ScannerButtons(
             showTorch = collapsed && cameraRunning && camera.torchAvailable,
             torchOn = state.scan.torchOn,
@@ -450,6 +462,7 @@ private fun ListOnlyHome(
                 modifier = Modifier.padding(top = AppSpacing.md),
             )
         }
+        TopBarTitle(visible = true, topInset = topInset, modifier = Modifier.align(Alignment.TopStart))
         ScannerButtons(
             showTorch = false,
             torchOn = false,

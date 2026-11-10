@@ -3,7 +3,7 @@
 ## 1. Aiming box and tokens
 
 - [x] 1.1 `:core:designsystem`: add tokens for the scanner button row and the 3:2 and 45% area rules, and verify the module compiles
-- [x] 1.2 `:feature:pokedex:impl`: move `AimBox` and `AimBoxTest` to the `scanner` package and make `aimBoxFor` near-square, clear of the status bar and buttons; verify with `AimBoxTest` tagged `Crop follows the aiming box` and `Aiming box clear of the controls`
+- [x] 1.2 `:feature:pokedex:impl`: move `AimBox` and `AimBoxTest` to the `scanner` package and make `aimBoxFor` use most of the area, clear of the status bar and buttons; verify with `AimBoxTest` tagged `Crop follows the aiming box` and `Aiming box clear of the controls`
 
 ## 2. State and ViewModel
 
