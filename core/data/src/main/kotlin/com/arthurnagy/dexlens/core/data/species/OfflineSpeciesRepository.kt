@@ -5,7 +5,6 @@ import com.arthurnagy.dexlens.core.database.SpeciesDao
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
 import com.arthurnagy.dexlens.core.model.GenderRatio
-import com.arthurnagy.dexlens.core.model.LocalizedName
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesNameHit
@@ -52,7 +51,6 @@ internal class OfflineSpeciesRepository
             val summary = loadSummaries().firstOrNull { it.id == id } ?: return null
             val names = dao.speciesNames(id.value)
             val genus = names.firstOrNull { it.languageId == language }?.genus ?: names.firstOrNull { it.languageId == ENGLISH }?.genus
-            val languageLabels = dao.languages().associate { it.id to it.name }
             val abilitiesByVariety = dao.abilities(id.value).groupBy { it.varietyId }
             val formsByVariety = dao.forms(id.value).groupBy { it.varietyId }
             val chain = dao.chainSpecies(species.evolutionChainId, language)
@@ -70,14 +68,6 @@ internal class OfflineSpeciesRepository
                     )
                 },
                 evolutionLine = buildEvolutionTree(chain, dao.evolutions(species.evolutionChainId), nameBySpecies),
-                otherNames = names
-                    .filter { it.languageId != language && it.languageId != ROMAJI }
-                    .map { LocalizedName(languageLabels[it.languageId].orEmpty(), it.name) }
-                    .sortedBy { it.language },
             )
-        }
-
-        private companion object {
-            const val ROMAJI = 2
         }
     }

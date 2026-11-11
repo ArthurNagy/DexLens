@@ -6,6 +6,7 @@ import com.arthurnagy.dexlens.core.data.content.ImageTranscoder
 import com.arthurnagy.dexlens.core.data.content.OfflineContentPackRepository
 import com.arthurnagy.dexlens.core.data.content.OfflineFlavorTextRepository
 import com.arthurnagy.dexlens.core.data.content.WebpTranscoder
+import com.arthurnagy.dexlens.core.data.game.OfflineGameRepository
 import com.arthurnagy.dexlens.core.data.species.DeviceDisplayLanguage
 import com.arthurnagy.dexlens.core.data.species.DisplayLanguage
 import com.arthurnagy.dexlens.core.data.species.OfflineSpeciesRepository
@@ -14,6 +15,7 @@ import com.arthurnagy.dexlens.core.domain.DispatcherProvider
 import com.arthurnagy.dexlens.core.domain.UserPreferencesRepository
 import com.arthurnagy.dexlens.core.domain.content.ContentPackRepository
 import com.arthurnagy.dexlens.core.domain.content.FlavorTextRepository
+import com.arthurnagy.dexlens.core.domain.game.GameRepository
 import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
 import com.arthurnagy.dexlens.core.domain.species.TypeChartRepository
 import dagger.Binds
@@ -52,6 +54,9 @@ internal interface DataModule {
 
     @Binds
     fun bindsFlavorTextRepository(impl: OfflineFlavorTextRepository): FlavorTextRepository
+
+    @Binds
+    fun bindsGameRepository(impl: OfflineGameRepository): GameRepository
 
     @Binds
     fun bindsImageTranscoder(impl: WebpTranscoder): ImageTranscoder

@@ -30,7 +30,7 @@ CSV_SUBDIR = "data/v2/csv"
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CACHE = ROOT / "tools/.cache/pokeapi"
-DEFAULT_SCHEMA = ROOT / "core/database/schemas/com.arthurnagy.dexlens.core.database.DexDatabase/1.json"
+DEFAULT_SCHEMA = ROOT / "core/database/schemas/com.arthurnagy.dexlens.core.database.DexDatabase/2.json"
 DEFAULT_OUTPUT = ROOT / "core/database/src/main/assets/databases/dexlens.db"
 
 ENGLISH = 9
@@ -45,6 +45,26 @@ STAT_COLUMNS = {
     "5": "special_defense",
     "6": "speed",
 }
+LEVEL_UP = "1"
+# Red / Green and Blue as sold in Japan: their data repeats Red / Blue.
+JAPAN_ONLY_GROUPS = {28, 29}
+# DLC versions, filed under the game they extend so their areas show with it.
+DLC_VERSIONS = {35: 33, 36: 33, 50: 34, 51: 34, 42: 40, 43: 40, 52: 41, 53: 41}
+# Tables whose composite primary key covers every column a query filters by. Without a rowid, the key holds the rows
+# instead of an index repeating them, which halves the file. Room validates columns, keys and its own indices only.
+WITHOUT_ROWID_TABLES = {"learnset", "encounter"}
+# Methods that differ only in encounter rate, filed under one identifier. The app words each identifier as a string resource.
+SAME_METHOD = {"headbutt-low": "headbutt", "headbutt-normal": "headbutt", "headbutt-high": "headbutt", "snag-rematch": "snag"}
+VINE_WHIP = 22
+BITE = 44
+NORMAL = 1
+DARK = 17
+PIKACHU = 25
+BULBASAUR = 1
+SCARLET_VIOLET = 25
+RED = 1
+BLUE = 2
+
 TRICKY_NAMES = {
     29: "Nidoran♀",
     32: "Nidoran♂",
@@ -148,7 +168,8 @@ class Builder:
     def create_tables(self) -> None:
         for entity in self.schema["entities"]:
             table = entity["tableName"]
-            self.db.execute(entity["createSql"].replace("${TABLE_NAME}", table))
+            create = entity["createSql"].replace("${TABLE_NAME}", table)
+            self.db.execute(f"{create} WITHOUT ROWID" if table in WITHOUT_ROWID_TABLES else create)
             for index in entity.get("indices", []):
                 self.db.execute(index["createSql"].replace("${TABLE_NAME}", table))
             for trigger in entity.get("contentSyncTriggers", []):
@@ -176,7 +197,9 @@ class Builder:
         self.egg_groups(species)
         self.evolutions(species)
         self.type_chart()
-        self.game_versions()
+        groups = self.game_versions()
+        self.learnsets(varieties, groups)
+        self.encounters(varieties, groups)
         self.search_index()
         self.db.commit()
         self.db.execute("INSERT INTO species_name_fts(species_name_fts) VALUES('optimize')")
@@ -444,11 +467,143 @@ class Builder:
         records.sort(key=lambda record: (record["attacking_type"], record["defending_type"]))
         self.insert("type_efficacy", records)
 
-    def game_versions(self) -> None:
+    def game_versions(self) -> dict[int, int]:
+        """Writes every version and the game pairs the picker can offer. Returns each version's group, DLC folded in."""
         names = english(self.csv, "version_names", "version_id")
-        records = [{"id": int(row["id"]), "name": names.get(row["id"], title_case(row["identifier"]))} for row in rows(self.csv, "versions")]
+        versions = rows(self.csv, "versions")
+        records = [
+            {"id": int(row["id"]), "name": names.get(row["id"], title_case(row["identifier"])), "version_group_id": int(row["version_group_id"])}
+            for row in versions
+        ]
         records.sort(key=lambda record: record["id"])
         self.insert("game_version", records)
+        group_of = {int(row["id"]): int(row["version_group_id"]) for row in versions}
+        self.insert(
+            "version_name",
+            sorted(
+                ({"version_id": int(row["version_id"]), "language_id": int(row["local_language_id"]), "name": row["name"]} for row in rows(self.csv, "version_names") if row["name"]),
+                key=lambda record: (record["version_id"], record["language_id"]),
+            ),
+        )
+        return {
+            version: group_of[DLC_VERSIONS.get(version, version)]
+            for version in group_of
+            if group_of[DLC_VERSIONS.get(version, version)] not in JAPAN_ONLY_GROUPS
+        }
+
+    def learnsets(self, varieties: set[int], groups: dict[int, int]) -> None:
+        offered = set(groups.values())
+        learnset = sorted(
+            {
+                (int(row["pokemon_id"]), int(row["version_group_id"]), int(row["move_id"]), int(row["level"]))
+                for row in rows(self.csv, "pokemon_moves")
+                if row["pokemon_move_method_id"] == LEVEL_UP and int(row["pokemon_id"]) in varieties and int(row["version_group_id"]) in offered
+            },
+        )
+        self.insert("learnset", [{"variety_id": v, "version_group_id": g, "move_id": m, "level": level} for v, g, m, level in learnset])
+        used = {move for _, _, move, _ in learnset}
+        moves = {row["id"]: row for row in rows(self.csv, "moves") if int(row["id"]) in used}
+        self.insert(
+            "move",
+            sorted(({"id": int(row["id"]), "type_id": int(row["type_id"]), "power": to_int(row["power"])} for row in moves.values()), key=lambda record: record["id"]),
+        )
+        self.insert(
+            "move_name",
+            sorted(
+                (
+                    {"move_id": int(row["move_id"]), "language_id": int(row["local_language_id"]), "name": row["name"]}
+                    for row in rows(self.csv, "move_names")
+                    if int(row["move_id"]) in used and row["name"]
+                ),
+                key=lambda record: (record["move_id"], record["language_id"]),
+            ),
+        )
+        self.move_past_values(moves, {group for _, group, _, _ in learnset})
+
+    def move_past_values(self, moves: dict[str, Row], groups: set[int]) -> None:
+        """A changelog row holds the values a move had before `changed_in_version_group_id`. The earliest later change wins."""
+        order = {int(row["id"]): int(row["order"]) for row in rows(self.csv, "version_groups")}
+        changes: dict[str, list[Row]] = collections.defaultdict(list)
+        for row in rows(self.csv, "move_changelog"):
+            if row["move_id"] in moves:
+                changes[row["move_id"]].append(row)
+        records = []
+        for move_id, history in changes.items():
+            history.sort(key=lambda row: order[int(row["changed_in_version_group_id"])])
+            current = moves[move_id]
+            for group in sorted(groups):
+                later = [row for row in history if order[int(row["changed_in_version_group_id"])] > order[group]]
+                type_id = next((int(row["type_id"]) for row in later if row["type_id"]), int(current["type_id"]))
+                power = next((int(row["power"]) for row in later if row["power"]), to_int(current["power"]))
+                if (type_id, power) != (int(current["type_id"]), to_int(current["power"])):
+                    records.append({"move_id": int(move_id), "version_group_id": group, "type_id": type_id, "power": power})
+        records.sort(key=lambda record: (record["move_id"], record["version_group_id"]))
+        self.insert("move_past_value", records)
+
+    def encounters(self, varieties: set[int], groups: dict[int, int]) -> None:
+        slots = {row["id"]: row["encounter_method_id"] for row in rows(self.csv, "encounter_slots")}
+        location_of = {row["id"]: int(row["location_id"]) for row in rows(self.csv, "location_areas")}
+        merged: dict[tuple[int, int, int, int], tuple[int, int]] = {}
+        for row in rows(self.csv, "encounters"):
+            version = DLC_VERSIONS.get(int(row["version_id"]), int(row["version_id"]))
+            if int(row["pokemon_id"]) not in varieties or version not in groups:
+                continue
+            key = (int(row["pokemon_id"]), version, location_of[row["location_area_id"]], int(slots[row["encounter_slot_id"]]))
+            low, high = merged.get(key, (int(row["min_level"]), int(row["max_level"])))
+            merged[key] = (min(low, int(row["min_level"])), max(high, int(row["max_level"])))
+        self.insert(
+            "encounter",
+            [
+                {"variety_id": v, "version_id": version, "location_id": location, "method_id": method, "min_level": low, "max_level": high}
+                for (v, version, location, method), (low, high) in sorted(merged.items())
+            ],
+        )
+        locations = {location for _, _, location, _ in merged}
+        identifiers = {int(row["id"]): row["identifier"] for row in rows(self.csv, "locations")}
+        names = [
+            {"location_id": int(row["location_id"]), "language_id": int(row["local_language_id"]), "name": row["name"]}
+            for row in rows(self.csv, "location_names")
+            if int(row["location_id"]) in locations and row["name"]
+        ]
+        named_in_english = {record["location_id"] for record in names if record["language_id"] == ENGLISH}
+        names += [{"location_id": location, "language_id": ENGLISH, "name": title_case(identifiers[location])} for location in locations - named_in_english]
+        self.insert("location_name", sorted(names, key=lambda record: (record["location_id"], record["language_id"])))
+        prose = english(self.csv, "encounter_method_prose", "encounter_method_id")
+        methods = {method for _, _, _, method in merged}
+        self.insert(
+            "encounter_method",
+            sorted(
+                (
+                    {
+                        "id": int(row["id"]),
+                        "identifier": SAME_METHOD.get(row["identifier"], row["identifier"]),
+                        "name": prose.get(row["id"]) or title_case(row["identifier"]),
+                        "sort_order": int(row["order"]),
+                    }
+                    for row in rows(self.csv, "encounter_methods")
+                    if int(row["id"]) in methods
+                ),
+                key=lambda record: record["id"],
+            ),
+        )
+        self.version_groups(groups, {version for _, version, _, _ in merged})
+
+    def version_groups(self, groups: dict[int, int], versions_with_encounters: set[int]) -> None:
+        """The game pairs the picker offers: those with any learnset or encounter."""
+        with_learnsets = {row[0] for row in self.db.execute("SELECT DISTINCT version_group_id FROM learnset")}
+        with_encounters = {groups[version] for version in versions_with_encounters}
+        records = [
+            {
+                "id": int(row["id"]),
+                "generation": int(row["generation_id"]),
+                "sort_order": int(row["order"]),
+                "has_encounters": int(int(row["id"]) in with_encounters),
+            }
+            for row in rows(self.csv, "version_groups")
+            if int(row["id"]) in with_learnsets | with_encounters
+        ]
+        records.sort(key=lambda record: record["id"])
+        self.insert("version_group", records)
 
     def search_index(self) -> None:
         names = self.db.execute("SELECT species_id, language_id, name FROM species_name ORDER BY species_id, language_id").fetchall()
@@ -484,6 +639,54 @@ class Builder:
                 self.scalar(
                     "SELECT COUNT(*) FROM species s WHERE s.evolves_from_species_id IS NOT NULL "
                     "AND NOT EXISTS (SELECT 1 FROM evolution e WHERE e.species_id = s.id)",
+                ),
+                0,
+            ),
+        }
+        checks |= {
+            "Bulbasaur games without Vine Whip": (
+                self.scalar(
+                    "SELECT COUNT(DISTINCT version_group_id) FROM learnset l WHERE variety_id = ? AND NOT EXISTS "
+                    "(SELECT 1 FROM learnset w WHERE w.variety_id = l.variety_id AND w.version_group_id = l.version_group_id AND w.move_id = ?)",
+                    BULBASAUR,
+                    VINE_WHIP,
+                ),
+                0,
+            ),
+            "Bulbasaur learns Vine Whip in Scarlet / Violet": (
+                self.scalar("SELECT COUNT(*) FROM learnset WHERE variety_id = ? AND version_group_id = ? AND move_id = ?", BULBASAUR, SCARLET_VIOLET, VINE_WHIP),
+                1,
+            ),
+            "Bite is Normal in Red / Blue": (self.scalar("SELECT type_id FROM move_past_value WHERE move_id = ? AND version_group_id = 1", BITE), NORMAL),
+            "Bite is Dark today": (self.scalar("SELECT type_id FROM move WHERE id = ?", BITE), DARK),
+            "Pikachu in Viridian Forest in Red and Blue": (
+                self.scalar(
+                    "SELECT COUNT(DISTINCT e.version_id) FROM encounter e JOIN location_name n ON n.location_id = e.location_id "
+                    "AND n.language_id = ? WHERE e.variety_id = ? AND n.name = 'Viridian Forest' AND e.version_id IN (?, ?)",
+                    ENGLISH,
+                    PIKACHU,
+                    RED,
+                    BLUE,
+                ),
+                2,
+            ),
+            "learnset rows without a move": (self.scalar("SELECT COUNT(*) FROM learnset l WHERE NOT EXISTS (SELECT 1 FROM move m WHERE m.id = l.move_id)"), 0),
+            "moves without an English name": (
+                self.scalar("SELECT COUNT(*) FROM move m WHERE NOT EXISTS (SELECT 1 FROM move_name n WHERE n.move_id = m.id AND n.language_id = ?)", ENGLISH),
+                0,
+            ),
+            "locations without an English name": (
+                self.scalar(
+                    "SELECT COUNT(DISTINCT location_id) FROM encounter e WHERE NOT EXISTS "
+                    "(SELECT 1 FROM location_name n WHERE n.location_id = e.location_id AND n.language_id = ?)",
+                    ENGLISH,
+                ),
+                0,
+            ),
+            "encounter versions outside an offered game": (
+                self.scalar(
+                    "SELECT COUNT(*) FROM encounter e JOIN game_version gv ON gv.id = e.version_id "
+                    "WHERE NOT EXISTS (SELECT 1 FROM version_group vg WHERE vg.id = gv.version_group_id)",
                 ),
                 0,
             ),

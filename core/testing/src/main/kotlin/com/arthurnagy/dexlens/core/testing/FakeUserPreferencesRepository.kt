@@ -14,7 +14,10 @@ class FakeUserPreferencesRepository(
     initialThemeMode: ThemeMode,
     initialOfferShown: Boolean = false,
     initialScannerEnabled: Boolean = true,
+    initialPreferredGame: Int? = null,
 ) : UserPreferencesRepository {
+    private val game = MutableStateFlow(initialPreferredGame)
+
     private val scannerSwitch = MutableStateFlow(initialScannerEnabled)
 
     private val offerShown = MutableStateFlow(initialOfferShown)
@@ -53,6 +56,17 @@ class FakeUserPreferencesRepository(
             return Err(error)
         }
         scannerSwitch.value = enabled
+        return Ok(Unit)
+    }
+
+    override val preferredGame: Flow<Int?> = game
+
+    override suspend fun setPreferredGame(gameId: Int): Result<Unit, DomainError> {
+        failNextWrite?.let { error ->
+            failNextWrite = null
+            return Err(error)
+        }
+        game.value = gameId
         return Ok(Unit)
     }
 }

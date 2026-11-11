@@ -36,6 +36,9 @@ internal object DatabaseModule {
     fun provideGameVersionDao(database: DexDatabase): GameVersionDao = database.gameVersionDao()
 
     @Provides
+    fun provideGameDao(database: DexDatabase): GameDao = database.gameDao()
+
+    @Provides
     @Singleton
     fun provideContentDatabase(
         @ApplicationContext context: Context,

@@ -11,5 +11,5 @@ import com.arthurnagy.dexlens.core.designsystem.AppTheme
 @Preview(name = "Foldable", device = Devices.FOLDABLE)
 @Composable
 private fun EntryLoadingPreview() {
-    AppTheme { EntryContent(EntryState.Loading, onNavigateBack = {}, onOpenSpecies = {}, onSelectVariety = {}) }
+    AppTheme { EntryContent(EntryState.Loading, onNavigateBack = {}, onOpenSpecies = {}, onSelectVariety = {}, onSelectGame = {}) }
 }

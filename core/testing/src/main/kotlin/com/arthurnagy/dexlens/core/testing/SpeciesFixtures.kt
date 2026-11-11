@@ -6,7 +6,6 @@ import com.arthurnagy.dexlens.core.model.EvolutionMethod
 import com.arthurnagy.dexlens.core.model.EvolutionNode
 import com.arthurnagy.dexlens.core.model.EvolutionTrigger
 import com.arthurnagy.dexlens.core.model.GenderRatio
-import com.arthurnagy.dexlens.core.model.LocalizedName
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.SpeciesId
@@ -88,6 +87,5 @@ fun bulbasaurDetail(): SpeciesDetail {
                 ),
             ),
         ),
-        otherNames = listOf(LocalizedName("French", "Bulbizarre"), LocalizedName("Japanese", "フシギダネ")),
     )
 }

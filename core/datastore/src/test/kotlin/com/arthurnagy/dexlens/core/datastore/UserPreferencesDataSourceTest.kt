@@ -44,6 +44,15 @@ class UserPreferencesDataSourceTest {
     }
 
     @Test
+    fun noGameIsPreferredUntilOneIsPicked() = runTest {
+        val dataSource = UserPreferencesDataSource(dataStore())
+
+        assertEquals(null, dataSource.preferredGame.first())
+        dataSource.setPreferredGame(20)
+        assertEquals(20, dataSource.preferredGame.first())
+    }
+
+    @Test
     fun aCorruptFileReadsAsTheDefaultsAndTheNextWriteReplacesIt() = runTest {
         val file = tmpFolder.newFolder().resolve("prefs.preferences_pb").apply { writeBytes(byteArrayOf(-1, -1, -1, -1)) }
         val dataSource = UserPreferencesDataSource(dataStore(file))

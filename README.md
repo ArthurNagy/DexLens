@@ -17,11 +17,13 @@ from Game Boy to Switch, and it reads the name on the screen and lists that Pok�
 - **Search as you type.** Prefix search that ignores case, accents and punctuation (`flabebe`, `mr mime`, `farfetchd`),
   Pokédex numbers (`25`, `#025`) and names in other languages.
 - **Type matchups.** Weaknesses, resistances and immunities computed on the device from the type chart.
+- **In game.** Pick a game pair, such as Sword / Shield, to see the moves learnt by level up and where to find the
+  Pokémon in the wild. The last game picked is remembered. PokeAPI has no wild locations for games after Sword / Shield yet.
 - **Camera name recognition.** Bundled text recognition reads the name inside an aiming box, tolerates common misreads,
   and locks on only when several frames agree. It sits on the home screen above the list, and can be turned off in
   Settings. No connection needed.
-- **Optional artwork and Pokédex text.** A one-time, resumable download. Without it, type-tinted placeholders are used
-  and everything else works the same.
+- **Optional artwork and Pokédex text.** A one-time, resumable download. The newest Pokédex text becomes the entry's
+  short description. Without it, type-tinted placeholders are used and everything else works the same.
 - **Adaptive.** Phone, tablet and foldable, with a list-detail layout, shared-element transition, predictive back,
   dark theme, edge-to-edge drawing and TalkBack labels.
 

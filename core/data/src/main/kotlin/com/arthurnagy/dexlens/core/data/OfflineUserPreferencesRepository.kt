@@ -29,4 +29,8 @@ internal class OfflineUserPreferencesRepository
         override suspend fun setScannerEnabled(enabled: Boolean): Result<Unit, DomainError> = catchStorage {
             dataSource.setScannerEnabled(enabled)
         }
+
+        override val preferredGame: Flow<Int?> = dataSource.preferredGame
+
+        override suspend fun setPreferredGame(gameId: Int): Result<Unit, DomainError> = catchStorage { dataSource.setPreferredGame(gameId) }
     }
