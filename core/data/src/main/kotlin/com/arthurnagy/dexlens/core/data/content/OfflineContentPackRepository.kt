@@ -41,7 +41,7 @@ internal class OfflineContentPackRepository
                 .distinctUntilChanged()
 
         private suspend fun stateFor(info: WorkInfo?): ContentPackState {
-            val total = catchStorage { speciesDao.speciesCount() + FLAVOR_STEP }.getOr(UNKNOWN_TOTAL)
+            val total = catchStorage { speciesDao.pictureCount() + FLAVOR_STEP }.getOr(UNKNOWN_TOTAL)
             val completed = catchStorage { files.storedIds().size + if (files.isFlavorImported()) FLAVOR_STEP else 0 }.getOr(0)
             val complete = catchStorage { files.isComplete() }.getOr(false)
             return when {

@@ -9,7 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Downloaded pictures on disk, one per species. A file only appears at its final name once fully written, so an
+ * Downloaded pictures on disk, one per variety. A file only appears at its final name once fully written, so an
  * interrupted write can never be shown as art, and a resumed download only needs to look at which final names exist.
  * Everything that touches the disk runs on the IO dispatcher, so callers can use it from any thread.
  */
@@ -26,7 +26,7 @@ internal class ContentFileStore
         private val flavorMarker: File get() = File(root, FLAVOR_MARKER)
         private val completeMarker: File get() = File(root, COMPLETE_MARKER)
 
-        /** Where a species' picture lives. This only builds the path and does not touch the disk. */
+        /** Where a variety's picture lives. This only builds the path and does not touch the disk. */
         fun file(id: Int): File = File(artworkDirectory, "$id$ARTWORK_EXTENSION")
 
         suspend fun write(
@@ -43,7 +43,7 @@ internal class ContentFileStore
             }
         }
 
-        /** The species whose picture is fully written. */
+        /** The varieties whose picture is fully written. */
         suspend fun storedIds(): Set<Int> = onDisk {
             artworkDirectory
                 .list { _, name -> name.endsWith(ARTWORK_EXTENSION) }

@@ -47,6 +47,15 @@ internal class PrebuiltDatabaseTest {
 
     private suspend fun search(match: String) = dao.searchNames(match).map { it.speciesId }.toSet()
 
+    @Test
+    fun onePicturePerVarietyWithSpeciesSharingTheirDefaultId() = runTest {
+        val ids = dao.pictureIds()
+        assertEquals(dao.pictureCount(), ids.size)
+        assertEquals((1..1025).toList(), ids.filter { it <= 1025 })
+        assertTrue(listOf(10034, 10035, 10196).all { it in ids })
+        assertEquals(0L, scalar("SELECT COUNT(*) FROM variety WHERE is_default = 1 AND id != species_id"))
+    }
+
     // Scenario: All species present offline
     @Test
     fun allSpeciesPresent() = runTest {

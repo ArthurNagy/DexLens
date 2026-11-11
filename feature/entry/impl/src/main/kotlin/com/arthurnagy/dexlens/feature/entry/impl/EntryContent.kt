@@ -242,6 +242,7 @@ private fun EntryHeader(
     description: String?,
 ) {
     val summary = detail.summary
+    val displayName = variety.name.takeIf { !variety.isDefault } ?: summary.name
     val sharedScope = LocalSharedTransitionScope.current
     val artModifier = if (sharedScope != null) {
         val animatedScope = LocalNavAnimatedContentScope.current
@@ -259,12 +260,13 @@ private fun EntryHeader(
         verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
     ) {
         SpeciesArt(
-            name = summary.name,
-            types = summary.types,
-            imagePath = artwork.artwork(summary.id),
-            contentDescription = stringResource(R.string.entry_art_description, summary.name),
+            name = displayName,
+            types = variety.types,
+            imagePath = artwork.artwork(variety),
+            contentDescription = stringResource(R.string.entry_art_description, displayName),
             letterStyle = MaterialTheme.typography.displayLarge,
-            modifier = artModifier.size(AppDimens.headerArt),
+            modifier = artModifier.size(AppDimens.headerArt).testTag("entry:art:${variety.id}"),
+            fallbackPath = artwork.artwork(summary.id).takeIf { !variety.isDefault },
         )
         Text(
             speciesNumberLabel(summary.id.value),
@@ -272,7 +274,7 @@ private fun EntryHeader(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = variety.name.takeIf { !variety.isDefault } ?: summary.name,
+            text = displayName,
             style = MaterialTheme.typography.headlineMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

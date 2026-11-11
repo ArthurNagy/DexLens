@@ -1,5 +1,7 @@
 package com.arthurnagy.dexlens.feature.entry.impl
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
@@ -15,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
@@ -52,7 +55,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.io.ByteArrayOutputStream
+import java.io.File
 import kotlin.test.assertEquals
+
+private const val PICTURE_TIMEOUT_MS = 5_000L
 
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -207,6 +214,43 @@ class EntryScreenTest {
     fun theDescriptionSitsUnderTheHeader() {
         show(described)
         composeRule.onNodeWithTag("entry:description").assertTextEquals("A strange seed was planted on its back at birth.")
+    }
+
+    /** Charizard-like entry with one alternate variety, [alternateId], and real picture files for [stored] ids. */
+    private fun withPictures(
+        alternateId: Int,
+        vararg stored: Int,
+    ): EntryState {
+        val root = File(ApplicationProvider.getApplicationContext<Context>().cacheDir, "content-$alternateId").apply { deleteRecursively() }
+        val png = ByteArrayOutputStream().also {
+            Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888).compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        stored.forEach { id -> File(root, "artwork/$id.webp").apply { parentFile?.mkdirs() }.writeBytes(png.toByteArray()) }
+        val mega = detail.varieties.single().copy(id = alternateId, name = "Mega Bulbasaur", isDefault = false)
+        return EntryState
+            .loaded(detail.copy(varieties = detail.varieties + mega), sampleTypeChart(), ArtworkLocation(root.path), null)
+            .select(mega)
+    }
+
+    /** The placeholder letter only shows while no picture has loaded. */
+    private fun waitForPicture() {
+        composeRule.waitUntil(PICTURE_TIMEOUT_MS) { composeRule.onAllNodesWithText("M").fetchSemanticsNodes().isEmpty() }
+    }
+
+    // Scenario: Selecting a variety shows its picture
+    @Test
+    fun aVarietyShowsItsOwnPicture() {
+        show(withPictures(alternateId = 10001, 10001))
+        composeRule.onNodeWithTag("entry:art:10001").assertExists()
+        composeRule.onNode(hasContentDescription("Artwork of Mega Bulbasaur"), useUnmergedTree = true).assertExists()
+        waitForPicture()
+    }
+
+    // Scenario: Variety without its own picture
+    @Test
+    fun aVarietyWithoutAPictureFallsBackToTheSpecies() {
+        show(withPictures(alternateId = 10002, 1))
+        waitForPicture()
     }
 
     @Test

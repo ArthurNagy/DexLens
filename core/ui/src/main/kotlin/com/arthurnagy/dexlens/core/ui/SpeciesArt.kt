@@ -10,7 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,7 +35,8 @@ import java.io.File
 
 /**
  * A species' picture slot: a tile tinted with its types, with the downloaded art on top when [imagePath] is set.
- * Coil only ever receives local files. Without art the tile shows the name's first letter in a lens motif.
+ * Coil only ever receives local files. When [imagePath] cannot be loaded, [fallbackPath] is tried instead. Without art
+ * the tile shows the name's first letter in a lens motif.
  */
 @Composable
 fun SpeciesArt(
@@ -43,6 +46,7 @@ fun SpeciesArt(
     contentDescription: String?,
     letterStyle: TextStyle,
     modifier: Modifier = Modifier,
+    fallbackPath: String? = null,
 ) {
     val first = types.first()
     val second = types.getOrElse(1) { first }
@@ -54,10 +58,16 @@ fun SpeciesArt(
     ) {
         // Always the stored size, so every place a species appears shares one decoded image and the hero never waits for it.
         val context = LocalPlatformContext.current
-        val request = remember(context, imagePath) {
-            imagePath?.let { ImageRequest.Builder(context).data(File(it)).size(Size.ORIGINAL).build() }
+        var primaryFailed by remember(imagePath) { mutableStateOf(false) }
+        val path = if (primaryFailed && fallbackPath != null) fallbackPath else imagePath
+        val request = remember(context, path) {
+            path?.let { ImageRequest.Builder(context).data(File(it)).size(Size.ORIGINAL).build() }
         }
-        val painter = rememberAsyncImagePainter(model = request)
+        val painter = rememberAsyncImagePainter(
+            model = request,
+            // Only the current primary picture's failure switches to the fallback, never a stale one from before a change.
+            onError = { error -> if (imagePath != null && error.result.request.data == File(imagePath)) primaryFailed = true },
+        )
         val painterState by painter.state.collectAsState()
         val loaded = painterState is AsyncImagePainter.State.Success
         if (!loaded) {

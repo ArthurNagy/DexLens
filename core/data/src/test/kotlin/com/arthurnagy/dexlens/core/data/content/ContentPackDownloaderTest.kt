@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.data.species.FakeSpeciesDao
 import com.arthurnagy.dexlens.core.database.entity.SpeciesEntity
+import com.arthurnagy.dexlens.core.database.entity.VarietyEntity
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.network.content.ContentRemoteDataSource
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
@@ -60,19 +61,24 @@ internal class ContentPackDownloaderTest {
         }
     }
 
-    private fun species(count: Int) = FakeSpeciesDao(
+    private fun species(
+        count: Int,
+        alternates: List<Int>,
+    ) = FakeSpeciesDao(
         species = (1..count).map { SpeciesEntity(it, "s$it", 1, 4, null, 1, isBaby = false, isLegendary = false, isMythical = false) },
+        varieties = alternates.map { VarietyEntity(it, 1, "v$it", "v$it", false, 2, 1, 1, 1, null, 1, 1, 1, 1, 1, 1) },
     )
 
     private fun TestScope.downloader(
         remote: ContentRemoteDataSource,
         count: Int = 2,
+        alternates: List<Int> = emptyList(),
     ): ContentPackDownloader = ContentPackDownloader(
         remote,
         files,
         ImageTranscoder { png, _ -> png },
         FlavorTextImporter(FakeContentDao()) { 9 },
-        species(count),
+        species(count, alternates),
         TestDispatcherProvider(testScheduler),
     )
 
@@ -93,14 +99,16 @@ internal class ContentPackDownloaderTest {
         assertTrue(files.isComplete())
     }
 
-    // Scenario: One picture for each species
+    // Scenario: One picture for each variety
     @Test
-    fun fetchesOnePicturePerSpecies() = runTest {
+    fun fetchesOnePicturePerVariety() = runTest {
         val remote = FakeRemote()
 
-        downloader(remote).download(progress)
+        downloader(remote, alternates = listOf(10034, 10035)).download(progress)
 
-        assertEquals(listOf(1, 2), remote.requested.sorted())
+        assertEquals(listOf(1, 2, 10034, 10035), remote.requested.sorted())
+        assertEquals(setOf(1, 2, 10034, 10035), files.storedIds())
+        assertEquals(ContentProgress(completed = 5, total = 5), progress.value)
     }
 
     // Scenario: Resume skips finished files
@@ -128,6 +136,7 @@ internal class ContentPackDownloaderTest {
         assertFalse(files.isFlavorImported())
     }
 
+    // Scenario: Variety without official artwork is skipped
     @Test
     fun aMissingFileDoesNotStopTheDownload() = runTest {
         val notFound = HttpException(Response.error<Unit>(404, okhttp3.ResponseBody.Companion.create(null, "")))
