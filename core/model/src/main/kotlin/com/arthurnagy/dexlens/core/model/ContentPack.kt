@@ -18,11 +18,19 @@ sealed interface ContentPackState {
     data object Ready : ContentPackState
 }
 
-/** Where downloaded pictures live, one per species. [rootPath] is null until the download has finished. */
+/**
+ * Where downloaded pictures live, one per variety. A species' default variety shares its id, so [artwork] for a species
+ * is its default variety's picture. [rootPath] is null until the download has finished.
+ */
 data class ArtworkLocation(
     val rootPath: String?,
 ) {
-    fun artwork(id: SpeciesId): String? = rootPath?.let { "$it/artwork/${id.value}.webp" }
+    fun artwork(id: SpeciesId): String? = picture(id.value)
+
+    /** May point at a missing file: a few forms have no official artwork. */
+    fun artwork(variety: Variety): String? = picture(variety.id)
+
+    private fun picture(id: Int): String? = rootPath?.let { "$it/artwork/$id.webp" }
 }
 
 /** One game's description of a species. Identical texts from several games are grouped. */

@@ -108,6 +108,10 @@ interface SpeciesDao {
     @Query("SELECT COUNT(*) FROM species")
     suspend fun speciesCount(): Int
 
-    @Query("SELECT id FROM species ORDER BY id")
-    suspend fun speciesIds(): List<Int>
+    /** One picture per variety. A species' default variety shares its id, so its picture is the species' picture. */
+    @Query("SELECT COUNT(*) FROM variety")
+    suspend fun pictureCount(): Int
+
+    @Query("SELECT id FROM variety ORDER BY id")
+    suspend fun pictureIds(): List<Int>
 }

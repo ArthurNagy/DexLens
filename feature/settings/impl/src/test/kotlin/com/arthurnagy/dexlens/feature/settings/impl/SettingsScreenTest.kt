@@ -49,7 +49,7 @@ internal class SettingsScreenTest {
     fun offersTheDownloadWithItsSize() {
         var started = false
         show(onDownload = { started = true })
-        composeRule.onNodeWithText("About 140 MB to download, 21 MB on this device").assertExists()
+        composeRule.onNodeWithText("About 183 MB to download, 27 MB on this device").assertExists()
         composeRule.onNodeWithTag("settings:download").performClick()
         assertTrue(started)
     }
@@ -130,7 +130,7 @@ internal class SettingsScreenTest {
     fun offerShowsSizeAndChoices() {
         var skipped = false
         composeRule.setContent { AppTheme { ContentOfferContent(ContentPackState.NotDownloaded, {}, { skipped = true }, {}) } }
-        composeRule.onNodeWithText("About 140 MB to download, 21 MB on this device").assertExists()
+        composeRule.onNodeWithText("About 183 MB to download, 27 MB on this device").assertExists()
         composeRule.onNodeWithTag("offer:skip").performClick()
         assertTrue(skipped)
     }

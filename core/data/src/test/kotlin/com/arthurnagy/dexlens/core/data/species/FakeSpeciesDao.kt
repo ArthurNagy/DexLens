@@ -79,8 +79,13 @@ internal class FakeSpeciesDao(
 
     override suspend fun speciesCount(): Int = species.size
 
-    override suspend fun speciesIds(): List<Int> {
+    override suspend fun pictureCount(): Int = pictureIds.size
+
+    override suspend fun pictureIds(): List<Int> {
         check()
-        return species.map { it.id }
+        return pictureIds
     }
+
+    /** Every species' default variety, plus any extra [varieties]. */
+    private val pictureIds: List<Int> get() = (species.map { it.id } + varieties.map { it.id }).distinct().sorted()
 }

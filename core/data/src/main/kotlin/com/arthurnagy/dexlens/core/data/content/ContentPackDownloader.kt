@@ -46,7 +46,7 @@ internal class ContentPackDownloader
     ) {
         @OptIn(ExperimentalAtomicApi::class)
         suspend fun download(progress: MutableStateFlow<ContentProgress>): Result<Unit, DomainError> {
-            val ids = catchStorage { speciesDao.speciesIds() }.getOrElse { return Err(it) }
+            val ids = catchStorage { speciesDao.pictureIds() }.getOrElse { return Err(it) }
             val (stored, flavorDone) = catchStorage { files.storedIds() to files.isFlavorImported() }.getOrElse { return Err(it) }
             val total = ids.size + FLAVOR_STEP
             val pending = ids.filterNot(stored::contains)
