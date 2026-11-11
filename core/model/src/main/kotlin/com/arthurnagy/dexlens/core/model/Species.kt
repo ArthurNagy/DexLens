@@ -25,11 +25,6 @@ data class SpeciesNameHit(
     val name: String,
 )
 
-data class LocalizedName(
-    val language: String,
-    val name: String,
-)
-
 data class SpeciesDetail(
     val summary: SpeciesSummary,
     val genus: String?,
@@ -38,7 +33,6 @@ data class SpeciesDetail(
     val eggGroups: List<String>,
     val varieties: List<Variety>,
     val evolutionLine: EvolutionNode,
-    val otherNames: List<LocalizedName>,
 )
 
 /** [femaleEighths] is null for genderless species. */

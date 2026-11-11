@@ -22,6 +22,8 @@ None. Free and open source (MIT), distributed as a signed APK on GitHub Releases
 - All 1,025 species: Pokédex number, names in every language, genus, types, height, weight, base stats, abilities
   including hidden ones, evolution line with triggers, egg groups, gender ratio and forms.
 - Type weaknesses, resistances and immunities, computed in the app from the type chart.
+- Per game pair: the moves learnt by level up, with their type and power in that game, and the wild locations with method
+  and level range, as far as PokeAPI has them.
 - A search-first home: Pokédex-order list, results as you type by prefix, ignoring case and accents, by number and
   in other languages.
 - A full entry screen, shown beside the list on tablets and unfolded foldables.
@@ -29,7 +31,7 @@ None. Free and open source (MIT), distributed as a signed APK on GitHub Releases
 - An optional, skippable, resumable download of artwork and flavor text. Polished placeholders without it.
 
 ## Out of scope (v1)
-- Learnsets and move data.
+- TM, egg, tutor and event moves, move descriptions, accuracy and PP. Encounter rates and conditions.
 - Recognising Pokémon from images (matching stays behind an interface so a model can be added later).
 - Non-Latin text recognition.
 - Accounts, sync, ads, analytics and any network use beyond the optional download.

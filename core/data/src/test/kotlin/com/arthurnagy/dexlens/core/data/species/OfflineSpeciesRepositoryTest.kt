@@ -128,7 +128,6 @@ internal class OfflineSpeciesRepositoryTest {
         assertEquals(318, variety.stats.total)
         assertEquals(listOf("Overgrow", "Chlorophyll"), variety.abilities.map { it.name })
         assertEquals(listOf(false, true), variety.abilities.map { it.isHidden })
-        assertEquals(listOf("French" to "Bulbizarre"), detail.otherNames.map { it.language to it.name })
     }
 
     // Scenario: Genderless species

@@ -20,4 +20,9 @@ interface UserPreferencesRepository {
     val scannerEnabled: Flow<Boolean>
 
     suspend fun setScannerEnabled(enabled: Boolean): Result<Unit, DomainError>
+
+    /** The game the user last picked on an entry, or null until they pick one. Never throws. */
+    val preferredGame: Flow<Int?>
+
+    suspend fun setPreferredGame(gameId: Int): Result<Unit, DomainError>
 }

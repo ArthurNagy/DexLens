@@ -1,7 +1,9 @@
 package com.arthurnagy.dexlens.feature.entry.impl
 
 import androidx.compose.ui.test.assertContentDescriptionContains
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -18,18 +20,29 @@ import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveFlavorEntriesUseCase
+import com.arthurnagy.dexlens.core.domain.game.GetInGameDetailsUseCase
+import com.arthurnagy.dexlens.core.domain.game.SetPreferredGameUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesDetailUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetTypeChartUseCase
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
-import com.arthurnagy.dexlens.core.model.FlavorEntry
+import com.arthurnagy.dexlens.core.model.EncounterMethod
 import com.arthurnagy.dexlens.core.model.Form
+import com.arthurnagy.dexlens.core.model.Game
+import com.arthurnagy.dexlens.core.model.LevelUpMove
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
+import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeFlavorTextRepository
+import com.arthurnagy.dexlens.core.testing.FakeGameRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeTypeChartRepository
+import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
+import com.arthurnagy.dexlens.core.testing.RedBlue
+import com.arthurnagy.dexlens.core.testing.ScarletViolet
+import com.arthurnagy.dexlens.core.testing.SwordShield
 import com.arthurnagy.dexlens.core.testing.bulbasaurDetail
+import com.arthurnagy.dexlens.core.testing.sampleGameDetails
 import com.arthurnagy.dexlens.core.testing.sampleTypeChart
 import com.arthurnagy.dexlens.feature.entry.api.EntryKey
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -48,15 +61,23 @@ class EntryScreenTest {
     val composeRule = createComposeRule()
 
     private val detail = bulbasaurDetail()
-    private val loaded = EntryState.loaded(detail, sampleTypeChart(), ArtworkLocation(null), emptyList())
+    private val loaded = EntryState.loaded(detail, sampleTypeChart(), ArtworkLocation(null), null)
+    private val described = loaded.copy(
+        description = "A strange seed was planted on its back at birth.",
+        inGame = InGameState(listOf(ScarletViolet, SwordShield, RedBlue), RedBlue, sampleGameDetails(RedBlue)),
+    )
+
+    private fun inGame(game: Game) =
+        loaded.copy(inGame = InGameState(listOf(ScarletViolet, SwordShield, RedBlue), game, sampleGameDetails(game)))
 
     private fun show(
         state: EntryState,
         onBack: (() -> Unit)? = {},
         onOpen: (Int) -> Unit = {},
         onSelect: (Int) -> Unit = {},
+        onSelectGame: (Int) -> Unit = {},
     ) {
-        composeRule.setContent { AppTheme { EntryContent(state, onBack, onOpen, onSelect) } }
+        composeRule.setContent { AppTheme { EntryContent(state, onBack, onOpen, onSelect, onSelectGame) } }
     }
 
     private fun scrollTo(text: String) {
@@ -92,7 +113,7 @@ class EntryScreenTest {
     @Test
     fun genderlessIsWorded() {
         val genderless = detail.copy(genderRatio = detail.genderRatio.copy(femaleEighths = null))
-        show(EntryState.loaded(genderless, sampleTypeChart(), ArtworkLocation(null), emptyList()))
+        show(EntryState.loaded(genderless, sampleTypeChart(), ArtworkLocation(null), null))
         scrollTo("Genderless")
         composeRule.onNodeWithText("Genderless").assertExists()
     }
@@ -137,7 +158,7 @@ class EntryScreenTest {
             stats = detail.varieties.single().stats.copy(hp = 99),
         )
         val withMega = EntryState
-            .loaded(detail.copy(varieties = detail.varieties + mega), sampleTypeChart(), ArtworkLocation(null), emptyList())
+            .loaded(detail.copy(varieties = detail.varieties + mega), sampleTypeChart(), ArtworkLocation(null), null)
             .select(mega)
         show(withMega, onSelect = { selected = it })
         composeRule.onNodeWithTag("entry:variety:1").performClick()
@@ -156,29 +177,40 @@ class EntryScreenTest {
             GetTypeChartUseCase(FakeTypeChartRepository(sampleTypeChart())),
             ObserveArtworkUseCase(FakeContentPackRepository()),
             ObserveFlavorEntriesUseCase(FakeFlavorTextRepository()),
+            GetInGameDetailsUseCase(
+                FakeGameRepository(gamesByVariety = mapOf(1 to listOf(SwordShield))),
+                FakeUserPreferencesRepository(ThemeMode.SYSTEM),
+            ),
+            SetPreferredGameUseCase(FakeUserPreferencesRepository(ThemeMode.SYSTEM)),
         )
         composeRule.setContent { AppTheme { EntryScreen(viewModel = viewModel, onNavigateBack = {}, onOpenSpecies = {}) } }
         composeRule.waitUntil(WAIT_MS) { composeRule.onAllNodesWithText("Seed Pokémon").fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNodeWithText("Seed Pokémon").assertExists()
+        // The section is a lazy item further down, so it can only be found by scrolling once it has loaded.
+        composeRule.waitUntil(WAIT_MS) {
+            runCatching { composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:game-picker")) }.isSuccess
+        }
+        composeRule.onNodeWithText("Sword / Shield").assertExists()
     }
 
+    // Scenario: No description without the download
     // Scenario: Entry without flavor text
     @Test
-    fun flavorSectionIsAbsentWithoutDownload() {
+    fun noDescriptionWithoutDownload() {
         show(loaded)
+        composeRule.onNodeWithTag("entry:description").assertDoesNotExist()
         composeRule.onNodeWithText("Pokédex entries").assertDoesNotExist()
     }
 
+    // Scenario: Description from downloaded text
     @Test
-    fun flavorEntriesAreShownWithTheirGames() {
-        val flavor = listOf(FlavorEntry("A seed grows.", listOf("Red", "Blue")))
-        show(EntryState.loaded(detail, sampleTypeChart(), ArtworkLocation(null), flavor))
-        scrollTo("A seed grows.")
-        composeRule.onNodeWithText("Red, Blue").assertExists()
+    fun theDescriptionSitsUnderTheHeader() {
+        show(described)
+        composeRule.onNodeWithTag("entry:description").assertTextEquals("A strange seed was planted on its back at birth.")
     }
 
     @Test
-    fun formsAndOtherNamesAreListed() {
+    fun formsAreListed() {
         val variety = detail.varieties.single()
         val forms =
             listOf(
@@ -186,17 +218,108 @@ class EntryScreenTest {
                 Form(2, "B", isDefault = false, isBattleOnly = false, isMega = false),
             )
         val withForms = detail.copy(varieties = listOf(variety.copy(forms = forms)))
-        show(EntryState.loaded(withForms, sampleTypeChart(), ArtworkLocation(null), emptyList()))
+        show(EntryState.loaded(withForms, sampleTypeChart(), ArtworkLocation(null), null))
         scrollTo("Forms")
         composeRule.onNodeWithText("B").assertExists()
-        scrollTo("Bulbizarre")
-        composeRule.onNodeWithText("French").assertExists()
+    }
+
+    // Scenario: No names in other languages
+    @Test
+    fun namesInOtherLanguagesAreNotListed() {
+        show(described)
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:location:1"))
+        composeRule.onNodeWithText("Names in other languages").assertDoesNotExist()
+        composeRule.onNodeWithText("Bulbizarre").assertDoesNotExist()
+    }
+
+    // Scenario: Moves learnt by level up
+    @Test
+    fun movesAreListedWithLevelTypeAndPower() {
+        show(inGame(ScarletViolet))
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:move:2"))
+        composeRule.onNodeWithTag("entry:move:1").assertContentDescriptionEquals("Level 3, Vine Whip, Grass, power 45")
+        composeRule.onNodeWithTag("entry:move:2").assertContentDescriptionEquals("Level 6, Growth, Normal, no direct damage")
+    }
+
+    @Test
+    fun anEvolutionMoveAndAMoveWithoutATypeAreWorded() {
+        val details = sampleGameDetails(ScarletViolet).let {
+            it.copy(moves = listOf(LevelUpMove(0, "Petal Dance", PokemonType.GRASS, 120), LevelUpMove(9, "Curse", null, null)))
+        }
+        show(loaded.copy(inGame = InGameState(listOf(ScarletViolet), ScarletViolet, details)))
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:move:1"))
+        composeRule.onNodeWithTag("entry:move:0").assertContentDescriptionEquals("Learnt on evolving, Petal Dance, Grass, power 120")
+        composeRule.onNodeWithTag("entry:move:1").assertContentDescriptionEquals("Level 9, Curse, no direct damage")
+    }
+
+    @Test
+    fun aGameWithoutMovesSaysSo() {
+        val details = sampleGameDetails(ScarletViolet).copy(moves = emptyList())
+        show(loaded.copy(inGame = InGameState(listOf(ScarletViolet), ScarletViolet, details)))
+        scrollTo("Learns no moves by level up in this game.")
+        composeRule.onNodeWithText("Learns no moves by level up in this game.").assertExists()
+    }
+
+    // Scenario: Where to find
+    // Scenario: Version-exclusive location
+    @Test
+    fun locationsShowMethodLevelsAndTheirVersion() {
+        show(inGame(RedBlue))
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:location:1"))
+        composeRule.onNodeWithTag("entry:location:0").assertContentDescriptionEquals("Route 1, Walking in grass or caves, Lv. 3–5")
+        composeRule.onNodeWithTag("entry:location:1").assertContentDescriptionEquals("Cerulean City, Gift, Lv. 10, Blue only")
+    }
+
+    // Scenario: No location data for the game
+    @Test
+    fun aGameWithoutLocationDataSaysSo() {
+        show(inGame(ScarletViolet))
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:locations-unavailable"))
+        composeRule.onNodeWithText("Location data isn't available for this game yet.").assertExists()
+    }
+
+    // Scenario: Not found in the wild
+    @Test
+    fun aPokemonNotInTheWildSaysSo() {
+        val details = sampleGameDetails(SwordShield).copy(encounters = emptyList())
+        show(loaded.copy(inGame = InGameState(listOf(SwordShield), SwordShield, details)))
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:locations-none"))
+        composeRule.onNodeWithText("Not found in the wild in this game.").assertExists()
+    }
+
+    @Test
+    fun aMethodWithoutAStringUsesPokeApisWords() {
+        val details = sampleGameDetails(RedBlue).let { sample ->
+            sample.copy(
+                encounters = listOf(
+                    sample.encounters.first().copy(method = EncounterMethod("pokemon-ranger", "Receiving a Manaphy from Pokemon Ranger")),
+                ),
+            )
+        }
+        show(loaded.copy(inGame = InGameState(listOf(RedBlue), RedBlue, details)))
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:location:0"))
+        composeRule.onNodeWithTag(
+            "entry:location:0",
+        ).assertContentDescriptionEquals("Route 1, Receiving a Manaphy from Pokemon Ranger, Lv. 3–5")
+    }
+
+    // Scenario: Picking a game updates the section
+    @Test
+    fun theGamePickerListsGamesAndReportsAPick() {
+        var picked: Int? = null
+        show(inGame(ScarletViolet), onSelectGame = { picked = it })
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:game-picker"))
+        composeRule.onNodeWithTag("entry:game-picker").performClick()
+        composeRule.onNodeWithTag("entry:game:${RedBlue.id}").assertExists()
+        composeRule.onNodeWithTag("entry:game:${SwordShield.id}").performClick()
+        assertEquals(SwordShield.id, picked)
+        composeRule.onNodeWithTag("entry:game:${RedBlue.id}").assertDoesNotExist()
     }
 
     @Test
     fun aSpeciesWithoutEvolutionSaysSo() {
         val lone = detail.copy(evolutionLine = detail.evolutionLine.copy(children = emptyList()))
-        show(EntryState.loaded(lone, sampleTypeChart(), ArtworkLocation(null), emptyList()))
+        show(EntryState.loaded(lone, sampleTypeChart(), ArtworkLocation(null), null))
         scrollTo("This species does not evolve.")
         composeRule.onNodeWithText("This species does not evolve.").assertExists()
     }
@@ -235,7 +358,7 @@ class EntryScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phone() {
-        show(loaded)
+        show(described)
         composeRule.onRoot().captureRoboImage()
     }
 
@@ -250,6 +373,22 @@ class EntryScreenTest {
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tablet() {
         show(loaded)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun phoneInGame() {
+        show(described)
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:location:1"))
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletInGame() {
+        show(described)
+        composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:location:1"))
         composeRule.onRoot().captureRoboImage()
     }
 

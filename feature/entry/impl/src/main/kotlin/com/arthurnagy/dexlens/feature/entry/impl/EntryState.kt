@@ -4,7 +4,9 @@ import androidx.compose.runtime.Immutable
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.species.calculateTypeMatchups
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
-import com.arthurnagy.dexlens.core.model.FlavorEntry
+import com.arthurnagy.dexlens.core.model.Game
+import com.arthurnagy.dexlens.core.model.GameDetails
+import com.arthurnagy.dexlens.core.model.InGame
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.TypeChart
 import com.arthurnagy.dexlens.core.model.TypeMatchups
@@ -18,7 +20,10 @@ internal sealed interface EntryState {
         val error: DomainError,
     ) : EntryState
 
-    /** [selected] picks which variety's stats, types and matchups are shown. */
+    /**
+     * [selected] picks which variety's stats, types, matchups and in-game details are shown. [description] is the newest
+     * downloaded Pokédex text, if any. [inGame] is null until it loads, and when the variety appears in no game.
+     */
     @Immutable
     data class Loaded(
         val detail: SpeciesDetail,
@@ -26,7 +31,8 @@ internal sealed interface EntryState {
         val selected: Variety,
         val matchups: TypeMatchups,
         val artwork: ArtworkLocation,
-        val flavor: List<FlavorEntry>,
+        val description: String?,
+        val inGame: InGameState?,
     ) : EntryState {
         fun select(variety: Variety): Loaded = copy(selected = variety, matchups = calculateTypeMatchups(chart, variety.types))
     }
@@ -38,10 +44,20 @@ internal sealed interface EntryState {
             detail: SpeciesDetail,
             chart: TypeChart,
             artwork: ArtworkLocation,
-            flavor: List<FlavorEntry>,
+            description: String?,
         ): Loaded {
             val variety = detail.varieties.first { it.isDefault }
-            return Loaded(detail, chart, variety, calculateTypeMatchups(chart, variety.types), artwork, flavor)
+            return Loaded(detail, chart, variety, calculateTypeMatchups(chart, variety.types), artwork, description, inGame = null)
         }
     }
 }
+
+/** The "In game" section. [details] can still be the previous game's for a moment after a new [selected] game is picked. */
+@Immutable
+internal data class InGameState(
+    val games: List<Game>,
+    val selected: Game,
+    val details: GameDetails,
+)
+
+internal fun InGame.toState(): InGameState? = details?.let { InGameState(games, it.game, it) }

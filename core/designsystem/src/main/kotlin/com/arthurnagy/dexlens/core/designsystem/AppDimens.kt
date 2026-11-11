@@ -40,6 +40,11 @@ object AppDimens {
     /** The most of the window's height the scanner area may take, so short windows keep the list reachable. */
     val scannerAreaMaxHeightFraction = 0.45f
 
+    /** Columns of the entry's level-up move rows: the level at the start, then the name, type and power. */
+    val moveLevelWidth = 48.dp
+    val moveTypeWidth = 88.dp
+    val movePowerWidth = 40.dp
+
     val skeletonLineHeight = 16.dp
     val skeletonLineShort = 64.dp
     val skeletonLineMedium = 120.dp

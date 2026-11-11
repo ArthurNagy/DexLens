@@ -193,6 +193,57 @@ internal class PrebuiltDatabaseTest {
         assertTrue(1 in search("フシギダネ*"))
     }
 
+    private val games get() = database.gameDao()
+
+    // Scenario: Learnsets bundled
+    @Test
+    fun learnsetsBundled() = runTest {
+        val bulbasaurGames = games.versionGroups(BULBASAUR).map { it.id }
+        assertTrue(RED_BLUE in bulbasaurGames && SCARLET_VIOLET in bulbasaurGames)
+        bulbasaurGames.filter { it != LEGENDS_ARCEUS }.forEach { game ->
+            assertTrue("Vine Whip in group $game", games.levelUpMoves(BULBASAUR, game, ENGLISH).any { it.name == "Vine Whip" })
+        }
+        val moves = games.levelUpMoves(BULBASAUR, SCARLET_VIOLET, ENGLISH)
+        assertEquals(moves.sortedBy { it.level }.map { it.level }, moves.map { it.level })
+        assertEquals(GRASS, moves.first { it.name == "Vine Whip" }.typeId)
+        assertEquals(
+            "Fouet Lianes",
+            games.levelUpMoves(BULBASAUR, SCARLET_VIOLET, FRENCH).first {
+                it.typeId == GRASS && it.power == 45
+            }.name,
+        )
+    }
+
+    // Scenario: Move as of the game
+    @Test
+    fun moveValuesAsOfTheGame() = runTest {
+        assertEquals(NORMAL, games.levelUpMoves(ARBOK, RED_BLUE, ENGLISH).first { it.name == "Bite" }.typeId)
+        assertEquals(DARK, games.levelUpMoves(ARBOK, SCARLET_VIOLET, ENGLISH).first { it.name == "Bite" }.typeId)
+    }
+
+    // Scenario: Locations bundled
+    @Test
+    fun locationsBundled() = runTest {
+        val forest = games.encounters(PIKACHU, RED_BLUE, ENGLISH).filter { it.location == "Viridian Forest" }
+        assertEquals(setOf(RED, BLUE), forest.map { it.versionId }.toSet())
+        assertTrue(forest.all { it.minLevel in 1..it.maxLevel })
+        assertEquals(setOf("walk"), forest.map { it.methodIdentifier }.toSet())
+        val groups = games.versionGroups(PIKACHU)
+        assertFalse(groups.first { it.id == SCARLET_VIOLET }.hasEncounters)
+        assertTrue(groups.first { it.id == RED_BLUE }.hasEncounters)
+        assertEquals(listOf("Red", "Blue"), games.versions(listOf(RED_BLUE), ENGLISH).map { it.name })
+    }
+
+    @Test
+    fun battleOnlyFormsUseTheDefaultVariety() = runTest {
+        val megaVenusaur = dao.varieties(VENUSAUR).first { it.identifier == "venusaur-mega" }.id
+        assertFalse(games.usesOwnData(megaVenusaur))
+        assertEquals(VENUSAUR, games.defaultVariety(megaVenusaur))
+        assertTrue(games.usesOwnData(VENUSAUR))
+        val alolanVulpix = dao.varieties(VULPIX).first { it.identifier == "vulpix-alola" }.id
+        assertTrue(games.usesOwnData(alolanVulpix))
+    }
+
     // Scenario: Prebuilt file passes validation
     @Test
     fun validatesOnReopen() = runTest {
@@ -214,5 +265,18 @@ internal class PrebuiltDatabaseTest {
         const val FIRE = 10
         const val WATER = 11
         const val GHOST = 8
+        const val GRASS = 12
+        const val DARK = 17
+        const val FRENCH = 5
+        const val BULBASAUR = 1
+        const val VENUSAUR = 3
+        const val VULPIX = 37
+        const val ARBOK = 24
+        const val PIKACHU = 25
+        const val RED_BLUE = 1
+        const val LEGENDS_ARCEUS = 24
+        const val SCARLET_VIOLET = 25
+        const val RED = 1
+        const val BLUE = 2
     }
 }

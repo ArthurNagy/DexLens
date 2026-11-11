@@ -34,7 +34,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,6 +63,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
@@ -78,9 +78,7 @@ import com.arthurnagy.dexlens.core.model.Ability
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.BaseStats
 import com.arthurnagy.dexlens.core.model.EvolutionNode
-import com.arthurnagy.dexlens.core.model.FlavorEntry
 import com.arthurnagy.dexlens.core.model.GenderRatio
-import com.arthurnagy.dexlens.core.model.LocalizedName
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.TypeEffectiveness
@@ -105,6 +103,7 @@ internal fun EntryContent(
     onNavigateBack: (() -> Unit)?,
     onOpenSpecies: (Int) -> Unit,
     onSelectVariety: (Int) -> Unit,
+    onSelectGame: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -142,7 +141,7 @@ internal fun EntryContent(
                 modifier = Modifier.padding(innerPadding),
             )
 
-            is EntryState.Loaded -> EntryBody(state, onOpenSpecies, onSelectVariety)
+            is EntryState.Loaded -> EntryBody(state, onOpenSpecies, onSelectVariety, onSelectGame)
         }
     }
 }
@@ -152,6 +151,7 @@ private fun EntryBody(
     state: EntryState.Loaded,
     onOpenSpecies: (Int) -> Unit,
     onSelectVariety: (Int) -> Unit,
+    onSelectGame: (Int) -> Unit,
 ) {
     val detail = state.detail
     val variety = state.selected
@@ -162,7 +162,7 @@ private fun EntryBody(
         contentPadding = PaddingValues(bottom = AppSpacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item(key = "header") { EntryHeader(detail, variety, state.artwork) }
+        item(key = "header") { EntryHeader(detail, variety, state.artwork, state.description) }
         val contentModifier = Modifier.widthIn(max = AppDimens.maxContentWidth).fillMaxWidth().padding(horizontal = AppSpacing.md)
         if (detail.varieties.size > 1) {
             item(key = "varieties") {
@@ -193,16 +193,9 @@ private fun EntryBody(
                 EvolutionSection(detail, state.artwork, onOpenSpecies)
             }
         }
-        if (state.flavor.isNotEmpty()) {
-            item(key = "flavor") { EntrySection(stringResource(R.string.entry_flavor), contentModifier) { FlavorSection(state.flavor) } }
-        }
+        state.inGame?.let { inGame -> inGameItems(inGame, onSelectGame, contentModifier) }
         if (variety.forms.size > 1) {
             item(key = "forms") { EntrySection(stringResource(R.string.entry_forms), contentModifier) { FormsSection(variety) } }
-        }
-        if (detail.otherNames.isNotEmpty()) {
-            item(key = "names") {
-                EntrySection(stringResource(R.string.entry_other_names), contentModifier) { OtherNamesSection(detail.otherNames) }
-            }
         }
         item(key = "bottom") { Spacer(Modifier.navigationBarsPadding()) }
     }
@@ -246,6 +239,7 @@ private fun EntryHeader(
     detail: SpeciesDetail,
     variety: Variety,
     artwork: ArtworkLocation,
+    description: String?,
 ) {
     val summary = detail.summary
     val sharedScope = LocalSharedTransitionScope.current
@@ -286,6 +280,18 @@ private fun EntryHeader(
         )
         detail.genus?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         TypeChipRow(variety.types)
+        description?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .widthIn(max = AppDimens.maxContentWidth)
+                    .padding(horizontal = AppSpacing.lg, vertical = AppSpacing.xs)
+                    .testTag("entry:description"),
+            )
+        }
     }
 }
 
@@ -314,7 +320,7 @@ private fun VarietyPicker(
 }
 
 @Composable
-private fun EntrySection(
+internal fun EntrySection(
     title: String,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -609,22 +615,6 @@ private fun EvolutionRow(
     }
 }
 
-@Composable
-private fun FlavorSection(entries: List<FlavorEntry>) {
-    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.md)) {
-        entries.forEach { entry ->
-            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-                Text(entry.text, style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    listText(entry.games),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FormsSection(variety: Variety) {
@@ -641,16 +631,6 @@ private fun FormsSection(variety: Variety) {
     }
 }
 
-@Composable
-private fun OtherNamesSection(names: List<LocalizedName>) {
-    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-        names.forEachIndexed { index, name ->
-            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = DIVIDER_ALPHA))
-            LabeledValue(name.language, name.name, Modifier.padding(vertical = AppSpacing.xs))
-        }
-    }
-}
-
 private fun decimal(value: Double): String = "%.1f".format(Locale.getDefault(), value)
 
 private fun percent(value: Double): String = if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(Locale.getDefault(), value)
@@ -662,6 +642,5 @@ private const val FULL_PERCENT = 100.0
 private const val FOUR_TIMES = 4.0
 private const val TWO_TIMES = 2.0
 private const val HALF = 0.5
-private const val DIVIDER_ALPHA = 0.5f
 
 private const val SKELETON_SECTIONS = 3

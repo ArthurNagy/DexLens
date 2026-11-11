@@ -1,0 +1,1121 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "ecc5f04ebbe5acc918489b95490fb5c7",
+    "entities": [
+      {
+        "tableName": "species",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `identifier` TEXT NOT NULL, `generation` INTEGER NOT NULL, `gender_rate` INTEGER NOT NULL, `evolves_from_species_id` INTEGER, `evolution_chain_id` INTEGER NOT NULL, `is_baby` INTEGER NOT NULL, `is_legendary` INTEGER NOT NULL, `is_mythical` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generation",
+            "columnName": "generation",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "genderRate",
+            "columnName": "gender_rate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "evolvesFromSpeciesId",
+            "columnName": "evolves_from_species_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "evolutionChainId",
+            "columnName": "evolution_chain_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isBaby",
+            "columnName": "is_baby",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isLegendary",
+            "columnName": "is_legendary",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isMythical",
+            "columnName": "is_mythical",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_species_evolution_chain_id",
+            "unique": false,
+            "columnNames": [
+              "evolution_chain_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_species_evolution_chain_id` ON `${TABLE_NAME}` (`evolution_chain_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "species_name",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`species_id` INTEGER NOT NULL, `language_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `genus` TEXT, PRIMARY KEY(`species_id`, `language_id`))",
+        "fields": [
+          {
+            "fieldPath": "speciesId",
+            "columnName": "species_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "languageId",
+            "columnName": "language_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "genus",
+            "columnName": "genus",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "species_id",
+            "language_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_species_name_language_id",
+            "unique": false,
+            "columnNames": [
+              "language_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_species_name_language_id` ON `${TABLE_NAME}` (`language_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "language",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `identifier` TEXT NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "variety",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `species_id` INTEGER NOT NULL, `identifier` TEXT NOT NULL, `name` TEXT NOT NULL, `is_default` INTEGER NOT NULL, `sort_order` INTEGER NOT NULL, `height` INTEGER NOT NULL, `weight` INTEGER NOT NULL, `type_primary` INTEGER NOT NULL, `type_secondary` INTEGER, `hp` INTEGER NOT NULL, `attack` INTEGER NOT NULL, `defense` INTEGER NOT NULL, `special_attack` INTEGER NOT NULL, `special_defense` INTEGER NOT NULL, `speed` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speciesId",
+            "columnName": "species_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDefault",
+            "columnName": "is_default",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weight",
+            "columnName": "weight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typePrimary",
+            "columnName": "type_primary",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeSecondary",
+            "columnName": "type_secondary",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hp",
+            "columnName": "hp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "attack",
+            "columnName": "attack",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "defense",
+            "columnName": "defense",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "specialAttack",
+            "columnName": "special_attack",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "specialDefense",
+            "columnName": "special_defense",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speed",
+            "columnName": "speed",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_variety_species_id",
+            "unique": false,
+            "columnNames": [
+              "species_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_variety_species_id` ON `${TABLE_NAME}` (`species_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "form",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `variety_id` INTEGER NOT NULL, `identifier` TEXT NOT NULL, `name` TEXT NOT NULL, `is_default` INTEGER NOT NULL, `is_battle_only` INTEGER NOT NULL, `is_mega` INTEGER NOT NULL, `sort_order` INTEGER NOT NULL, `type_primary` INTEGER, `type_secondary` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "varietyId",
+            "columnName": "variety_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDefault",
+            "columnName": "is_default",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isBattleOnly",
+            "columnName": "is_battle_only",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isMega",
+            "columnName": "is_mega",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typePrimary",
+            "columnName": "type_primary",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "typeSecondary",
+            "columnName": "type_secondary",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_form_variety_id",
+            "unique": false,
+            "columnNames": [
+              "variety_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_form_variety_id` ON `${TABLE_NAME}` (`variety_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "ability",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `identifier` TEXT NOT NULL, `name` TEXT NOT NULL, `short_effect` TEXT, `effect` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shortEffect",
+            "columnName": "short_effect",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "effect",
+            "columnName": "effect",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "variety_ability",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`variety_id` INTEGER NOT NULL, `slot` INTEGER NOT NULL, `ability_id` INTEGER NOT NULL, `is_hidden` INTEGER NOT NULL, PRIMARY KEY(`variety_id`, `slot`))",
+        "fields": [
+          {
+            "fieldPath": "varietyId",
+            "columnName": "variety_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slot",
+            "columnName": "slot",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "abilityId",
+            "columnName": "ability_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isHidden",
+            "columnName": "is_hidden",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "variety_id",
+            "slot"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_variety_ability_ability_id",
+            "unique": false,
+            "columnNames": [
+              "ability_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_variety_ability_ability_id` ON `${TABLE_NAME}` (`ability_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "egg_group",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `identifier` TEXT NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "species_egg_group",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`species_id` INTEGER NOT NULL, `egg_group_id` INTEGER NOT NULL, PRIMARY KEY(`species_id`, `egg_group_id`))",
+        "fields": [
+          {
+            "fieldPath": "speciesId",
+            "columnName": "species_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eggGroupId",
+            "columnName": "egg_group_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "species_id",
+            "egg_group_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_species_egg_group_egg_group_id",
+            "unique": false,
+            "columnNames": [
+              "egg_group_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_species_egg_group_egg_group_id` ON `${TABLE_NAME}` (`egg_group_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "evolution",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `species_id` INTEGER NOT NULL, `from_species_id` INTEGER NOT NULL, `trigger` TEXT NOT NULL, `min_level` INTEGER, `item` TEXT, `held_item` TEXT, `time_of_day` TEXT, `known_move` TEXT, `known_move_type` INTEGER, `min_happiness` INTEGER, `min_beauty` INTEGER, `min_affection` INTEGER, `relative_physical_stats` INTEGER, `party_species_id` INTEGER, `party_type` INTEGER, `trade_species_id` INTEGER, `location` TEXT, `region` TEXT, `gender` INTEGER, `needs_rain` INTEGER NOT NULL, `turn_upside_down` INTEGER NOT NULL, `used_move` TEXT, `min_move_count` INTEGER, `min_steps` INTEGER, `min_damage_taken` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speciesId",
+            "columnName": "species_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromSpeciesId",
+            "columnName": "from_species_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trigger",
+            "columnName": "trigger",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minLevel",
+            "columnName": "min_level",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "item",
+            "columnName": "item",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "heldItem",
+            "columnName": "held_item",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "timeOfDay",
+            "columnName": "time_of_day",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "knownMove",
+            "columnName": "known_move",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "knownMoveType",
+            "columnName": "known_move_type",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "minHappiness",
+            "columnName": "min_happiness",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "minBeauty",
+            "columnName": "min_beauty",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "minAffection",
+            "columnName": "min_affection",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "relativePhysicalStats",
+            "columnName": "relative_physical_stats",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "partySpeciesId",
+            "columnName": "party_species_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "partyType",
+            "columnName": "party_type",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "tradeSpeciesId",
+            "columnName": "trade_species_id",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "region",
+            "columnName": "region",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "needsRain",
+            "columnName": "needs_rain",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "turnUpsideDown",
+            "columnName": "turn_upside_down",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usedMove",
+            "columnName": "used_move",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "minMoveCount",
+            "columnName": "min_move_count",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "minSteps",
+            "columnName": "min_steps",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "minDamageTaken",
+            "columnName": "min_damage_taken",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_evolution_species_id",
+            "unique": false,
+            "columnNames": [
+              "species_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_evolution_species_id` ON `${TABLE_NAME}` (`species_id`)"
+          },
+          {
+            "name": "index_evolution_from_species_id",
+            "unique": false,
+            "columnNames": [
+              "from_species_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_evolution_from_species_id` ON `${TABLE_NAME}` (`from_species_id`)"
+          }
+        ]
+      },
+      {
+        "tableName": "type_efficacy",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`attacking_type` INTEGER NOT NULL, `defending_type` INTEGER NOT NULL, `factor` INTEGER NOT NULL, PRIMARY KEY(`attacking_type`, `defending_type`))",
+        "fields": [
+          {
+            "fieldPath": "attackingType",
+            "columnName": "attacking_type",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "defendingType",
+            "columnName": "defending_type",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "factor",
+            "columnName": "factor",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "attacking_type",
+            "defending_type"
+          ]
+        }
+      },
+      {
+        "tableName": "game_version",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `version_group_id` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionGroupId",
+            "columnName": "version_group_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "species_name_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS5(`species_id` UNINDEXED, `language_id` UNINDEXED, `search`, tokenize=`unicode61 remove_diacritics 2`, prefix=`2 3`)",
+        "fields": [
+          {
+            "fieldPath": "speciesId",
+            "columnName": "species_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "languageId",
+            "columnName": "language_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "search",
+            "columnName": "search",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS5",
+        "ftsOptions": {
+          "tokenizer": "unicode61",
+          "tokenizerArgs": [
+            "remove_diacritics 2"
+          ],
+          "contentTable": "",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [
+            "species_id",
+            "language_id"
+          ],
+          "prefixSizes": [
+            2,
+            3
+          ],
+          "preferredOrder": "ASC",
+          "contentRowId": "",
+          "columnSize": true,
+          "detail": "FULL"
+        },
+        "contentSyncTriggers": []
+      },
+      {
+        "tableName": "version_group",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `generation` INTEGER NOT NULL, `sort_order` INTEGER NOT NULL, `has_encounters` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generation",
+            "columnName": "generation",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasEncounters",
+            "columnName": "has_encounters",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "version_name",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`version_id` INTEGER NOT NULL, `language_id` INTEGER NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`version_id`, `language_id`))",
+        "fields": [
+          {
+            "fieldPath": "versionId",
+            "columnName": "version_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "languageId",
+            "columnName": "language_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "version_id",
+            "language_id"
+          ]
+        }
+      },
+      {
+        "tableName": "move",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `type_id` INTEGER NOT NULL, `power` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeId",
+            "columnName": "type_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "power",
+            "columnName": "power",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "move_name",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`move_id` INTEGER NOT NULL, `language_id` INTEGER NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`move_id`, `language_id`))",
+        "fields": [
+          {
+            "fieldPath": "moveId",
+            "columnName": "move_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "languageId",
+            "columnName": "language_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "move_id",
+            "language_id"
+          ]
+        }
+      },
+      {
+        "tableName": "move_past_value",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`move_id` INTEGER NOT NULL, `version_group_id` INTEGER NOT NULL, `type_id` INTEGER NOT NULL, `power` INTEGER, PRIMARY KEY(`move_id`, `version_group_id`))",
+        "fields": [
+          {
+            "fieldPath": "moveId",
+            "columnName": "move_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionGroupId",
+            "columnName": "version_group_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeId",
+            "columnName": "type_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "power",
+            "columnName": "power",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "move_id",
+            "version_group_id"
+          ]
+        }
+      },
+      {
+        "tableName": "learnset",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`variety_id` INTEGER NOT NULL, `version_group_id` INTEGER NOT NULL, `move_id` INTEGER NOT NULL, `level` INTEGER NOT NULL, PRIMARY KEY(`variety_id`, `version_group_id`, `move_id`, `level`))",
+        "fields": [
+          {
+            "fieldPath": "varietyId",
+            "columnName": "variety_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionGroupId",
+            "columnName": "version_group_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moveId",
+            "columnName": "move_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "level",
+            "columnName": "level",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "variety_id",
+            "version_group_id",
+            "move_id",
+            "level"
+          ]
+        }
+      },
+      {
+        "tableName": "encounter",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`variety_id` INTEGER NOT NULL, `version_id` INTEGER NOT NULL, `location_id` INTEGER NOT NULL, `method_id` INTEGER NOT NULL, `min_level` INTEGER NOT NULL, `max_level` INTEGER NOT NULL, PRIMARY KEY(`variety_id`, `version_id`, `location_id`, `method_id`))",
+        "fields": [
+          {
+            "fieldPath": "varietyId",
+            "columnName": "variety_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "versionId",
+            "columnName": "version_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationId",
+            "columnName": "location_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "methodId",
+            "columnName": "method_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minLevel",
+            "columnName": "min_level",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxLevel",
+            "columnName": "max_level",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "variety_id",
+            "version_id",
+            "location_id",
+            "method_id"
+          ]
+        }
+      },
+      {
+        "tableName": "location_name",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`location_id` INTEGER NOT NULL, `language_id` INTEGER NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`location_id`, `language_id`))",
+        "fields": [
+          {
+            "fieldPath": "locationId",
+            "columnName": "location_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "languageId",
+            "columnName": "language_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "location_id",
+            "language_id"
+          ]
+        }
+      },
+      {
+        "tableName": "encounter_method",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `identifier` TEXT NOT NULL, `name` TEXT NOT NULL, `sort_order` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "identifier",
+            "columnName": "identifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sort_order",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ecc5f04ebbe5acc918489b95490fb5c7')"
+    ]
+  }
+}

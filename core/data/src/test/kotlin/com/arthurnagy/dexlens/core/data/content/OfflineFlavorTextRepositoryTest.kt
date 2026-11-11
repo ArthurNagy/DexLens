@@ -13,15 +13,16 @@ import kotlin.test.assertEquals
 
 internal class OfflineFlavorTextRepositoryTest {
     private val dao = FakeContentDao()
-    private val versions = GameVersionDao { listOf(GameVersionEntity(1, "Red"), GameVersionEntity(2, "Blue")) }
+    private val versions = GameVersionDao { listOf(GameVersionEntity(1, "Red", 1), GameVersionEntity(2, "Blue", 1)) }
 
     private fun repository(language: Int = 9) = OfflineFlavorTextRepository(dao, versions) { language }
 
+    // Scenario: Flavor text is imported
     @Test
-    fun groupsIdenticalTextsByGame() = runTest {
+    fun groupsIdenticalTextsByGameNewestFirst() = runTest {
         dao.upsertAll(listOf(FlavorTextEntity(1, 1, 9, "Same"), FlavorTextEntity(1, 2, 9, "Same"), FlavorTextEntity(1, 3, 9, "Other")))
         val entries = repository().observeFlavorEntries(SpeciesId(1)).first()
-        assertEquals(listOf(FlavorEntry("Same", listOf("Red", "Blue")), FlavorEntry("Other", emptyList())), entries)
+        assertEquals(listOf(FlavorEntry("Other", emptyList()), FlavorEntry("Same", listOf("Red", "Blue"))), entries)
     }
 
     @Test

@@ -18,6 +18,7 @@ internal fun EntryScreen(
         onNavigateBack = onNavigateBack,
         onOpenSpecies = onOpenSpecies,
         onSelectVariety = viewModel::onSelectVariety,
+        onSelectGame = viewModel::onSelectGame,
         modifier = modifier,
     )
 }

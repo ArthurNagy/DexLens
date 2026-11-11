@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.arthurnagy.dexlens.core.model.ThemeMode
 import kotlinx.coroutines.delay
@@ -47,6 +48,12 @@ class UserPreferencesDataSource
 
         val scannerEnabled: Flow<Boolean> = preferences.map { it[SCANNER_ENABLED] ?: true }
 
+        val preferredGame: Flow<Int?> = preferences.map { it[PREFERRED_GAME] }
+
+        suspend fun setPreferredGame(gameId: Int) {
+            dataStore.edit { it[PREFERRED_GAME] = gameId }
+        }
+
         suspend fun setScannerEnabled(enabled: Boolean) {
             dataStore.edit { it[SCANNER_ENABLED] = enabled }
         }
@@ -63,6 +70,7 @@ class UserPreferencesDataSource
             val THEME_MODE = stringPreferencesKey("theme_mode")
             val CONTENT_OFFER_SHOWN = booleanPreferencesKey("content_offer_shown")
             val SCANNER_ENABLED = booleanPreferencesKey("scanner_enabled")
+            val PREFERRED_GAME = intPreferencesKey("preferred_game")
             const val MAX_RETRY_DELAY_SECONDS = 30L
         }
     }

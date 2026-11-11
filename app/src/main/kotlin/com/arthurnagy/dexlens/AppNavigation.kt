@@ -1,7 +1,11 @@
 package com.arthurnagy.dexlens
 
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth
@@ -61,6 +65,10 @@ internal fun AppNavigation(
                         rememberViewModelStoreNavEntryDecorator(),
                     ),
                 sceneStrategies = listOf(dialogStrategy, listDetailStrategy),
+                popTransitionSpec = { popTransition() },
+                // The default predictive pop shrinks the leaving screen while a shared element flies out of it. The
+                // back arrow's fade, scrubbed by the gesture, keeps the entry whole as its art returns to the list.
+                predictivePopTransitionSpec = { popTransition() },
                 entryProvider =
                     entryProvider {
                         entryProviderInstallers.forEach { install -> install(navigator) }
@@ -69,3 +77,8 @@ internal fun AppNavigation(
         }
     }
 }
+
+/** One fade for leaving a screen, whether by the back arrow or the back gesture. */
+internal fun popTransition(): ContentTransform = ContentTransform(fadeIn(tween(POP_DURATION_MILLIS)), fadeOut(tween(POP_DURATION_MILLIS)))
+
+private const val POP_DURATION_MILLIS = 700

@@ -32,7 +32,7 @@ internal class OfflineFlavorTextRepository
             emit(emptyList())
         }
 
-        /** The display language's text, or English when a language has none. */
+        /** The display language's text, or English when a language has none, newest game first. */
         private fun entries(
             rows: List<FlavorTextEntity>,
             language: Int,
@@ -41,5 +41,7 @@ internal class OfflineFlavorTextRepository
             .filter { it.languageId == language }
             .ifEmpty { rows.filter { it.languageId == ENGLISH } }
             .groupBy { it.text }
+            .entries
+            .sortedByDescending { (_, sameText) -> sameText.maxOf { it.versionId } }
             .map { (text, sameText) -> FlavorEntry(text, sameText.mapNotNull { games[it.versionId] }) }
     }

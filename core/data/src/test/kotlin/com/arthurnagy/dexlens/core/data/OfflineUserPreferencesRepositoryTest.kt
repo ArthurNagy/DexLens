@@ -46,6 +46,22 @@ class OfflineUserPreferencesRepositoryTest {
     }
 
     @Test
+    fun thePreferredGameIsStored() = runTest {
+        val dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) {
+            tmpFolder.newFolder().resolve("prefs.preferences_pb")
+        }
+        val repository = OfflineUserPreferencesRepository(UserPreferencesDataSource(dataStore))
+
+        assertEquals(null, repository.preferredGame.first())
+        assertEquals(Ok(Unit), repository.setPreferredGame(25))
+        assertEquals(25, repository.preferredGame.first())
+        assertEquals(
+            Err(DomainError.Unknown("disk full")),
+            OfflineUserPreferencesRepository(UserPreferencesDataSource(FailingDataStore)).setPreferredGame(25),
+        )
+    }
+
+    @Test
     fun aFailedScannerSwitchWriteBecomesUnknown() = runTest {
         val repository = OfflineUserPreferencesRepository(UserPreferencesDataSource(FailingDataStore))
 

@@ -3,6 +3,8 @@ package com.arthurnagy.dexlens.feature.entry.impl
 import androidx.lifecycle.ViewModel
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveFlavorEntriesUseCase
+import com.arthurnagy.dexlens.core.domain.game.GetInGameDetailsUseCase
+import com.arthurnagy.dexlens.core.domain.game.SetPreferredGameUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesDetailUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetTypeChartUseCase
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
@@ -22,7 +24,10 @@ import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.orbitContainer
 
-/** Loads one species and its type chart. Selecting a variety recalculates matchups for its types. */
+/**
+ * Loads one species and its type chart, then the moves and locations for one game. Selecting a variety recalculates
+ * matchups for its types and reloads the in-game section.
+ */
 @HiltViewModel(assistedFactory = EntryViewModel.Factory::class)
 internal class EntryViewModel
     @AssistedInject
@@ -32,6 +37,8 @@ internal class EntryViewModel
         private val getTypeChart: GetTypeChartUseCase,
         private val observeArtwork: ObserveArtworkUseCase,
         private val observeFlavorEntries: ObserveFlavorEntriesUseCase,
+        private val getInGameDetails: GetInGameDetailsUseCase,
+        private val setPreferredGame: SetPreferredGameUseCase,
     ) : ViewModel(),
         OrbitContainerHost<EntryState, EntryState, Nothing> {
         override val container = orbitContainer<EntryState, Nothing>(EntryState.Initial) {
@@ -50,12 +57,14 @@ internal class EntryViewModel
             detail: SpeciesDetail,
             chart: TypeChart,
         ) {
-            combine(observeArtwork(), observeFlavorEntries(detail.summary.id)) { artwork, flavor -> artwork to flavor }
-                .collect { (artwork, flavor) ->
+            combine(observeArtwork(), observeFlavorEntries(detail.summary.id)) { artwork, flavor -> artwork to flavor.firstOrNull()?.text }
+                .collect { (artwork, description) ->
+                    val first = state !is EntryState.Loaded
                     reduce {
-                        (state as? EntryState.Loaded)?.copy(artwork = artwork, flavor = flavor)
-                            ?: EntryState.loaded(detail, chart, artwork, flavor)
+                        (state as? EntryState.Loaded)?.copy(artwork = artwork, description = description)
+                            ?: EntryState.loaded(detail, chart, artwork, description)
                     }
+                    (state as? EntryState.Loaded)?.takeIf { first }?.let { loadInGame(it.selected.id, requestedGameId = null) }
                 }
         }
 
@@ -63,6 +72,37 @@ internal class EntryViewModel
             val loaded = state as? EntryState.Loaded ?: return@intent
             val variety = loaded.detail.varieties.firstOrNull { it.id == varietyId } ?: return@intent
             reduce { loaded.select(variety) }
+            loadInGame(varietyId, loaded.inGame?.selected?.id)
+        }
+
+        /** Shows the picked game at once and remembers it for other entries; its moves and locations follow. */
+        fun onSelectGame(gameId: Int) = intent {
+            val loaded = state as? EntryState.Loaded ?: return@intent
+            val inGame = loaded.inGame ?: return@intent
+            val game = inGame.games.firstOrNull { it.id == gameId } ?: return@intent
+            reduce { loaded.copy(inGame = inGame.copy(selected = game)) }
+            setPreferredGame(gameId)
+            loadInGame(loaded.selected.id, gameId)
+        }
+
+        /** Drops the result when the user has since picked another variety or game. A failure leaves the section as it was. */
+        private fun loadInGame(
+            varietyId: Int,
+            requestedGameId: Int?,
+        ) = intent {
+            getInGameDetails(varietyId, requestedGameId).onOk { inGame ->
+                reduce {
+                    val loaded = state as? EntryState.Loaded
+                    val pickedGame = loaded?.inGame?.selected?.id
+                    if (loaded != null && loaded.selected.id == varietyId &&
+                        (requestedGameId == null || pickedGame in listOf(null, requestedGameId))
+                    ) {
+                        loaded.copy(inGame = inGame.toState())
+                    } else {
+                        state
+                    }
+                }
+            }
         }
 
         @AssistedFactory
