@@ -1,6 +1,8 @@
 plugins {
     id("android-forge.android.application")
     id("android-forge.hilt")
+    // Consumes the profiles :benchmarks records (app/src/release/generated/baselineProfiles/).
+    id("androidx.baselineprofile")
 }
 
 android {
@@ -16,7 +18,18 @@ android {
     }
 }
 
+baselineProfile {
+    // Profiles are recorded on a device on demand (`./gradlew :app:generateReleaseBaselineProfile`) and committed,
+    // never during an ordinary release build.
+    automaticGenerationDuringBuild = false
+    // R8 puts the classes in startup-prof.txt first in the DEX files, so a cold start touches fewer pages.
+    dexLayoutOptimization = true
+}
+
 dependencies {
+    baselineProfile(project(":benchmarks"))
+    // Installs the Baseline Profile on sideloaded installs too (Play installs it itself).
+    implementation(libs.androidx.profileinstaller)
     implementation(project(":core:model"))
     implementation(project(":core:domain"))
     implementation(project(":core:data")) // only the app modules depend on :core:data — they assemble the DI graph

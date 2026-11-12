@@ -12,9 +12,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
@@ -39,6 +42,7 @@ internal fun ContentOfferDialog(
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun ContentOfferContent(
     state: ContentPackState,
@@ -47,7 +51,12 @@ internal fun ContentOfferContent(
     onHide: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(AppDimens.cardCorner), tonalElevation = AppSpacing.xs) {
+    // A dialog is its own window, so the app root's testTagsAsResourceId doesn't reach it: set again for UI Automator.
+    Surface(
+        modifier = modifier.semantics { testTagsAsResourceId = true },
+        shape = RoundedCornerShape(AppDimens.cardCorner),
+        tonalElevation = AppSpacing.xs,
+    ) {
         Column(Modifier.padding(AppSpacing.lg), verticalArrangement = Arrangement.spacedBy(AppSpacing.md)) {
             Text(stringResource(R.string.settings_offer_title), style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.settings_content_description), style = MaterialTheme.typography.bodyMedium)

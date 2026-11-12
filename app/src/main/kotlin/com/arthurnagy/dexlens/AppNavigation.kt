@@ -13,7 +13,10 @@ import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneSt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -37,7 +40,7 @@ import com.arthurnagy.dexlens.feature.pokedex.api.PokedexKey
  * (from 600dp: tablets, unfolded foldables, desktop) and one at a time on phones. (The material3-adaptive scene
  * strategies are still `@ExperimentalMaterial3AdaptiveApi`.)
  */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class, ExperimentalComposeUiApi::class)
 @Composable
 internal fun AppNavigation(
     entryProviderInstallers: Set<EntryProviderInstaller>,
@@ -51,7 +54,8 @@ internal fun AppNavigation(
     val sideBySide = adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val listDetailStrategy =
         rememberListDetailSceneStrategy<NavKey>(directive = calculatePaneScaffoldDirectiveWithTwoPanesOnMediumWidth(adaptiveInfo))
-    SharedTransitionLayout(modifier = modifier) {
+    // Test tags become resource IDs, so the Baseline Profile and benchmark journeys (UI Automator) can find them.
+    SharedTransitionLayout(modifier = modifier.semantics { testTagsAsResourceId = true }) {
         CompositionLocalProvider(LocalSharedTransitionScope provides if (sideBySide) null else this) {
             NavDisplay<NavKey>(
                 backStack = backStack,

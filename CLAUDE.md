@@ -27,6 +27,7 @@ android-forge project rules apply here (the plugin's agents and skills check for
 - :app · :core:{model,domain,data,datastore,designsystem,ui,navigation,testing} · :core:network · build-logic/
 
 - :core:database — Room 3: entities, DAOs, DexDatabase (prebuilt)
+- :benchmarks — Baseline + startup profile generator and Macrobenchmarks (device only): `./gradlew :app:generateReleaseBaselineProfile` regenerates app/src/release/generated/baselineProfiles/ — commit it
 
 Features: pokedex (home list, search and camera scanner), entry, settings
 
