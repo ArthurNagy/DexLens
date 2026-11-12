@@ -142,8 +142,8 @@ All the cut-offs live in one place, `RecognitionThresholds` (domain):
 
 | Cut-off | Starting value | Source |
 |---|---|---|
-| `candidate` | 0.94 | README default |
-| `imageOnly` | 0.957 | README: about 90% of unseen sprites kept, 0.5% false accepts |
+| `candidate` | 0.90 | README default 0.94, lowered after the first real game screen scored 0.81 |
+| `imageOnly` | 0.92 | README 0.957 (90% of unseen sprites, 0.5% false accepts on simulated capture), lowered on device |
 | `leadMargin` | 0.015 | A guess, to be tuned with the readout |
 
 `combineSignals(text: SignalResult, picture: PictureScores?, thresholds): FrameEvidence` (domain, pure) decides, per

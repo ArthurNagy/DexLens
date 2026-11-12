@@ -88,7 +88,7 @@ internal class CombineSignalsTest {
 
     @Test
     fun pictureAloneNeedsTheImageOnlyScore() {
-        assertEquals(FrameEvidence.Empty, combineSignals(text("FIGHT"), scores(pikachu to 0.95f)))
+        assertEquals(FrameEvidence.Empty, combineSignals(text("FIGHT"), scores(pikachu to 0.91f)))
         assertEquals(evidence(pikachu to Evidence.PICTURE), combineSignals(text("FIGHT"), scores(pikachu to 0.97f, raichu to 0.94f)))
     }
 
@@ -100,7 +100,7 @@ internal class CombineSignalsTest {
 
     @Test
     fun pictureAloneLeavesOutRunnersUpBelowTheImageOnlyScore() {
-        val result = combineSignals(text(), scores(pikachu to 0.960f, raichu to 0.950f))
+        val result = combineSignals(text(), scores(pikachu to 0.925f, raichu to 0.915f))
         assertEquals(evidence(pikachu to Evidence.PICTURE), result)
     }
 }

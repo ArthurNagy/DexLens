@@ -142,7 +142,7 @@ internal class LockOnTrackerTest {
         assertSame(LockOnTracker.Empty, after(*frames))
     }
 
-    private val weak = PictureScores.of(SpeciesScore(SpeciesId(pikachu), 0.95f))
+    private val weak = PictureScores.of(SpeciesScore(SpeciesId(pikachu), 0.91f))
 
     private val LockOnTracker.lockedIds: Set<Int> get() = locked.map { it.value }.toSet()
 }
