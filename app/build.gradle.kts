@@ -20,6 +20,8 @@ android {
             // a single APK.
             isEnable = providers.gradleProperty("abiSplits").map(String::toBoolean).getOrElse(false)
             reset()
+            // The universal APK, built alongside, still carries x86_64 for ChromeOS.
+            //noinspection ChromeOsAbiSupport
             include("arm64-v8a")
             isUniversalApk = true
         }
