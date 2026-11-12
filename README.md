@@ -2,13 +2,14 @@
 
 DexLens is an open-source, offline-first Pokémon reference for Android. All 1,025 species ship inside the app, so
 browsing, searching and reading an entry work in airplane mode from the first launch. Point the camera at a Pokémon RPG,
-from Game Boy to Switch, and it reads the name on the screen and lists that Pokémon on the home screen.
+from Game Boy to Switch, and it recognises the Pokémon from its name on the screen or from its sprite, then lists it on
+the home screen.
 
 **[Download the latest APK from GitHub Releases](https://github.com/arthurnagy/DexLens/releases/latest)**
 
-| Browse | Entry | Scan |
-| --- | --- | --- |
-| ![Home list with search](docs/screenshots/home.png) | ![Full entry](docs/screenshots/entry.png) | ![Camera scanning a name](docs/screenshots/scan.png) |
+| Scan and browse | Search | Entry | In game |
+| --- | --- | --- | --- |
+| ![Home screen with the camera scanner above the list](docs/screenshots/home.png) | ![Search results, including names in other languages](docs/screenshots/search.png) | ![Charizard's entry with its forms](docs/screenshots/entry.png) | ![Moves learnt by level up in Scarlet / Violet](docs/screenshots/in-game.png) |
 
 ## Features
 
@@ -19,9 +20,12 @@ from Game Boy to Switch, and it reads the name on the screen and lists that Pok�
 - **Type matchups.** Weaknesses, resistances and immunities computed on the device from the type chart.
 - **In game.** Pick a game pair, such as Sword / Shield, to see the moves learnt by level up and where to find the
   Pokémon in the wild. The last game picked is remembered. PokeAPI has no wild locations for games after Sword / Shield yet.
-- **Camera name recognition.** Bundled text recognition reads the name inside an aiming box, tolerates common misreads,
-  and locks on only when several frames agree. It sits on the home screen above the list, and can be turned off in
-  Settings. No connection needed.
+- **Camera recognition.** The scanner sits on the home screen above the list and reads the aiming box two ways at once:
+  bundled text recognition reads the Pokémon's name, tolerating common misreads, and a bundled image model recognises the
+  Pokémon from its sprite. A name counts for more than the picture. A name locks after three of the last five frames, a
+  name and an agreeing picture after two, and a picture alone only with a high score in four of five frames. The picture
+  also settles names the text can't tell apart, such as "NIDORAN" without its symbol. It names the species, not the form.
+  It can be turned off in Settings. No connection needed.
 - **Optional artwork and Pokédex text.** A one-time, resumable download. The newest Pokédex text becomes the entry's
   short description. Without it, type-tinted placeholders are used and everything else works the same.
 - **Adaptive.** Phone, tablet and foldable, with a list-detail layout, shared-element transition, predictive back,
@@ -34,14 +38,16 @@ DexLens has no accounts, ads, analytics or crash reporting.
 - **Network.** The only network use is the optional download, and only after you start it. It contacts one host,
   `raw.githubusercontent.com`. The app's HTTP client refuses every other host and does not follow redirects.
 - **Camera.** Once you allow it, the camera starts when the app opens and runs only while the scanner area is on screen.
-  Frames are processed on the device by a model bundled in the APK. Nothing is stored or sent. Turn off "Scanner on home
+  Frames are processed on the device by the two models bundled in the APK. The image model runs on LiteRT, which is
+  bundled too rather than loaded through Google Play services. Nothing is stored or sent. Turn off "Scanner on home
   screen" in Settings and the camera never starts and DexLens doesn't ask for access.
 - **ML Kit usage data.** Google documents that
   [ML Kit collects device and app information, per-installation identifiers and usage metrics](https://developers.google.com/ml-kit/android-data-disclosure)
   and sends them over HTTPS. DexLens removes the `datatransport` components that perform that upload, so the data is
   never sent. ML Kit's own log confirms it at runtime: `Transport backend 'cct' is not registered`.
 - **Measured result.** On a Pixel 6 (Android 17 beta) with Wi-Fi on, using the list, search, entries and the camera on a
-  fresh install, Android's per-app traffic counter recorded no bytes for DexLens.
+  fresh install, Android's per-app traffic counter recorded no bytes for DexLens. This was measured before image
+  recognition was added.
 - **Backups.** Android Auto Backup and device-to-device transfer are turned off.
 
 ## Architecture
@@ -50,10 +56,10 @@ Kotlin, Jetpack Compose and Material 3, on the [android-forge](https://github.co
 
 ```
 :app                     composition root, Nav 3 back stack, list-detail scene
-:feature:pokedex         home screen: list, search, CameraX preview and ML Kit recognition
+:feature:pokedex         home screen: list, search, CameraX preview, ML Kit text and LiteRT image recognition
 :feature:entry           full species entry
 :feature:settings        optional download, scanner switch, theme, credits
-:core:domain             use cases, repository interfaces, name matcher, lock-on tracker
+:core:domain             use cases, repository interfaces, name matcher, picture matching, lock-on tracker
 :core:data               repositories, downloader, WorkManager worker
 :core:database           Room 3: prebuilt Pokédex with FTS5 search, and a writable database for downloaded text
 :core:network            HTTP client limited to the download host
@@ -103,9 +109,11 @@ Release. Add these repository secrets first:
 Pokémon data, artwork and flavor text come from [PokeAPI](https://pokeapi.co/)
 ([BSD-3-Clause](https://github.com/PokeAPI/pokeapi/blob/master/LICENSE.md)). Artwork and text are downloaded directly from
 PokeAPI's public repositories and are never part of this repository or the APK. Text recognition uses
-[ML Kit](https://developers.google.com/ml-kit).
+[ML Kit](https://developers.google.com/ml-kit), and image recognition runs a MobileNetV4 model on
+[LiteRT](https://ai.google.dev/edge/litert).
 
 DexLens is released under the [MIT License](LICENSE).
 
 Unofficial fan project, not affiliated with or endorsed by Nintendo, Game Freak or The Pokémon Company. Pokémon names are
-trademarks of their owners. No game artwork is bundled with the app.
+trademarks of their owners. No game artwork is bundled with the app. The image model and its reference file hold numbers
+derived from pictures, not pictures.
