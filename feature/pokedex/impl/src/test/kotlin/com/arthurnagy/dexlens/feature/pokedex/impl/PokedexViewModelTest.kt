@@ -1,11 +1,16 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl
 
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.ObserveRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
+import com.arthurnagy.dexlens.core.domain.scan.Evidence
+import com.arthurnagy.dexlens.core.domain.scan.FrameEvidence
 import com.arthurnagy.dexlens.core.domain.scan.LockOnTracker
+import com.arthurnagy.dexlens.core.domain.scan.PictureScores
+import com.arthurnagy.dexlens.core.domain.scan.SpeciesScore
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
@@ -65,20 +70,21 @@ internal class PokedexViewModelTest {
         ObserveArtworkUseCase(artwork),
         ObserveContentOfferUseCase(userPreferences),
         ObserveScannerEnabledUseCase(userPreferences),
+        ObserveRecognitionScoresShownUseCase(userPreferences),
         BuildSpeciesSignalUseCase(speciesRepository, TestDispatcherProvider(testScheduler)),
         GetSpeciesListUseCase(speciesRepository),
     )
 
-    private fun frame(vararg lines: String) = AnalyzedFrame(lines.toList())
+    private fun frame(vararg lines: String) = AnalyzedFrame(lines.toList(), pictureScores = null)
+
+    private fun scores(vararg scores: Pair<SpeciesSummary, Float>) = PictureScores.of(
+        *scores.map {
+            SpeciesScore(it.first.id, it.second)
+        }.toTypedArray(),
+    )
 
     private fun PokedexState.seen(vararg seen: SpeciesSummary) = copy(
-        scan = scan.copy(
-            lockOn = scan.lockOn.observe(
-                seen.map {
-                    it.id
-                }.toSet(),
-            ),
-        ),
+        scan = scan.copy(lockOn = scan.lockOn.observe(FrameEvidence(seen.associate { it.id to Evidence.NAME }))),
     )
 
     private fun PokedexState.lockedOn(vararg locked: SpeciesSummary) =
@@ -265,6 +271,60 @@ internal class PokedexViewModelTest {
         expectInternalState { seen(pikachu, pidgey) }
         expectInternalState { lockedOn(pidgey, pikachu) }
         assertEquals(results(16, 25), awaitLatest().listed)
+    }
+
+    // Scenario: Sprite without a name locks
+    @Test
+    fun aSpriteWithoutANameLocksAfterFourFrames() = home {
+        repeat(4) { containerHost.onFrame(AnalyzedFrame(emptyList(), scores(pikachu to 0.97f, pidgey to 0.90f))) }
+        skipItems(3)
+        expectInternalState { lockedOn(pikachu) }
+    }
+
+    // Scenario: Agreement locks after two frames
+    @Test
+    fun aNameAndAgreeingPictureLockAfterTwoFrames() = home {
+        repeat(2) { containerHost.onFrame(AnalyzedFrame(listOf("PIKACHU"), scores(pikachu to 0.95f))) }
+        skipItems(1)
+        expectInternalState { lockedOn(pikachu) }
+    }
+
+    // Scenario: Model missing keeps names working
+    @Test
+    fun namesLockWithoutPictureScores() = home {
+        repeat(3) { containerHost.onFrame(frame("PIKACHU")) }
+        skipItems(2)
+        val locked = awaitInternalState()
+        assertEquals(listOf(pikachu), locked.scan.match)
+        assertNull(locked.scan.error)
+    }
+
+    // Scenario: Readout off by default
+    @Test
+    fun noScoresAreKeptWhileTheReadoutIsOff() = home { ready ->
+        assertEquals(false, ready.scoresShown)
+        // A strong picture frame changes the lock-on but stores no scores for the readout.
+        containerHost.onFrame(AnalyzedFrame(emptyList(), scores(pikachu to 0.97f)))
+        assertEquals(emptyList(), awaitInternalState().scan.pictureScores)
+    }
+
+    // Scenario: Readout follows the frames
+    @Test
+    fun theReadoutShowsEachFramesBestThree() = runTest {
+        val shown = FakeUserPreferencesRepository(ThemeMode.SYSTEM, initialOfferShown = true, initialRecognitionScoresShown = true)
+        viewModel(userPreferences = shown).testWithInternalState(this, PokedexState.Initial) {
+            runOnCreate()
+            var state = settled()
+            while (!state.scoresShown) state = awaitInternalState()
+            containerHost.onFrame(AnalyzedFrame(emptyList(), scores(pikachu to 0.90f, pidgey to 0.80f, bulbasaur to 0.70f)))
+            assertEquals(listOf(25, 16, 1), awaitInternalState().scan.pictureScores.map { it.speciesId.value })
+            containerHost.onFrame(AnalyzedFrame(emptyList(), scores(bulbasaur to 0.91f)))
+            assertEquals(listOf(SpeciesScore(bulbasaur.id, 0.91f)), awaitInternalState().scan.pictureScores)
+            // A frame the picture signal skipped keeps the last readout.
+            containerHost.onFrame(frame("nothing here"))
+            expectNoItems()
+            cancelAndIgnoreRemainingItems()
+        }
     }
 
     // Scenario: Nickname keeps scanning

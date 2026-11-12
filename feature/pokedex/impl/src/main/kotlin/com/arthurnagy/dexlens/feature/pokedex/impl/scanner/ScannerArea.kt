@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -64,11 +65,14 @@ import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.designsystem.CameraColors
 import com.arthurnagy.dexlens.core.designsystem.DarkScheme
+import com.arthurnagy.dexlens.core.domain.scan.SpeciesScore
+import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
 import com.arthurnagy.dexlens.core.ui.MessageState
 import com.arthurnagy.dexlens.core.ui.listText
 import com.arthurnagy.dexlens.core.ui.toMessage
 import com.arthurnagy.dexlens.feature.pokedex.impl.R
+import java.util.Locale
 import com.arthurnagy.dexlens.core.ui.R as CoreUiR
 
 internal enum class CameraPermission { GRANTED, NEEDS_REQUEST, PERMANENTLY_DENIED }
@@ -152,6 +156,13 @@ internal fun ScannerArea(
                             bottom = areaHeight * (1f - aimBox.bottom) + AppSpacing.sm,
                         ),
                 )
+                if (scan.pictureScores.isNotEmpty()) {
+                    ScoresReadout(
+                        scores = scan.pictureScores,
+                        speciesById = scan.speciesById,
+                        modifier = Modifier.align(Alignment.TopStart).padding(start = AppSpacing.sm, top = topInset + AppSpacing.sm),
+                    )
+                }
             }
         }
         // Read while drawing, so following the sheet doesn't recompose the camera on every frame.
@@ -182,6 +193,29 @@ private fun ScanLabel(
             .padding(horizontal = AppSpacing.sm, vertical = AppSpacing.xs)
             .semantics { liveRegion = LiveRegionMode.Polite }
             .testTag("pokedex:scanLabel"),
+    )
+}
+
+/** The picture signal's best species and scores, a debug-build tool for tuning the score cut-offs. */
+@Composable
+private fun ScoresReadout(
+    scores: List<SpeciesScore>,
+    speciesById: Map<SpeciesId, SpeciesSummary>,
+    modifier: Modifier = Modifier,
+) {
+    val resources = LocalResources.current
+    Text(
+        text = scores.joinToString("\n") { score ->
+            val name =
+                speciesById[score.speciesId]?.name ?: resources.getString(R.string.pokedex_scores_unknown_species, score.speciesId.value)
+            "$name ${String.format(Locale.ROOT, "%.3f", score.score)}"
+        },
+        style = MaterialTheme.typography.labelSmall,
+        color = CameraColors.onCamera,
+        modifier = modifier
+            .background(CameraColors.toolbar, RoundedCornerShape(AppDimens.aimBoxCorner))
+            .padding(horizontal = AppSpacing.sm, vertical = AppSpacing.xs)
+            .testTag("scanner:scores"),
     )
 }
 

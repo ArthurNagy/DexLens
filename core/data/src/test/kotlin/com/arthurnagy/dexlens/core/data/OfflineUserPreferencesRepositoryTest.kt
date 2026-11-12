@@ -46,6 +46,25 @@ class OfflineUserPreferencesRepositoryTest {
     }
 
     @Test
+    fun storesAndEmitsTheRecognitionScoresSwitch() = runTest {
+        val dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) {
+            tmpFolder.newFolder().resolve("prefs.preferences_pb")
+        }
+        val repository = OfflineUserPreferencesRepository(UserPreferencesDataSource(dataStore))
+
+        assertEquals(false, repository.recognitionScoresShown.first())
+        assertEquals(Ok(Unit), repository.setRecognitionScoresShown(true))
+        assertEquals(true, repository.recognitionScoresShown.first())
+    }
+
+    @Test
+    fun aFailedScoresSwitchWriteBecomesUnknown() = runTest {
+        val repository = OfflineUserPreferencesRepository(UserPreferencesDataSource(FailingDataStore))
+
+        assertEquals(Err(DomainError.Unknown("disk full")), repository.setRecognitionScoresShown(true))
+    }
+
+    @Test
     fun thePreferredGameIsStored() = runTest {
         val dataStore = PreferenceDataStoreFactory.create(scope = backgroundScope) {
             tmpFolder.newFolder().resolve("prefs.preferences_pb")

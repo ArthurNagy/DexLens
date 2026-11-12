@@ -57,6 +57,7 @@ import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -117,10 +118,13 @@ import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AimBox
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraPermission
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraStatus
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraViewfinder
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.FrameAnalyzer
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.LiteRtPictureEngine
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.MlKitLineRecognizer
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.PictureRecognizer
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScannerArea
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScannerButtons
-import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.TextFrameAnalyzer
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ThreadedPictureRecognizer
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.TopBarTitle
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.scannerAreaHeight
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.topBarAlpha
@@ -165,6 +169,8 @@ internal fun PokedexScreen(
     val permission = rememberCameraPermission()
     var torchAvailable by remember { mutableStateOf(false) }
     var cameraFailed by remember { mutableStateOf(false) }
+    val pictures = rememberPictureRecognizer(enabled = state.scannerEnabled == true && permission.status == CameraPermission.GRANTED)
+    val currentPictures by rememberUpdatedState(pictures)
 
     PokedexContent(
         state = state,
@@ -189,8 +195,9 @@ internal fun PokedexScreen(
             DisposableEffect(recognizer) { onDispose { recognizer.close() } }
             val currentBox by rememberUpdatedState(aimBox)
             val analyzer = remember(recognizer) {
-                TextFrameAnalyzer(
+                FrameAnalyzer(
                     recognizer = recognizer,
+                    pictures = { currentPictures },
                     aimBox = { currentBox },
                     onFrame = viewModel::onFrame,
                 )
@@ -204,6 +211,28 @@ internal fun PokedexScreen(
             )
         },
     )
+}
+
+/**
+ * The picture model, loaded while the home scanner can run. It outlives the viewfinder, so collapsing and expanding the
+ * sheet doesn't reload 17 MB of model files, and is released when the scanner is switched off or the camera isn't allowed.
+ */
+@Composable
+private fun rememberPictureRecognizer(enabled: Boolean): PictureRecognizer? {
+    val assets = LocalContext.current.assets
+    val holder = remember(enabled, assets) { if (enabled) ClosingHolder(ThreadedPictureRecognizer(LiteRtPictureEngine(assets))) else null }
+    return holder?.recognizer
+}
+
+/** Closes the recogniser when composition forgets it, and also when a composition that created it is abandoned. */
+private class ClosingHolder(
+    val recognizer: PictureRecognizer,
+) : RememberObserver {
+    override fun onRemembered() = Unit
+
+    override fun onForgotten() = recognizer.close()
+
+    override fun onAbandoned() = recognizer.close()
 }
 
 /** From this width the status bar also spans the detail pane, so the home screen starts below it. */

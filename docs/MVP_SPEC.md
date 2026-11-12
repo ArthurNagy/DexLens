@@ -28,15 +28,18 @@ None. Free and open source (MIT), distributed as a signed APK on GitHub Releases
   in other languages.
 - A full entry screen, shown beside the list on tablets and unfolded foldables.
 - Camera name recognition: Latin script, on-device only, works offline from first launch.
+- Camera picture recognition: the Pokémon in the aiming box is recognised by species with a bundled model, combined
+  with the name so a name counts for more. On-device only, works offline from first launch.
 - An optional, skippable, resumable download of artwork and flavor text. Polished placeholders without it.
 
 ## Out of scope (v1)
 - TM, egg, tutor and event moves, move descriptions, accuracy and PP. Encounter rates and conditions.
-- Recognising Pokémon from images (matching stays behind an interface so a model can be added later).
+- Recognising forms (Mega, Gigantamax, regional) from images; the picture signal names the species.
 - Non-Latin text recognition.
 - Accounts, sync, ads, analytics and any network use beyond the optional download.
 - Wear OS, TV, car and XR surfaces.
-- Any official art, sprites or word-for-word game flavor text in the repository or the APK.
+- Any official art, sprites or word-for-word game flavor text in the repository or the APK. The bundled image model
+  and its reference file hold numbers derived from pictures, not pictures.
 
 ## Key user flows
 
