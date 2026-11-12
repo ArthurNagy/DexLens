@@ -59,7 +59,7 @@ Artwork SHALL be stored as WebP at about 384 pixels.
 
 #### Scenario: Flavor text is imported
 - **WHEN** the flavor text table has been downloaded
-- **THEN** entries show flavor text labelled with its game, without line-break artifacts
+- **THEN** each entry shows its newest flavor text as its description, without line-break artifacts
 
 ### Requirement: Works offline afterwards
 Downloaded content SHALL be used from local storage only.
@@ -73,7 +73,7 @@ Without downloaded content, the app SHALL show type-tinted placeholders and omit
 
 #### Scenario: Entry without flavor text
 - **WHEN** an entry opens and flavor text has not been downloaded
-- **THEN** the flavor text section is absent
+- **THEN** the entry has no description
 
 ### Requirement: Remove downloaded content
 The user SHALL be able to delete downloaded content.
@@ -81,13 +81,6 @@ The user SHALL be able to delete downloaded content.
 #### Scenario: Delete frees content
 - **WHEN** the user deletes the downloaded content
 - **THEN** placeholders return and the download can be started again
-
-### Requirement: One picture per species
-The download SHALL fetch one picture for each species, and every screen that shows a species SHALL use that picture.
-
-#### Scenario: One picture for each species
-- **WHEN** the download runs
-- **THEN** one picture is fetched and stored for each species
 
 ### Requirement: Content appears without reopening
 Downloaded art and flavor text SHALL appear on open screens as soon as they are available.
@@ -98,4 +91,20 @@ Downloaded art and flavor text SHALL appear on open screens as soon as they are 
 
 #### Scenario: Flavor text appears in an open entry
 - **WHEN** flavor text finishes importing while an entry is open
-- **THEN** the flavor text section appears without reopening the entry
+- **THEN** the description appears without reopening the entry
+
+### Requirement: One picture per variety
+The download SHALL fetch one picture for each variety, and every screen that shows a species SHALL use its default
+variety's picture. A variety without official artwork SHALL be skipped without stopping the download.
+
+#### Scenario: One picture for each variety
+- **WHEN** the download runs
+- **THEN** one picture is fetched and stored for each variety, including alternate varieties such as Mega Charizard X
+
+#### Scenario: Species screens use the default variety
+- **WHEN** the list, the scanner or the evolution tree asks for Charizard's picture by its species number
+- **THEN** it gets the picture stored for Charizard's default variety
+
+#### Scenario: Variety without official artwork is skipped
+- **WHEN** the download reaches a variety that has no official artwork
+- **THEN** it is skipped, the rest of the download continues, and the run finishes
