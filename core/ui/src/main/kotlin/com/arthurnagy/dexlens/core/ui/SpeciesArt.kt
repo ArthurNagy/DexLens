@@ -1,9 +1,9 @@
 package com.arthurnagy.dexlens.core.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -88,12 +88,18 @@ private fun LensMotif(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier) {
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val base = size.minDimension
-        drawCircle(color.copy(alpha = RING_ALPHA), radius = base * OUTER_RING, center = center, style = Stroke(width = base * RING_WIDTH))
-        drawCircle(color.copy(alpha = RING_ALPHA), radius = base * INNER_RING, center = center, style = Stroke(width = base * RING_WIDTH))
-    }
+    // The stroke is built once per size, not on every draw of every placeholder in the list.
+    Spacer(
+        modifier.drawWithCache {
+            val base = size.minDimension
+            val stroke = Stroke(width = base * RING_WIDTH)
+            val ring = color.copy(alpha = RING_ALPHA)
+            onDrawBehind {
+                drawCircle(ring, radius = base * OUTER_RING, style = stroke)
+                drawCircle(ring, radius = base * INNER_RING, style = stroke)
+            }
+        },
+    )
 }
 
 private const val TILE_END_ALPHA = 0.72f

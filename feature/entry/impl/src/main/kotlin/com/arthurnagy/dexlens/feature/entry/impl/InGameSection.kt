@@ -47,29 +47,31 @@ internal fun LazyListScope.inGameItems(
     modifier: Modifier,
 ) {
     val details = inGame.details
-    item(key = "in-game") {
+    item(key = "in-game", contentType = "section") {
         EntrySection(stringResource(R.string.entry_in_game), modifier) { GamePicker(inGame.games, inGame.selected, onSelectGame) }
     }
-    item(key = "moves-title") { Subheading(stringResource(R.string.entry_moves_level_up), modifier) }
+    item(key = "moves-title", contentType = "subheading") { Subheading(stringResource(R.string.entry_moves_level_up), modifier) }
     if (details.moves.isEmpty()) {
-        item(key = "moves-none") { Note(stringResource(R.string.entry_moves_none), modifier) }
+        item(key = "moves-none", contentType = "note") { Note(stringResource(R.string.entry_moves_none), modifier) }
     } else {
-        item(key = "moves-header") { MoveHeader(modifier) }
-        itemsIndexed(details.moves, key = { index, _ -> "move-$index" }) { index, move ->
+        item(key = "moves-header", contentType = "move-header") { MoveHeader(modifier) }
+        itemsIndexed(details.moves, key = { index, _ -> "move-$index" }, contentType = { _, _ -> "move" }) { index, move ->
             MoveRow(move, modifier.testTag("entry:move:$index"))
         }
     }
-    item(key = "locations-title") { Subheading(stringResource(R.string.entry_locations), modifier) }
+    item(key = "locations-title", contentType = "subheading") { Subheading(stringResource(R.string.entry_locations), modifier) }
     when {
-        !details.game.hasLocationData -> item(key = "locations-unavailable") {
+        !details.game.hasLocationData -> item(key = "locations-unavailable", contentType = "note") {
             Note(stringResource(R.string.entry_locations_unavailable), modifier.testTag("entry:locations-unavailable"))
         }
 
-        details.encounters.isEmpty() -> item(key = "locations-none") {
+        details.encounters.isEmpty() -> item(key = "locations-none", contentType = "note") {
             Note(stringResource(R.string.entry_locations_none), modifier.testTag("entry:locations-none"))
         }
 
-        else -> itemsIndexed(details.encounters, key = { index, _ -> "location-$index" }) { index, encounter ->
+        else -> itemsIndexed(details.encounters, key = { index, _ ->
+            "location-$index"
+        }, contentType = { _, _ -> "location" }) { index, encounter ->
             EncounterRow(encounter, modifier.testTag("entry:location:$index"))
         }
     }

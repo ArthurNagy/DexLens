@@ -125,24 +125,30 @@ internal fun SettingsContent(
             )
         },
     ) { innerPadding ->
+        // Read once out here: the items then rerun only when their own part changes, not on every download progress step.
+        val content = state.content
+        val scannerEnabled = state.scannerEnabled
+        val themeMode = state.themeMode
         LazyColumn(
             contentPadding = innerPadding,
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth().testTag("settings:list"),
         ) {
             val sectionModifier = Modifier.widthIn(max = AppDimens.maxContentWidth).fillMaxWidth().padding(AppSpacing.md)
-            item {
+            item(key = "content") {
                 Section(stringResource(R.string.settings_content_title), sectionModifier) {
-                    ContentPackSection(state.content, onDownload, onCancelDownload, onDeleteContent)
+                    ContentPackSection(content, onDownload, onCancelDownload, onDeleteContent)
                 }
             }
-            item {
+            item(key = "scanner") {
                 Section(stringResource(R.string.settings_scanner), sectionModifier) {
-                    ScannerSection(state.scannerEnabled, onScannerEnabledChange)
+                    ScannerSection(scannerEnabled, onScannerEnabledChange)
                 }
             }
-            item { Section(stringResource(R.string.settings_theme), sectionModifier) { ThemeSection(state.themeMode, onThemeSelect) } }
-            item { Section(stringResource(R.string.settings_about), sectionModifier) { AboutSection() } }
+            item(key = "theme") {
+                Section(stringResource(R.string.settings_theme), sectionModifier) { ThemeSection(themeMode, onThemeSelect) }
+            }
+            item(key = "about") { Section(stringResource(R.string.settings_about), sectionModifier) { AboutSection() } }
         }
     }
 }

@@ -10,7 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
@@ -61,13 +61,12 @@ class MainActivity : ComponentActivity() {
                 // The system bars draw over the edge-to-edge content, so their icons follow the app's theme —
                 // a dark theme picked in-app on a light system gets light icons. enableEdgeToEdge()'s defaults
                 // read the system's night mode instead; re-applied whenever the resolved theme changes.
-                DisposableEffect(darkTheme) {
+                SideEffect(darkTheme) {
                     enableEdgeToEdge(
                         statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { darkTheme },
                         navigationBarStyle = SystemBarStyle.auto(lightScrim, darkScrim) { darkTheme },
                     )
                     useLightCaptionBar(!darkTheme)
-                    onDispose {}
                 }
                 AppTheme(themeMode = state.themeMode) {
                     AppNavigation(entryProviderInstallers = entryProviderInstallers)

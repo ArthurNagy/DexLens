@@ -12,13 +12,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 
 /**
@@ -40,18 +41,17 @@ fun SkeletonShimmer(
     Box(
         modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithContent {
-                drawContent()
+            .drawWithCache {
+                // Built once per size: each frame only moves the band.
                 val band = size.width * BAND_FRACTION
-                val start = (size.width + band) * sweep - band
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color.Transparent, highlight, Color.Transparent),
-                        start = Offset(start, 0f),
-                        end = Offset(start + band, 0f),
-                    ),
-                    blendMode = BlendMode.SrcAtop,
-                )
+                val brush = Brush.horizontalGradient(listOf(Color.Transparent, highlight, Color.Transparent), startX = 0f, endX = band)
+                val bandSize = Size(band, size.height)
+                onDrawWithContent {
+                    drawContent()
+                    translate(left = (size.width + band) * sweep - band) {
+                        drawRect(brush = brush, size = bandSize, blendMode = BlendMode.SrcAtop)
+                    }
+                }
             },
     ) {
         content()

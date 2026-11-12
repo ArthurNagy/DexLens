@@ -8,7 +8,9 @@ import android.provider.Settings
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +49,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -60,7 +63,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,7 +70,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -103,8 +104,10 @@ import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.designsystem.CameraColors
 import com.arthurnagy.dexlens.core.designsystem.SkeletonBlock
+import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
 import com.arthurnagy.dexlens.core.model.SpeciesSearchResult
+import com.arthurnagy.dexlens.core.model.SpeciesSummary
 import com.arthurnagy.dexlens.core.ui.LoadingSkeleton
 import com.arthurnagy.dexlens.core.ui.LocalSharedTransitionScope
 import com.arthurnagy.dexlens.core.ui.MessageState
@@ -171,6 +174,8 @@ internal fun PokedexScreen(
     var cameraFailed by remember { mutableStateOf(false) }
     val pictures = rememberPictureRecognizer(enabled = state.scannerEnabled == true && permission.status == CameraPermission.GRANTED)
     val currentPictures by rememberUpdatedState(pictures)
+    // Read here, not inside the viewfinder slot: capturing `state` would hand the slot a new lambda on every frame.
+    val torchOn = state.scan.torchOn
 
     PokedexContent(
         state = state,
@@ -204,7 +209,7 @@ internal fun PokedexScreen(
             }
             CameraViewfinder(
                 analyzer = analyzer,
-                torchOn = state.scan.torchOn,
+                torchOn = torchOn,
                 onTorchAvailabilityChange = { torchAvailable = it },
                 onCameraUnavailable = { cameraFailed = true },
                 modifier = Modifier.fillMaxSize(),
@@ -305,7 +310,31 @@ internal fun PokedexContent(
 ) {
     val wide = isWideWindow()
     val topInset = if (wide) AppSpacing.none else WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val listActions = ListActions(onOpenSpecies, onRetry, onClearMatch)
+    val listActions = remember(onOpenSpecies, onRetry, onClearMatch) { ListActions(onOpenSpecies, onRetry, onClearMatch) }
+    // The scanner emits a new state on most frames it sees something, but the list only changes with these. One object
+    // kept across those frames lets everything below skip them.
+    val matchListed = state.matchListed
+    val list =
+        remember(
+            state.loading,
+            state.error,
+            state.query,
+            state.results,
+            state.artwork,
+            matchListed,
+            state.scan.match.takeIf {
+                matchListed
+            },
+        ) {
+            ListModel(
+                loading = state.loading,
+                error = state.error,
+                query = state.query,
+                listed = state.listed,
+                artwork = state.artwork,
+                matchListed = matchListed,
+            )
+        }
     // Nothing but the surface until the switch has been read, so neither layout appears and then jumps.
     val background = when (state.scannerEnabled) {
         true -> CameraColors.background
@@ -320,7 +349,10 @@ internal fun PokedexContent(
             null -> Unit
 
             true -> ScannerHome(
-                state = state,
+                list = list,
+                match = state.scan.match,
+                scanError = state.scan.error,
+                torchOn = state.scan.torchOn,
                 textFieldState = textFieldState,
                 camera = camera,
                 canNavigateBack = canNavigateBack,
@@ -335,10 +367,20 @@ internal fun PokedexContent(
                 viewfinder = viewfinder,
             )
 
-            false -> ListOnlyHome(state, textFieldState, canNavigateBack, topInset, listActions, onOpenSettings)
+            false -> ListOnlyHome(list, textFieldState, canNavigateBack, topInset, listActions, onOpenSettings)
         }
     }
 }
+
+/** What the list and its search field show, in both layouts. */
+private class ListModel(
+    val loading: Boolean,
+    val error: DomainError?,
+    val query: String,
+    val listed: List<SpeciesSearchResult>,
+    val artwork: ArtworkLocation,
+    val matchListed: Boolean,
+)
 
 /** What the list and its search field can do, in both layouts. */
 private class ListActions(
@@ -351,7 +393,10 @@ private class ListActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScannerHome(
-    state: PokedexState,
+    list: ListModel,
+    match: List<SpeciesSummary>,
+    scanError: DomainError?,
+    torchOn: Boolean,
     textFieldState: TextFieldState,
     camera: CameraStatus,
     canNavigateBack: Boolean,
@@ -388,7 +433,7 @@ private fun ScannerHome(
     NavigationBackHandler(
         state = rememberNavigationEventState(currentInfo = NavigationEventInfo.None),
         // With an entry open beside the list, Back belongs to the entry.
-        isBackEnabled = !canNavigateBack && (!collapsed || state.matchListed),
+        isBackEnabled = !canNavigateBack && (!collapsed || list.matchListed),
         onBackCompleted = {
             if (collapsed) listActions.onClearMatch() else scope.launch { sheetState.partialExpand() }
         },
@@ -398,16 +443,16 @@ private fun ScannerHome(
     val cameraRunning = sheetState.currentValue == SheetValue.PartiallyExpanded &&
         camera.permission == CameraPermission.GRANTED &&
         !camera.failed &&
-        state.scan.error == null
+        scanError == null
     val stripHeight = topInset + AppDimens.scannerButtonRowHeight
     val collapsedOffset = with(LocalDensity.current) { areaHeight.toPx() }
     val expandedOffset = with(LocalDensity.current) { stripHeight.toPx() }
 
-    // A copy of the fade for what sits outside the scaffold, which can be measured before the sheet has an offset.
-    var fade by remember { mutableFloatStateOf(if (sheetState.currentValue == SheetValue.Expanded) 1f else 0f) }
-    LaunchedEffect(sheetState, collapsedOffset, expandedOffset) {
-        withFrameNanos {} // The sheet has no offset until it has been laid out once.
-        snapshotFlow { topBarAlpha(sheetState.requireOffset(), collapsedOffset, expandedOffset) }.collect { fade = it }
+    // The fade for what sits outside the scaffold, which can be measured before the sheet has an offset: until then it
+    // follows the sheet's starting position. Derived in the same frame as the drag, with no coroutine in between.
+    val initialFade = if (sheetState.currentValue == SheetValue.Expanded) 1f else 0f
+    val fade by remember(sheetState, collapsedOffset, expandedOffset) {
+        derivedStateOf { sheetState.offsetOrNull()?.let { topBarAlpha(it, collapsedOffset, expandedOffset) } ?: initialFade }
     }
     // The status bar icons and the buttons change at the fade's midpoint, when the top bar has become the brighter of the two.
     val overTopBar by remember { derivedStateOf { fade > TOP_BAR_MIDPOINT } }
@@ -423,7 +468,7 @@ private fun ScannerHome(
             sheetContent = {
                 // Sized here rather than left to fill, because this is what stops the expanded sheet below the buttons.
                 SearchAndList(
-                    state = state,
+                    list = list,
                     textFieldState = textFieldState,
                     actions = listActions,
                     onFocus = { scope.launch { sheetState.expand() } },
@@ -432,7 +477,8 @@ private fun ScannerHome(
             },
         ) {
             ScannerArea(
-                scan = state.scan,
+                match = match,
+                scanError = scanError,
                 camera = camera,
                 cameraRunning = cameraRunning,
                 topBarAlpha = { topBarAlpha(sheetState.requireOffset(), collapsedOffset, expandedOffset) },
@@ -451,7 +497,7 @@ private fun ScannerHome(
         )
         ScannerButtons(
             showTorch = collapsed && cameraRunning && camera.torchAvailable,
-            torchOn = state.scan.torchOn,
+            torchOn = torchOn,
             onTopBar = overTopBar,
             topInset = topInset,
             onToggleTorch = onToggleTorch,
@@ -461,11 +507,19 @@ private fun ScannerHome(
     }
 }
 
+/** The sheet's offset, or null before its first layout (when [SheetState.requireOffset] throws). */
+@OptIn(ExperimentalMaterial3Api::class)
+private fun SheetState.offsetOrNull(): Float? = try {
+    requireOffset()
+} catch (_: IllegalStateException) {
+    null
+}
+
 /** The switched-off layout: no scanner and no sheet, so there is nothing to drag, and the camera can't start. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ListOnlyHome(
-    state: PokedexState,
+    list: ListModel,
     textFieldState: TextFieldState,
     canNavigateBack: Boolean,
     topInset: Dp,
@@ -484,7 +538,7 @@ private fun ListOnlyHome(
             modifier = Modifier.fillMaxSize().padding(top = topInset + AppDimens.scannerButtonRowHeight),
         ) {
             SearchAndList(
-                state = state,
+                list = list,
                 textFieldState = textFieldState,
                 actions = listActions,
                 onFocus = {},
@@ -506,7 +560,7 @@ private fun ListOnlyHome(
 
 @Composable
 private fun SearchAndList(
-    state: PokedexState,
+    list: ListModel,
     textFieldState: TextFieldState,
     actions: ListActions,
     onFocus: () -> Unit,
@@ -515,11 +569,11 @@ private fun SearchAndList(
     Column(modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
         SearchField(
             textFieldState = textFieldState,
-            matchListed = state.matchListed,
+            matchListed = list.matchListed,
             onFocus = onFocus,
             onClearMatch = actions.onClearMatch,
         )
-        PokedexBody(state, actions.onOpenSpecies, actions.onRetry)
+        PokedexBody(list, actions.onOpenSpecies, actions.onRetry)
     }
 }
 
@@ -569,39 +623,60 @@ private fun SearchField(
 
 @Composable
 private fun PokedexBody(
-    state: PokedexState,
+    list: ListModel,
     onOpenSpecies: (Int) -> Unit,
     onRetry: () -> Unit,
 ) {
     val bodyModifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
-    val listed = state.listed
+    val listed = list.listed
+    val error = list.error
     when {
-        state.loading && listed.isEmpty() -> SpeciesListSkeleton(bodyModifier)
+        list.loading && listed.isEmpty() -> SpeciesListSkeleton(bodyModifier)
 
-        state.error != null && !state.matchListed -> MessageState(
-            title = state.error.toMessage(),
+        error != null && !list.matchListed -> MessageState(
+            title = error.toMessage(),
             actionLabel = stringResource(CoreUiR.string.core_ui_retry),
             onAction = onRetry,
             modifier = bodyModifier,
         )
 
         listed.isEmpty() -> MessageState(
-            title = stringResource(R.string.pokedex_empty_title, state.query),
+            title = stringResource(R.string.pokedex_empty_title, list.query),
             message = stringResource(R.string.pokedex_empty_message),
             icon = ImageVector.vectorResource(CoreUiR.drawable.core_ui_ic_search),
             modifier = bodyModifier,
         )
 
-        else -> LazyColumn(
-            modifier = bodyModifier.fillMaxSize().testTag("pokedex:list"),
-            contentPadding = PaddingValues(
-                top = AppSpacing.xs,
-                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppSpacing.md,
-            ),
-        ) {
-            items(listed, key = { it.summary.id.value }, contentType = { "species" }) { result ->
-                SpeciesRow(result, state.artwork, onClick = { onOpenSpecies(result.summary.id.value) }, Modifier.animateItem())
-            }
+        else -> SpeciesList(listed, list.artwork, onOpenSpecies, bodyModifier)
+    }
+}
+
+/** The rows. The shared-transition scopes are read once here, not in every row a fling composes. */
+@Composable
+private fun SpeciesList(
+    listed: List<SpeciesSearchResult>,
+    artwork: ArtworkLocation,
+    onOpenSpecies: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val sharedScope = LocalSharedTransitionScope.current
+    val animatedScope = if (sharedScope != null) LocalNavAnimatedContentScope.current else null
+    LazyColumn(
+        modifier = modifier.fillMaxSize().testTag("pokedex:list"),
+        contentPadding = PaddingValues(
+            top = AppSpacing.xs,
+            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppSpacing.md,
+        ),
+    ) {
+        items(listed, key = { it.summary.id.value }, contentType = { "species" }) { result ->
+            SpeciesRow(
+                result = result,
+                artwork = artwork,
+                sharedScope = sharedScope,
+                animatedScope = animatedScope,
+                onClick = { onOpenSpecies(result.summary.id.value) },
+                modifier = Modifier.animateItem(),
+            )
         }
     }
 }
@@ -634,6 +709,8 @@ private fun SpeciesListSkeleton(modifier: Modifier = Modifier) {
 private fun SpeciesRow(
     result: SpeciesSearchResult,
     artwork: ArtworkLocation,
+    sharedScope: SharedTransitionScope?,
+    animatedScope: AnimatedContentScope?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -641,9 +718,7 @@ private fun SpeciesRow(
     val number = speciesNumberLabel(summary.id.value)
     val typeNames = listText(summary.types.map { stringResource(it.labelRes()) })
     val description = stringResource(R.string.pokedex_row_description, number, summary.name, typeNames)
-    val sharedScope = LocalSharedTransitionScope.current
-    val artModifier = if (sharedScope != null) {
-        val animatedScope = LocalNavAnimatedContentScope.current
+    val artModifier = if (sharedScope != null && animatedScope != null) {
         with(sharedScope) {
             Modifier.sharedBounds(rememberSharedContentState(key = "species-art-${summary.id.value}"), animatedScope)
         }
