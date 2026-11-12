@@ -31,6 +31,7 @@ dependencies {
     implementation(project(":feature:settings:impl"))
     // android-forge:feature-modules
 
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.compose.material3) // the phone/tablet Material 3 — :app's own, not the app convention's
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
