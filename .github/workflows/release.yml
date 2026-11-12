@@ -2,6 +2,8 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # A dry run: builds and signs everything and keeps it as a workflow artifact, but publishes no Release.
+  workflow_dispatch:
 
 # Read-only by default; only the job that creates the Release gets write access.
 permissions:
@@ -24,6 +26,30 @@ jobs:
       # accepts Gradle's Terms of Use (https://gradle.com/legal/terms-of-use/). Pin `@v5` (MIT) instead
       # if your project can't accept them. https://blog.gradle.org/github-actions-for-gradle-v6
       - uses: gradle/actions/setup-gradle@v6
+      # A tag that disagrees with the app's versionName would publish a Release whose APKs report another version.
+      - name: Tag matches versionName
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error title=Version mismatch::Tag $GITHUB_REF_NAME, but app/build.gradle.kts has versionName $version. Bump it in a chore(release) commit first."
+            exit 1
+          fi
+      - name: Signing secrets are set
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [ -n "$(printenv "$name")" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=Missing signing secrets::Add these repository secrets (Settings > Secrets and variables > Actions):$missing"
+            exit 1
+          fi
       - name: Decode keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -31,6 +57,7 @@ jobs:
       # Signs via AGP's injected signing properties (the same ones Android Studio's "Generate Signed
       # Bundle" uses) — no signingConfig in the app modules and no keystore path in the repo. Every
       # app module (:app and the form-factor apps :wear / :tv / :automotive) shares the upload key.
+      # -PabiSplits adds one APK per ABI next to the universal one, for sideloading a smaller download.
       - name: Build signed release AABs + APKs (every app module)
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
@@ -39,21 +66,31 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: >-
           ./gradlew bundleRelease assembleRelease
+          -PabiSplits=true
           -Pandroid.injected.signing.store.file="$KEYSTORE_PATH"
           -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD"
           -Pandroid.injected.signing.key.alias="$KEY_ALIAS"
           -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+      - name: Collect and verify artifacts
+        run: |
+          mkdir -p dist
+          cp */build/outputs/bundle/release/*.aab */build/outputs/apk/release/*.apk dist/
+          # R8 mappings retrace release stack traces; kept with the Release, one per module.
+          for mapping in */build/outputs/mapping/release/mapping.txt; do cp "$mapping" "dist/${mapping%%/*}-mapping.txt"; done
+          if ls dist | grep -q unsigned; then echo "::error::Unsigned APKs: the signing properties did not apply."; exit 1; fi
+          apksigner="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner"
+          for apk in dist/*.apk; do "$apksigner" verify "$apk"; done
+          ls -lh dist
       - uses: actions/upload-artifact@v7
         with:
           name: android
-          path: |
-            */build/outputs/bundle/release/*.aab
-            */build/outputs/apk/release/*.apk
-            */build/outputs/mapping/release/mapping.txt
+          path: dist/
           if-no-files-found: error
 
   changelog-and-release:
     needs: [android]
+    # Only a pushed tag publishes; a manual run (even from a tag) stays a dry run.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     # Creating a Release needs write access; new repos default GITHUB_TOKEN to read-only.
     permissions:
@@ -75,7 +112,5 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           body: ${{ steps.cliff.outputs.content }}
-          files: |
-            artifacts/android/**/*.aab
-            artifacts/android/**/*.apk
+          files: artifacts/android/*
           generate_release_notes: false

@@ -10,6 +10,17 @@ android {
         versionCode = 1
         versionName = "0.1.0"
     }
+    splits {
+        abi {
+            // Only for the release workflow (-PabiSplits=true): one APK per ABI, about half the universal APK's size,
+            // since the text and picture recognisers ship native libraries for every ABI. Play builds its own splits
+            // from the AAB; local builds stay a single APK.
+            isEnable = providers.gradleProperty("abiSplits").map(String::toBoolean).getOrElse(false)
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
+    }
     androidResources {
         // Stored uncompressed so it can be memory-mapped, as AGP already does for .tflite files.
         noCompress += "dexlens_references.bin"
