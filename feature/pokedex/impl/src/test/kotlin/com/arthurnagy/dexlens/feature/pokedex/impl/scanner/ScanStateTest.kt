@@ -1,5 +1,7 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl.scanner
 
+import com.arthurnagy.dexlens.core.domain.scan.Evidence
+import com.arthurnagy.dexlens.core.domain.scan.FrameEvidence
 import com.arthurnagy.dexlens.core.domain.scan.LockOnTracker
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
@@ -19,7 +21,7 @@ internal class ScanStateTest {
     private fun ScanState.frames(
         count: Int,
         vararg seen: SpeciesSummary,
-    ): ScanState = (1..count).fold(this) { state, _ -> state.afterFrame(seen.mapTo(mutableSetOf()) { it.id }) }
+    ): ScanState = (1..count).fold(this) { state, _ -> state.afterFrame(FrameEvidence(seen.associate { it.id to Evidence.NAME })) }
 
     // Scenario: Analysis continues during a match
     @Test

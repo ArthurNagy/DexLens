@@ -2,15 +2,19 @@ package com.arthurnagy.dexlens.feature.pokedex.impl.scanner
 
 import androidx.compose.runtime.Immutable
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.domain.scan.FrameEvidence
 import com.arthurnagy.dexlens.core.domain.scan.LockOnTracker
+import com.arthurnagy.dexlens.core.domain.scan.PictureScores
+import com.arthurnagy.dexlens.core.domain.scan.SpeciesScore
 import com.arthurnagy.dexlens.core.domain.scan.SpeciesSignal
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
 
-/** The lines of text recognised in one frame's aiming box. */
+/** What one frame's aiming box showed: the lines of text read, and the picture scores if the picture signal answered. */
 @Immutable
 internal data class AnalyzedFrame(
     val lines: List<String>,
+    val pictureScores: PictureScores?,
 )
 
 /** What the scanner knows and has decided. Part of `PokedexState`, because a match fills the same list as a search. */
@@ -27,13 +31,15 @@ internal data class ScanState(
     /** True once after a lock that changed [match], until the screen has played the haptic. */
     val pendingHaptic: Boolean,
     val torchOn: Boolean,
+    /** The latest frame's best picture scores, kept only while the scores readout is on. */
+    val pictureScores: List<SpeciesScore>,
 ) {
     /**
      * This state after one analysed frame. A lock replaces [match] only if it adds a species outside it, so a name that
      * stays in view doesn't buzz every few frames, and a screen flickering between two names can't shrink the list.
      */
-    fun afterFrame(candidates: Set<SpeciesId>): ScanState {
-        val tracker = lockOn.observe(candidates)
+    fun afterFrame(evidence: FrameEvidence): ScanState {
+        val tracker = lockOn.observe(evidence)
         val species = tracker.locked.mapNotNull(speciesById::get).sortedBy { it.id.value }
         val listed = match.mapTo(mutableSetOf()) { it.id }
         return when {
@@ -55,6 +61,7 @@ internal data class ScanState(
             match = emptyList(),
             pendingHaptic = false,
             torchOn = false,
+            pictureScores = emptyList(),
         )
     }
 }

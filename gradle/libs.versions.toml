@@ -14,6 +14,7 @@ kotlin = "2.4.21"
 nav3Core = "1.2.1"
 camerax = "1.6.2"
 mlkitTextRecognition = "16.0.1"
+litert = "2.3.2"
 navigationEvent = "1.1.1"
 lifecycleViewmodelNav3 = "2.11.0"
 
@@ -79,6 +80,7 @@ androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.r
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-compose = { module = "androidx.camera:camera-compose", version.ref = "camerax" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkitTextRecognition" }
+litert = { module = "com.google.ai.edge.litert:litert", version.ref = "litert" }
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }

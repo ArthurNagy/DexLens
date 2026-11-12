@@ -1,6 +1,7 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import android.Manifest
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -70,8 +71,10 @@ internal fun SettingsScreen(
         snackbarHostState.showSnackbar(resources.getString(error.messageRes()))
         viewModel.onErrorConsumed()
     }
+    val debuggable = (LocalContext.current.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     SettingsContent(
         state = state,
+        showDeveloperOptions = debuggable,
         snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         onThemeSelect = viewModel::onThemeSelected,
@@ -79,6 +82,7 @@ internal fun SettingsScreen(
         onCancelDownload = viewModel::onCancelDownload,
         onDeleteContent = viewModel::onDeleteContent,
         onScannerEnabledChange = viewModel::onScannerEnabledChanged,
+        onScoresShownChange = viewModel::onScoresShownChanged,
         modifier = modifier,
     )
 }
@@ -99,6 +103,8 @@ internal fun rememberNotificationAwareStart(onStart: () -> Unit): () -> Unit {
 @Composable
 internal fun SettingsContent(
     state: SettingsState,
+    /** Debug builds only: tools for testing the scanner, never shown to people using a release build. */
+    showDeveloperOptions: Boolean,
     snackbarHostState: SnackbarHostState,
     onNavigateBack: () -> Unit,
     onThemeSelect: (ThemeMode) -> Unit,
@@ -106,6 +112,7 @@ internal fun SettingsContent(
     onCancelDownload: () -> Unit,
     onDeleteContent: () -> Unit,
     onScannerEnabledChange: (Boolean) -> Unit,
+    onScoresShownChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -138,10 +145,29 @@ internal fun SettingsContent(
             }
             item {
                 Section(stringResource(R.string.settings_scanner), sectionModifier) {
-                    ScannerSection(state.scannerEnabled, onScannerEnabledChange)
+                    SwitchRow(
+                        title = stringResource(R.string.settings_scanner_switch),
+                        description = stringResource(R.string.settings_scanner_description),
+                        checked = state.scannerEnabled,
+                        onChange = onScannerEnabledChange,
+                        modifier = Modifier.testTag("settings:scanner"),
+                    )
                 }
             }
             item { Section(stringResource(R.string.settings_theme), sectionModifier) { ThemeSection(state.themeMode, onThemeSelect) } }
+            if (showDeveloperOptions) {
+                item {
+                    Section(stringResource(R.string.settings_developer), sectionModifier) {
+                        SwitchRow(
+                            title = stringResource(R.string.settings_scores_switch),
+                            description = stringResource(R.string.settings_scores_description),
+                            checked = state.scoresShown,
+                            onChange = onScoresShownChange,
+                            modifier = Modifier.testTag("settings:scores"),
+                        )
+                    }
+                }
+            }
             item { Section(stringResource(R.string.settings_about), sectionModifier) { AboutSection() } }
         }
     }
@@ -235,29 +261,27 @@ internal fun ProgressRow(
 }
 
 @Composable
-private fun ScannerSection(
-    enabled: Boolean,
+private fun SwitchRow(
+    title: String,
+    description: String,
+    checked: Boolean,
     onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = AppDimens.touchTargetMin)
-            .toggleable(value = enabled, onValueChange = onChange, role = Role.Switch)
-            .testTag("settings:scanner")
+            .toggleable(value = checked, onValueChange = onChange, role = Role.Switch)
             .padding(vertical = AppSpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
-            Text(stringResource(R.string.settings_scanner_switch), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                stringResource(R.string.settings_scanner_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked = enabled, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 

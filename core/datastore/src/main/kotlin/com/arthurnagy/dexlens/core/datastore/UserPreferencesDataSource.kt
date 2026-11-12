@@ -50,6 +50,12 @@ class UserPreferencesDataSource
 
         val preferredGame: Flow<Int?> = preferences.map { it[PREFERRED_GAME] }
 
+        val recognitionScoresShown: Flow<Boolean> = preferences.map { it[RECOGNITION_SCORES_SHOWN] ?: false }
+
+        suspend fun setRecognitionScoresShown(shown: Boolean) {
+            dataStore.edit { it[RECOGNITION_SCORES_SHOWN] = shown }
+        }
+
         suspend fun setPreferredGame(gameId: Int) {
             dataStore.edit { it[PREFERRED_GAME] = gameId }
         }
@@ -71,6 +77,7 @@ class UserPreferencesDataSource
             val CONTENT_OFFER_SHOWN = booleanPreferencesKey("content_offer_shown")
             val SCANNER_ENABLED = booleanPreferencesKey("scanner_enabled")
             val PREFERRED_GAME = intPreferencesKey("preferred_game")
+            val RECOGNITION_SCORES_SHOWN = booleanPreferencesKey("recognition_scores_shown")
             const val MAX_RETRY_DELAY_SECONDS = 30L
         }
     }

@@ -44,6 +44,16 @@ class UserPreferencesDataSourceTest {
     }
 
     @Test
+    fun recognitionScoresAreHiddenUntilShownAndTheChoiceSurvivesANewInstance() = runTest {
+        val file = tmpFolder.newFolder().resolve("prefs.preferences_pb")
+        val first = PreferenceDataStoreFactory.create(scope = backgroundScope) { file }
+
+        assertEquals(false, UserPreferencesDataSource(first).recognitionScoresShown.first())
+        UserPreferencesDataSource(first).setRecognitionScoresShown(true)
+        assertEquals(true, UserPreferencesDataSource(first).recognitionScoresShown.first())
+    }
+
+    @Test
     fun noGameIsPreferredUntilOneIsPicked() = runTest {
         val dataSource = UserPreferencesDataSource(dataStore())
 

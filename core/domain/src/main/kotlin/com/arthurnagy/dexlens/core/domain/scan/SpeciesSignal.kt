@@ -2,7 +2,7 @@ package com.arthurnagy.dexlens.core.domain.scan
 
 import com.arthurnagy.dexlens.core.model.SpeciesId
 
-/** What the camera saw in one frame. A future image-model signal can add the frame's pixels here. */
+/** The text read in one frame's aiming box. The picture signal reaches [combineSignals] separately. */
 data class FrameObservation(
     val lines: List<String>,
 )
@@ -16,7 +16,10 @@ data class SpeciesCandidate(
 
 enum class MatchKind { EXACT, CONFUSABLE, FUZZY }
 
-/** Why a piece of text did or didn't match. Only the debug overlay reads these. */
+/**
+ * Why a piece of text did or didn't match. [combineSignals] reads these to let the picture choose between several
+ * species one piece of text matched.
+ */
 data class MatchDecision(
     val text: String,
     val outcome: MatchOutcome,
@@ -30,10 +33,7 @@ data class SignalResult(
     val decisions: List<MatchDecision>,
 )
 
-/**
- * One source of evidence about which species is in a frame. Text matching is the only signal today. An
- * image-recognition model can implement this later, and [LockOnTracker] would combine both without changing.
- */
+/** Finds species in one frame's text. [combineSignals] merges its result with the picture signal's. */
 fun interface SpeciesSignal {
     fun analyze(observation: FrameObservation): SignalResult
 }

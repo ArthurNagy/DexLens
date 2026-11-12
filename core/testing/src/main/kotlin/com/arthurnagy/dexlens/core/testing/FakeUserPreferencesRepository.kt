@@ -15,10 +15,13 @@ class FakeUserPreferencesRepository(
     initialOfferShown: Boolean = false,
     initialScannerEnabled: Boolean = true,
     initialPreferredGame: Int? = null,
+    initialRecognitionScoresShown: Boolean = false,
 ) : UserPreferencesRepository {
     private val game = MutableStateFlow(initialPreferredGame)
 
     private val scannerSwitch = MutableStateFlow(initialScannerEnabled)
+
+    private val scoresSwitch = MutableStateFlow(initialRecognitionScoresShown)
 
     private val offerShown = MutableStateFlow(initialOfferShown)
 
@@ -56,6 +59,17 @@ class FakeUserPreferencesRepository(
             return Err(error)
         }
         scannerSwitch.value = enabled
+        return Ok(Unit)
+    }
+
+    override val recognitionScoresShown: Flow<Boolean> = scoresSwitch
+
+    override suspend fun setRecognitionScoresShown(shown: Boolean): Result<Unit, DomainError> {
+        failNextWrite?.let { error ->
+            failNextWrite = null
+            return Err(error)
+        }
+        scoresSwitch.value = shown
         return Ok(Unit)
     }
 

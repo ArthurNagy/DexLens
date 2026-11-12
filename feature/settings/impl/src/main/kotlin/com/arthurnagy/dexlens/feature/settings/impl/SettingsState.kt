@@ -9,6 +9,8 @@ import com.arthurnagy.dexlens.core.model.ThemeMode
 internal data class SettingsState(
     val themeMode: ThemeMode,
     val scannerEnabled: Boolean,
+    /** The debug-build switch for the scanner's recognition scores. */
+    val scoresShown: Boolean,
     val content: ContentPackState,
     val pendingError: DomainError?,
 ) {
@@ -16,6 +18,7 @@ internal data class SettingsState(
         val Initial = SettingsState(
             themeMode = ThemeMode.SYSTEM,
             scannerEnabled = true,
+            scoresShown = false,
             content = ContentPackState.NotDownloaded,
             pendingError = null,
         )
