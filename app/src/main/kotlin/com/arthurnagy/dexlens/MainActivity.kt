@@ -3,8 +3,6 @@ package com.arthurnagy.dexlens
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.view.View
-import android.view.ViewTreeObserver
 import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -14,6 +12,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.navigation.EntryProviderInstaller
@@ -34,7 +33,20 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainActivityViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Before super.onCreate: swaps the launch theme (Theme.DexLens.Starting) for Theme.DexLens.
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // The splash stays up until the stored theme is read (a DataStore read: milliseconds), so a theme picked
+        // in-app never flashes the system's first; the app's first frame waits behind it.
+        splashScreen.setKeepOnScreenCondition { viewModel.container.stateFlow.value.loading }
+        splashScreen.setOnExitAnimationListener { splash ->
+            splash.view
+                .animate()
+                .alpha(0f)
+                .setDuration(SPLASH_FADE_MS)
+                .withEndAction { splash.remove() }
+                .start()
+        }
         setContent {
             val state by viewModel.collectAsState()
             // Nothing renders until the stored theme is read: drawing in the default one first would
@@ -62,25 +74,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        holdFirstFrameUntilThemeResolved()
-    }
-
-    /**
-     * Keeps the first frame from drawing until the stored theme is known (a DataStore read: milliseconds), so a theme
-     * picked in-app doesn't flash the system's first. Android 12+ keeps its splash screen up meanwhile; older versions
-     * show the window background.
-     */
-    private fun holdFirstFrameUntilThemeResolved() {
-        val content = findViewById<View>(android.R.id.content)
-        content.viewTreeObserver.addOnPreDrawListener(
-            object : ViewTreeObserver.OnPreDrawListener {
-                override fun onPreDraw(): Boolean {
-                    val ready = !viewModel.container.stateFlow.value.loading
-                    if (ready) content.viewTreeObserver.removeOnPreDrawListener(this)
-                    return ready
-                }
-            },
-        )
     }
 
     /**
@@ -97,6 +90,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
+        const val SPLASH_FADE_MS = 200L
+
         // enableEdgeToEdge()'s default navigation-bar scrims (behind three-button navigation on API 26–28).
         val lightScrim = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
         val darkScrim = Color.argb(0x80, 0x1b, 0x1b, 0x1b)

@@ -4,4 +4,12 @@
     <style name="Theme.DexLens" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/core_designsystem_window_background</item>
     </style>
+
+    <!-- The launch theme: AndroidX SplashScreen draws the same splash on every API level (the system one on 12+),
+         then MainActivity's installSplashScreen() switches to Theme.DexLens. -->
+    <style name="Theme.DexLens.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/core_designsystem_window_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.DexLens</item>
+    </style>
 </resources>
