@@ -54,6 +54,8 @@ Matching SHALL accept a bounded edit distance that treats 0/O, 1/I/L and 5/S as 
 
 ### Requirement: Lock on across frames
 A species SHALL be locked only after it appears in several recent frames, and unknown text SHALL keep scanning quietly.
+A name candidate alone SHALL lock after three of the last five frames. Picture evidence SHALL lock as the
+camera-image-recognition capability allows: sooner when it agrees with a name, later when it stands alone.
 
 #### Scenario: Lock after repeated frames
 - **WHEN** the same species is a candidate in three of the last five frames
@@ -68,7 +70,7 @@ A species SHALL be locked only after it appears in several recent frames, and un
 - **THEN** both are listed in Pokédex order
 
 #### Scenario: Nickname keeps scanning
-- **WHEN** only text that is not a species name is seen
+- **WHEN** only text that is not a species name is seen and no species reaches the image-only threshold
 - **THEN** the list does not change and scanning continues
 
 ### Requirement: Camera permission
@@ -91,11 +93,12 @@ While the scanner is switched on, the scanner area SHALL explain why the camera 
 - **THEN** the list and search work as usual, and the scanner area says why it is empty
 
 ### Requirement: Camera controls and guidance
-The scanner area SHALL show an aiming box, a hint to point at the Pokémon's name and, while the camera is running on a device with a flash, a torch toggle, and only the aiming box SHALL be analysed.
+The scanner area SHALL show an aiming box, a hint to point at the Pokémon or its name and, while the camera is running on
+a device with a flash, a torch toggle, and only the aiming box SHALL be analysed.
 
 #### Scenario: Hint and aiming box shown
 - **WHEN** the camera is running and nothing is matched
-- **THEN** the aiming box and the hint "Point at the Pokémon's name" are visible
+- **THEN** the aiming box and the hint "Point at a Pokémon or its name" are visible
 
 #### Scenario: Torch toggles
 - **WHEN** the torch button is tapped on a camera with a flash
@@ -107,18 +110,23 @@ The scanner area SHALL show an aiming box, a hint to point at the Pokémon's nam
 
 #### Scenario: Crop follows the aiming box
 - **WHEN** a frame is analysed in any device orientation
-- **THEN** only the sensor region under the aiming box is sent to recognition
+- **THEN** only the sensor region under the aiming box is sent to text recognition, and only an upright colour square centred in that region is sent to the picture signal
 
 #### Scenario: Aiming box clear of the controls
 - **WHEN** the camera is running in any window size
 - **THEN** the aiming box is centred, does not overlap the status bar or the buttons, and is no more than half again as wide as it is tall
 
 ### Requirement: Works offline with on-device recognition
-Recognition SHALL run entirely on the device with a model bundled in the app, with no download and no network.
+Recognition SHALL run entirely on the device with models bundled in the app, with no download and no network. This
+covers both the text recogniser and the picture model.
 
 #### Scenario: Recognition in airplane mode
 - **WHEN** the device has no network on first launch
 - **THEN** text recognition still returns results
+
+#### Scenario: Picture recognition in airplane mode
+- **WHEN** the device has no network on first launch and the aiming box shows a clear sprite
+- **THEN** the picture signal still scores species
 
 ### Requirement: Matches shown in the home list
 On lock the app SHALL give haptic feedback, list the locked species in the home list in place of the full list, and name them in the aiming box.
