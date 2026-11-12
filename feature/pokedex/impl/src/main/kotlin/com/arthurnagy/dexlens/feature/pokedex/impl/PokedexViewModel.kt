@@ -1,7 +1,6 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl
 
 import androidx.lifecycle.ViewModel
-import com.arthurnagy.dexlens.core.domain.ObserveRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
@@ -20,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.syntax.Syntax
 import org.orbitmvi.orbit.viewmodel.orbitContainer
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -34,7 +34,6 @@ internal class PokedexViewModel
         private val observeArtwork: ObserveArtworkUseCase,
         private val observeContentOffer: ObserveContentOfferUseCase,
         private val observeScannerEnabled: ObserveScannerEnabledUseCase,
-        private val observeScoresShown: ObserveRecognitionScoresShownUseCase,
         private val buildSignal: BuildSpeciesSignalUseCase,
         private val getSpeciesList: GetSpeciesListUseCase,
     ) : ViewModel(),
@@ -42,7 +41,6 @@ internal class PokedexViewModel
         override val container = orbitContainer<PokedexState, Nothing>(PokedexState.Initial) {
             observeArtworkLocation()
             observeScannerSwitch()
-            observeScoresSwitch()
             checkOffer()
             loadMatcher()
             search(state.query)
@@ -59,12 +57,6 @@ internal class PokedexViewModel
                     val scan = if (enabled) state.scan else state.scan.withoutMatch().copy(torchOn = false)
                     state.copy(scannerEnabled = enabled, scan = scan)
                 }
-            }
-        }
-
-        private fun observeScoresSwitch() = intent {
-            observeScoresShown().collect { shown ->
-                reduce { state.copy(scoresShown = shown, scan = state.scan.copy(pictureScores = emptyList())) }
             }
         }
 
@@ -107,14 +99,14 @@ internal class PokedexViewModel
             val signal = current.scan.signal ?: return
             if (!current.scanning) return
             val evidence = combineSignals(signal.analyze(FrameObservation(frame.lines)), frame.pictureScores)
-            // A frame the picture signal skipped keeps the previous readout, so it doesn't flicker.
-            val readout = frame.pictureScores?.takeIf { current.scoresShown }?.top(READOUT_SIZE)
+            if (!evidence.isEmpty()) Timber.d("frame evidence %s", evidence.species)
             // Checked again here: typing may have started while the frame was being read.
             intent {
                 reduce {
                     if (!state.scanning) return@reduce state
                     val scan = state.scan.afterFrame(evidence)
-                    state.copy(scan = if (readout != null && state.scoresShown) scan.copy(pictureScores = readout) else scan)
+                    if (scan.match != state.scan.match) Timber.i("locked %s", scan.match.map { it.name })
+                    state.copy(scan = scan)
                 }
             }
         }
@@ -140,10 +132,5 @@ internal class PokedexViewModel
         fun onRetry() = intent {
             reduce { state.copy(loading = true, error = null) }
             search(state.query)
-        }
-
-        private companion object {
-            /** How many species the scores readout lists. */
-            const val READOUT_SIZE = 3
         }
     }

@@ -14,9 +14,6 @@
     <string name="settings_scanner">Scanner</string>
     <string name="settings_scanner_switch">Scanner on home screen</string>
     <string name="settings_scanner_description">Shows the camera above the list. Turn it off to use DexLens as a plain list. The camera stays off and DexLens won\'t ask for access.</string>
-    <string name="settings_developer">Developer</string>
-    <string name="settings_scores_switch">Show recognition scores</string>
-    <string name="settings_scores_description">Lists the picture model\'s three best guesses and their scores over the camera, for tuning recognition. Debug builds only.</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light</string>

@@ -22,7 +22,6 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
-import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasText
@@ -44,12 +43,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.designsystem.LightScheme
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.ObserveRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
-import com.arthurnagy.dexlens.core.domain.scan.SpeciesScore
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.model.PokemonType
@@ -101,13 +98,6 @@ internal class PokedexScreenTest {
     )
     private val scannerOff = loaded.copy(scannerEnabled = false)
     private val matched = loaded.copy(scan = ScanState.Initial.copy(match = listOf(pikachu)))
-    private val withScores = loaded.copy(
-        scoresShown = true,
-        scan = ScanState.Initial.copy(
-            speciesById = mapOf(pikachu.id to pikachu, pidgey.id to pidgey),
-            pictureScores = listOf(SpeciesScore(pikachu.id, 0.962f), SpeciesScore(pidgey.id, 0.941f), SpeciesScore(SpeciesId(26), 0.930f)),
-        ),
-    )
     private val ready = CameraStatus(CameraPermission.GRANTED, failed = false, torchAvailable = true)
     private val needsPermission = ready.copy(permission = CameraPermission.NEEDS_REQUEST)
 
@@ -264,7 +254,6 @@ internal class PokedexScreenTest {
             ObserveArtworkUseCase(FakeContentPackRepository()),
             ObserveContentOfferUseCase(preferences),
             ObserveScannerEnabledUseCase(preferences),
-            ObserveRecognitionScoresShownUseCase(preferences),
             BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(TestCoroutineScheduler())),
             GetSpeciesListUseCase(repository),
         )
@@ -347,20 +336,6 @@ internal class PokedexScreenTest {
         show()
         composeRule.onNodeWithText("Point at a Pokémon or its name").assertExists()
         composeRule.onNodeWithTag("pokedex:aimBox").assertExists()
-    }
-
-    // Scenario: Readout shows the top three
-    @Test
-    fun theReadoutListsTheBestThreeScores() {
-        show(withScores)
-        composeRule.onNodeWithTag("scanner:scores").assertTextEquals("Pikachu 0.962\nPidgey 0.941\n#26 0.930")
-    }
-
-    // Scenario: Readout off by default
-    @Test
-    fun noReadoutWithoutScores() {
-        show()
-        composeRule.onNodeWithTag("scanner:scores").assertDoesNotExist()
     }
 
     // Scenario: Match named in the aiming box
@@ -760,7 +735,6 @@ internal class PokedexScreenTest {
             ObserveArtworkUseCase(FakeContentPackRepository()),
             ObserveContentOfferUseCase(preferences),
             ObserveScannerEnabledUseCase(preferences),
-            ObserveRecognitionScoresShownUseCase(preferences),
             BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(TestCoroutineScheduler())),
             GetSpeciesListUseCase(repository),
         )
@@ -876,20 +850,6 @@ internal class PokedexScreenTest {
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tablet() {
         show()
-        composeRule.onRoot().captureRoboImage()
-    }
-
-    @Test
-    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
-    fun phoneScores() {
-        show(withScores)
-        composeRule.onRoot().captureRoboImage()
-    }
-
-    @Test
-    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
-    fun tabletScores() {
-        show(withScores)
         composeRule.onRoot().captureRoboImage()
     }
 

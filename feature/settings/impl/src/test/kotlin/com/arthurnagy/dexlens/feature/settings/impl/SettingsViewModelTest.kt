@@ -1,10 +1,8 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.ObserveRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
-import com.arthurnagy.dexlens.core.domain.SetRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
@@ -31,8 +29,6 @@ class SettingsViewModelTest {
         SetThemeModeUseCase(preferences),
         ObserveScannerEnabledUseCase(preferences),
         SetScannerEnabledUseCase(preferences),
-        ObserveRecognitionScoresShownUseCase(preferences),
-        SetRecognitionScoresShownUseCase(preferences),
         ObserveContentPackStateUseCase(content),
         StartContentDownloadUseCase(content),
         CancelContentDownloadUseCase(content),
@@ -66,29 +62,6 @@ class SettingsViewModelTest {
             cancelAndIgnoreRemainingItems()
         }
         assertEquals(false, preferences.scannerEnabled.first())
-    }
-
-    // Scenario: Scores switch in debug builds
-    @Test
-    fun scoresSwitchIsStored() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
-            runOnCreate()
-            containerHost.onScoresShownChanged(true)
-            expectInternalState { copy(scoresShown = true) }
-            cancelAndIgnoreRemainingItems()
-        }
-        assertEquals(true, preferences.recognitionScoresShown.first())
-    }
-
-    @Test
-    fun aFailedScoresSwitchWriteIsReported() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
-            runOnCreate()
-            preferences.failNextWrite = DomainError.Unknown("disk full")
-            containerHost.onScoresShownChanged(true)
-            expectInternalState { copy(pendingError = DomainError.Unknown("disk full")) }
-            cancelAndIgnoreRemainingItems()
-        }
     }
 
     @Test
