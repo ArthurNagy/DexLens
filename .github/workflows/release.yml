@@ -57,15 +57,28 @@ jobs:
       # Signs via AGP's injected signing properties (the same ones Android Studio's "Generate Signed
       # Bundle" uses) — no signingConfig in the app modules and no keystore path in the repo. Every
       # app module (:app and the form-factor apps :wear / :tv / :automotive) shares the upload key.
-      # -PabiSplits adds one APK per ABI next to the universal one, for sideloading a smaller download.
-      - name: Build signed release AABs + APKs (every app module)
+      # Two Gradle runs: AGP can't build an AAB while ABI splits are on (https://issuetracker.google.com/402800800).
+      - name: Build signed release AABs (every app module)
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: >-
-          ./gradlew bundleRelease assembleRelease
+          ./gradlew bundleRelease
+          -Pandroid.injected.signing.store.file="$KEYSTORE_PATH"
+          -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD"
+          -Pandroid.injected.signing.key.alias="$KEY_ALIAS"
+          -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+      # -PabiSplits adds one APK per ABI next to the universal one, for sideloading a smaller download.
+      - name: Build signed release APKs (universal + per ABI)
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: >-
+          ./gradlew assembleRelease
           -PabiSplits=true
           -Pandroid.injected.signing.store.file="$KEYSTORE_PATH"
           -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD"
