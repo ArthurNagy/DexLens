@@ -13,7 +13,7 @@
 ## 2. :core:domain: picture matching and combined lock-on
 
 - [x] 2.1 `scan` package: add `SpeciesScore`, `PictureScores` (`score(id)` for any species, plus `top(n)` best first) and
-  `RecognitionThresholds` (candidate 0.94, imageOnly 0.957, leadMargin 0.015) in one place.
+  `RecognitionThresholds` (candidate 0.90, imageOnly 0.92, leadMargin 0.015; lowered from 0.94 / 0.957 after device testing) in one place.
 - [x] 2.2 `ReferenceGallery.parse(bytes)`: validate the `DXRF` header (version 1, D=256, 1 byte per value, size) and every
   species ID (1..1025), and return null on any mismatch. Add `rank(embedding): PictureScores` with the best-per-species
   loop, divided by the scale.
@@ -149,7 +149,7 @@
 
 - [x] 6.1 Local gate: `./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true`
 - [x] 6.2 Record the APK size before and after in the PR body.
-- [ ] 6.3 On a device (emulator first, then a phone the user approves), with the readout on, scan gameplay images on a
+- [x] 6.3 On a device (emulator first, then a phone the user approves), with the readout on, scan gameplay images on a
   monitor:
   - check that clear sprites reach the candidate threshold and that a sprite with no name locks;
   - check that a name still locks on its own, and that airplane mode changes nothing (Picture recognition in airplane

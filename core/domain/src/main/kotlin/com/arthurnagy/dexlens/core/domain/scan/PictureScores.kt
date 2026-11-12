@@ -43,18 +43,19 @@ class PictureScores internal constructor(
 internal const val MAX_SPECIES_ID = 1025
 
 /**
- * Every score cut-off the scanner uses, in one place so tuning is a one-line change. The starting values come from the
- * model's own tests on unseen sprites, not from photos of game screens.
+ * Every score cut-off the scanner uses, in one place so tuning is a one-line change. The model's own tests on clean,
+ * simulated captures suggested 0.94 and 0.957; phone photos of real game screens score lower even when the first guess is
+ * right (a Sword / Shield battle scored 0.81, empty scenes about 0.75), so the values were lowered on device.
  */
 data class RecognitionThresholds(
     /** A species counts as seen in the picture from this score. */
     val candidate: Float,
-    /** A species can lock from the picture alone from this score: about 90% of unseen sprites, 0.5% false accepts. */
+    /** A species can lock from the picture alone from this score, still needing four of the last five frames. */
     val imageOnly: Float,
     /** How far ahead of the others a species must be to count as a clear winner. */
     val leadMargin: Float,
 ) {
     companion object {
-        val Default = RecognitionThresholds(candidate = 0.94f, imageOnly = 0.957f, leadMargin = 0.015f)
+        val Default = RecognitionThresholds(candidate = 0.90f, imageOnly = 0.92f, leadMargin = 0.015f)
     }
 }
