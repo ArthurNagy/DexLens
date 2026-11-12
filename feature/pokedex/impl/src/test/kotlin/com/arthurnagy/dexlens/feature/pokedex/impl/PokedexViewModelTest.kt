@@ -1,7 +1,6 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl
 
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.ObserveRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
@@ -70,7 +69,6 @@ internal class PokedexViewModelTest {
         ObserveArtworkUseCase(artwork),
         ObserveContentOfferUseCase(userPreferences),
         ObserveScannerEnabledUseCase(userPreferences),
-        ObserveRecognitionScoresShownUseCase(userPreferences),
         BuildSpeciesSignalUseCase(speciesRepository, TestDispatcherProvider(testScheduler)),
         GetSpeciesListUseCase(speciesRepository),
     )
@@ -297,34 +295,6 @@ internal class PokedexViewModelTest {
         val locked = awaitInternalState()
         assertEquals(listOf(pikachu), locked.scan.match)
         assertNull(locked.scan.error)
-    }
-
-    // Scenario: Readout off by default
-    @Test
-    fun noScoresAreKeptWhileTheReadoutIsOff() = home { ready ->
-        assertEquals(false, ready.scoresShown)
-        // A strong picture frame changes the lock-on but stores no scores for the readout.
-        containerHost.onFrame(AnalyzedFrame(emptyList(), scores(pikachu to 0.97f)))
-        assertEquals(emptyList(), awaitInternalState().scan.pictureScores)
-    }
-
-    // Scenario: Readout follows the frames
-    @Test
-    fun theReadoutShowsEachFramesBestThree() = runTest {
-        val shown = FakeUserPreferencesRepository(ThemeMode.SYSTEM, initialOfferShown = true, initialRecognitionScoresShown = true)
-        viewModel(userPreferences = shown).testWithInternalState(this, PokedexState.Initial) {
-            runOnCreate()
-            var state = settled()
-            while (!state.scoresShown) state = awaitInternalState()
-            containerHost.onFrame(AnalyzedFrame(emptyList(), scores(pikachu to 0.90f, pidgey to 0.80f, bulbasaur to 0.70f)))
-            assertEquals(listOf(25, 16, 1), awaitInternalState().scan.pictureScores.map { it.speciesId.value })
-            containerHost.onFrame(AnalyzedFrame(emptyList(), scores(bulbasaur to 0.91f)))
-            assertEquals(listOf(SpeciesScore(bulbasaur.id, 0.91f)), awaitInternalState().scan.pictureScores)
-            // A frame the picture signal skipped keeps the last readout.
-            containerHost.onFrame(frame("nothing here"))
-            expectNoItems()
-            cancelAndIgnoreRemainingItems()
-        }
     }
 
     // Scenario: Nickname keeps scanning

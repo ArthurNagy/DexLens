@@ -1,10 +1,8 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import androidx.lifecycle.ViewModel
-import com.arthurnagy.dexlens.core.domain.ObserveRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
-import com.arthurnagy.dexlens.core.domain.SetRecognitionScoresShownUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
@@ -26,8 +24,6 @@ internal class SettingsViewModel
         private val setThemeMode: SetThemeModeUseCase,
         private val observeScannerEnabled: ObserveScannerEnabledUseCase,
         private val setScannerEnabled: SetScannerEnabledUseCase,
-        private val observeScoresShown: ObserveRecognitionScoresShownUseCase,
-        private val setScoresShown: SetRecognitionScoresShownUseCase,
         private val observeContent: ObserveContentPackStateUseCase,
         private val startDownload: StartContentDownloadUseCase,
         private val cancelDownload: CancelContentDownloadUseCase,
@@ -37,7 +33,6 @@ internal class SettingsViewModel
         override val container = orbitContainer<SettingsState, Nothing>(SettingsState.Initial) {
             observeTheme()
             observeScannerSwitch()
-            observeScoresSwitch()
             observeContentState()
         }
 
@@ -47,10 +42,6 @@ internal class SettingsViewModel
 
         private fun observeScannerSwitch() = intent {
             observeScannerEnabled().collect { enabled -> reduce { state.copy(scannerEnabled = enabled) } }
-        }
-
-        private fun observeScoresSwitch() = intent {
-            observeScoresShown().collect { shown -> reduce { state.copy(scoresShown = shown) } }
         }
 
         private fun observeContentState() = intent {
@@ -63,10 +54,6 @@ internal class SettingsViewModel
 
         fun onScannerEnabledChanged(enabled: Boolean) = intent {
             setScannerEnabled(enabled).onErr { error -> reduce { state.copy(pendingError = error) } }
-        }
-
-        fun onScoresShownChanged(shown: Boolean) = intent {
-            setScoresShown(shown).onErr { error -> reduce { state.copy(pendingError = error) } }
         }
 
         fun onDownload() = intent {

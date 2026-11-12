@@ -107,19 +107,3 @@ the user SHALL see no error.
 #### Scenario: Slow picture frame keeps names working
 - **WHEN** the picture signal has not answered a frame in time and the recognised text is "PIKACHU"
 - **THEN** the frame counts as a name-only frame and scanning continues
-
-### Requirement: Recognition scores readout
-A settings switch, shown only in debug builds and off by default, SHALL show the picture signal's three best species and
-their scores in the scanner area while the camera runs.
-
-#### Scenario: Readout off by default
-- **WHEN** the camera is running and the scores switch has never been turned on
-- **THEN** no scores are shown in the scanner area
-
-#### Scenario: Readout shows the top three
-- **WHEN** the scores switch is on and a frame has been analysed
-- **THEN** the scanner area shows the three best-scoring species with their scores, best first
-
-#### Scenario: Readout follows the frames
-- **WHEN** the scores switch is on and a new frame is analysed with different scores
-- **THEN** the readout shows the new scores

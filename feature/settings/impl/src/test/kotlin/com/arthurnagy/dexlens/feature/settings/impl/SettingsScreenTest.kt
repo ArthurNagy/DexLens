@@ -38,13 +38,9 @@ internal class SettingsScreenTest {
         onCancel: () -> Unit = {},
         onDelete: () -> Unit = {},
         onScanner: (Boolean) -> Unit = {},
-        developer: Boolean = false,
-        onScores: (Boolean) -> Unit = {},
     ) {
         composeRule.setContent {
-            AppTheme {
-                SettingsContent(state, developer, SnackbarHostState(), {}, onTheme, onDownload, onCancel, onDelete, onScanner, onScores)
-            }
+            AppTheme { SettingsContent(state, SnackbarHostState(), {}, onTheme, onDownload, onCancel, onDelete, onScanner) }
         }
     }
 
@@ -112,25 +108,6 @@ internal class SettingsScreenTest {
         composeRule.onNodeWithTag("settings:list").performScrollToNode(hasTestTag("settings:scanner"))
         composeRule.onNodeWithTag("settings:scanner").assertIsOn().performClick()
         assertEquals(false, changed)
-    }
-
-    // Scenario: Scores switch in debug builds
-    @Test
-    fun debugBuildsShowTheScoresSwitchOffByDefault() {
-        var changed: Boolean? = null
-        show(developer = true, onScores = { changed = it })
-        composeRule.onNodeWithTag("settings:list").performScrollToNode(hasTestTag("settings:scores"))
-        composeRule.onNodeWithText("Show recognition scores").assertExists()
-        composeRule.onNodeWithTag("settings:scores").assertIsOff().performClick()
-        assertEquals(true, changed)
-    }
-
-    // Scenario: No scores switch in release builds
-    @Test
-    fun releaseBuildsHaveNoScoresSwitch() {
-        show(developer = false)
-        composeRule.onNodeWithTag("settings:scores").assertDoesNotExist()
-        composeRule.onNodeWithText("Developer").assertDoesNotExist()
     }
 
     @Test
@@ -202,22 +179,6 @@ internal class SettingsScreenTest {
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tablet() {
         show()
-        composeRule.onRoot().captureRoboImage()
-    }
-
-    @Test
-    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
-    fun phoneDeveloper() {
-        show(developer = true)
-        composeRule.onNodeWithTag("settings:list").performScrollToNode(hasTestTag("settings:scores"))
-        composeRule.onRoot().captureRoboImage()
-    }
-
-    @Test
-    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
-    fun tabletDeveloper() {
-        show(developer = true)
-        composeRule.onNodeWithTag("settings:list").performScrollToNode(hasTestTag("settings:scores"))
         composeRule.onRoot().captureRoboImage()
     }
 

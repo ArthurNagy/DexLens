@@ -2,6 +2,8 @@ package com.arthurnagy.dexlens.feature.pokedex.impl.scanner
 
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import timber.log.Timber
+import java.util.Locale
 
 /** Finds lines of text in a grey NV21 image. Returns null when recognition fails, so the frame is simply skipped. */
 internal fun interface LineRecognizer {
@@ -35,6 +37,7 @@ internal class FrameAnalyzer(
     }
 
     private fun process(image: ImageProxy) {
+        val started = System.nanoTime()
         val rotation = image.imageInfo.rotationDegrees
         val view = image.cropRect
         val region = cropRegion(view.left, view.top, view.right, view.bottom, rotation, aimBox())
@@ -45,6 +48,12 @@ internal class FrameAnalyzer(
         val nv21 = lumaCropToNv21(planes[0].buffer, planes[0].rowStride, region)
         val lines = recognizer.recognize(nv21, region.width, region.height, rotation)
         val scores = pending?.await()
+        Timber.d(
+            "frame in %d ms: text %s, picture %s",
+            (System.nanoTime() - started) / NANOS_PER_MILLI,
+            lines,
+            scores?.top(LOGGED_GUESSES)?.joinToString { "#${it.speciesId.value} %.3f".format(Locale.ROOT, it.score) } ?: "skipped",
+        )
         if (lines == null && scores == null) return
         onFrame(AnalyzedFrame(lines.orEmpty(), scores))
     }
@@ -53,5 +62,7 @@ internal class FrameAnalyzer(
 
     private companion object {
         const val YUV_PLANES = 3
+        const val LOGGED_GUESSES = 3
+        const val NANOS_PER_MILLI = 1_000_000L
     }
 }

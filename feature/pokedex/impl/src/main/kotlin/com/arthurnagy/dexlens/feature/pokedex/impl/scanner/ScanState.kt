@@ -5,7 +5,6 @@ import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.scan.FrameEvidence
 import com.arthurnagy.dexlens.core.domain.scan.LockOnTracker
 import com.arthurnagy.dexlens.core.domain.scan.PictureScores
-import com.arthurnagy.dexlens.core.domain.scan.SpeciesScore
 import com.arthurnagy.dexlens.core.domain.scan.SpeciesSignal
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
@@ -31,8 +30,6 @@ internal data class ScanState(
     /** True once after a lock that changed [match], until the screen has played the haptic. */
     val pendingHaptic: Boolean,
     val torchOn: Boolean,
-    /** The latest frame's best picture scores, kept only while the scores readout is on. */
-    val pictureScores: List<SpeciesScore>,
 ) {
     /**
      * This state after one analysed frame. A lock replaces [match] only if it adds a species outside it, so a name that
@@ -61,7 +58,6 @@ internal data class ScanState(
             match = emptyList(),
             pendingHaptic = false,
             torchOn = false,
-            pictureScores = emptyList(),
         )
     }
 }

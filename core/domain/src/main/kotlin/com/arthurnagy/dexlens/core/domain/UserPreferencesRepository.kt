@@ -21,11 +21,6 @@ interface UserPreferencesRepository {
 
     suspend fun setScannerEnabled(enabled: Boolean): Result<Unit, DomainError>
 
-    /** Whether the scanner shows the picture signal's scores, a debug-build tool; false until turned on. Never throws. */
-    val recognitionScoresShown: Flow<Boolean>
-
-    suspend fun setRecognitionScoresShown(shown: Boolean): Result<Unit, DomainError>
-
     /** The game the user last picked on an entry, or null until they pick one. Never throws. */
     val preferredGame: Flow<Int?>
 

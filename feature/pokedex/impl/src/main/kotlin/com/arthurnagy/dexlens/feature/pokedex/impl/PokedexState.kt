@@ -18,8 +18,6 @@ internal data class PokedexState(
     val pendingOffer: Boolean,
     /** The Settings switch. Null until it has been read, so the camera can't start for someone who turned it off. */
     val scannerEnabled: Boolean?,
-    /** The debug-build switch that shows the picture signal's scores in the scanner area. */
-    val scoresShown: Boolean,
     val scan: ScanState,
 ) {
     /** A scan match is showing in place of the full list. Typed text always takes over from one. */
@@ -39,7 +37,6 @@ internal data class PokedexState(
                 artwork = ArtworkLocation(null),
                 pendingOffer = false,
                 scannerEnabled = null,
-                scoresShown = false,
                 scan = ScanState.Initial,
             )
     }

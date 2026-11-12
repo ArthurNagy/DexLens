@@ -20,8 +20,7 @@ See proposal.md for why. The current pipeline, all on the camera's single analys
 - Placement follows ADR 0013: camera and recogniser code lives in `:feature:pokedex:impl`'s `scanner` package. Pure
   matching logic lives in `:core:domain`'s `scan` package.
 
-Form factors: only `:app` (phone, tablet, foldable). The scanner area's layout doesn't change apart from the hint text and
-the optional readout. On expanded windows the scanner sits above the list as it does today, so compact and expanded
+Form factors: only `:app` (phone, tablet, foldable). The scanner area's layout doesn't change apart from the hint text. On expanded windows the scanner sits above the list as it does today, so compact and expanded
 windows get the same treatment.
 
 ## Goals / Non-Goals
@@ -131,7 +130,7 @@ in the loop. It copies the vectors into a `ByteArray` and the IDs into a `ShortA
 `PictureScores` has two parts:
 - `score(id)`: a lookup for any species, backed by a copied 1026-slot array, so a name ranked below the top few still
   gets its picture score;
-- `top(n)`: best first, used for the picture-only path and the readout.
+- `top(n)`: best first, used for the picture-only path and the debug logs.
 
 It is pure Kotlin, so a unit test can build a tiny synthetic file. The asset bytes are read in the recogniser
 (`AssetManager`, on its own thread) and handed to `parse`.
@@ -144,7 +143,7 @@ All the cut-offs live in one place, `RecognitionThresholds` (domain):
 |---|---|---|
 | `candidate` | 0.90 | README default 0.94, lowered after the first real game screen scored 0.81 |
 | `imageOnly` | 0.92 | README 0.957 (90% of unseen sprites, 0.5% false accepts on simulated capture), lowered on device |
-| `leadMargin` | 0.015 | A guess, to be tuned with the readout |
+| `leadMargin` | 0.015 | A guess, to be tuned from the debug logs |
 
 `combineSignals(text: SignalResult, picture: PictureScores?, thresholds): FrameEvidence` (domain, pure) decides, per
 frame:
@@ -184,30 +183,24 @@ Empty windows still collapse to `Empty`.
   scenarios.
 - A sequential fallback (image only after N frames without text) is slower, and it can't break ties.
 
-### 6. Scores readout
+### 6. Debug logs instead of a readout
 
-- **Storing the switch.** A new preference `recognition_scores_shown` (default false) sits next to `scanner_enabled` in
-  `UserPreferencesDataSource`. It goes through the user preferences repository, plus
-  `ObserveRecognitionScoresShownUseCase` / `SetRecognitionScoresShownUseCase` in `:core:domain`.
-- **Home screen.** `PokedexViewModel` observes it into `PokedexState.scoresShown`. Only while it is on does `onFrame` also
-  store the frame's top 3 in `ScanState.pictureScores`, so the screen doesn't recompose every frame when the readout is
-  off.
-- **What it shows.** `ScannerArea` shows a small `labelSmall` text block at the bottom start of the scanner area, above
-  the sheet. Each line reads `Pikachu 0.962`, with the names from `speciesById`. It has the tag `scanner:scores` and
-  uses `onSurface` colour on a scrim, with tokens only.
-- **Settings.** `SettingsScreen` decides `showDeveloperOptions` from
-  `applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE`. That is a UI-level fact, so no BuildConfig is needed.
-  `SettingsContent` takes the boolean, so tests and goldens choose it. The switch is labelled "Show recognition scores"
-  under a "Developer" heading.
+Tuning reads logcat in debug builds (Timber is planted only there), with no debug UI and no settings entry:
+- `FrameAnalyzer` logs each frame: how long it took, the lines read, and the picture's top 3 species with scores, or
+  "skipped" when the picture signal had no answer.
+- `PokedexViewModel` logs a frame's evidence when there is any, and every lock that changes the listed match.
+
+*Alternative:* an on-screen scores readout behind a debug-only settings switch was built first and dropped. It added a
+preference, a settings section and goldens for a tool only developers use.
 
 ### 7. Hint and strings
 
-`pokedex_scanner_hint` becomes "Point at a Pokémon or its name". The settings strings use the `settings_` prefix.
+`pokedex_scanner_hint` becomes "Point at a Pokémon or its name".
 
 ## Risks / Trade-offs
 
 - **The thresholds are untested on real game screens.** A wrong image-only lock is worse than none. → The image-only lock
-  is the strictest rule (4 of 5 frames, high score), the readout supports tuning on device, and the cut-offs live in one
+  is the strictest rule (4 of 5 frames, high score), the debug logs support tuning on device, and the cut-offs live in one
   constant set.
 - **Frame time.** ML Kit on a large crop plus the encoder could drop the frame rate on older phones. → They run in
   parallel and keep-only-latest drops stale frames. Measure on the Pixel 6 and S24 Ultra during QA. If a frame takes more
@@ -217,16 +210,16 @@ Empty windows still collapse to `Empty`.
 - **APK size.** It grows by LiteRT's native library for each ABI. → Measure it in the PR. The Play bundle splits per ABI.
 - **A crop that doesn't match training** (colour range, resize, centre square) silently lowers scores. → A JVM unit test
   checks the crop's colours and orientation with synthetic YUV buffers. Device QA scans gameplay images on a monitor with
-  the readout on, and checks that clear sprites score above `candidate`.
+  debug logs on, and checks that clear sprites score above `candidate`.
 - **The model files hold no pictures.** Spec wording: the reference vectors are numbers derived from images. The MVP
   spec's art rule is updated to say so explicitly.
 
 ## Migration Plan
 
-There is no data migration. The new preference defaults to false. Rollback means reverting the PR, which leaves the
+There is no data migration. Rollback means reverting the PR, which leaves the
 assets in place, unused as before.
 
 ## Open Questions
 
-- The final `imageOnly` and `leadMargin` values. They will be tuned on device with the readout, after merge if needed,
+- The final `imageOnly` and `leadMargin` values. They will be tuned on device from the debug logs, after merge if needed,
   without changing the rules.
