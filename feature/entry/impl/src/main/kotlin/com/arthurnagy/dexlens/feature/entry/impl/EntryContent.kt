@@ -174,30 +174,34 @@ private fun EntryBody(
                 )
             }
         }
-        item(key = "about") { EntrySection(stringResource(R.string.entry_about), contentModifier) { AboutSection(detail, variety) } }
-        item(key = "stats") {
+        item(key = "about", contentType = "section") {
+            EntrySection(stringResource(R.string.entry_about), contentModifier) { AboutSection(detail, variety) }
+        }
+        item(key = "stats", contentType = "section") {
             EntrySection(stringResource(R.string.entry_base_stats), contentModifier) {
                 StatsSection(variety.stats, variety.types.first().color)
             }
         }
         if (variety.abilities.isNotEmpty()) {
-            item(key = "abilities") {
+            item(key = "abilities", contentType = "section") {
                 EntrySection(stringResource(R.string.entry_abilities), contentModifier) { AbilitiesSection(variety.abilities) }
             }
         }
-        item(key = "matchups") {
+        item(key = "matchups", contentType = "section") {
             EntrySection(stringResource(R.string.entry_matchups), contentModifier) { MatchupsSection(state.matchups) }
         }
-        item(key = "evolution") {
+        item(key = "evolution", contentType = "section") {
             EntrySection(stringResource(R.string.entry_evolution), contentModifier) {
                 EvolutionSection(detail, state.artwork, onOpenSpecies)
             }
         }
         state.inGame?.let { inGame -> inGameItems(inGame, onSelectGame, contentModifier) }
         if (variety.forms.size > 1) {
-            item(key = "forms") { EntrySection(stringResource(R.string.entry_forms), contentModifier) { FormsSection(variety) } }
+            item(key = "forms", contentType = "section") {
+                EntrySection(stringResource(R.string.entry_forms), contentModifier) { FormsSection(variety) }
+            }
         }
-        item(key = "bottom") { Spacer(Modifier.navigationBarsPadding()) }
+        item(key = "bottom", contentType = "spacer") { Spacer(Modifier.navigationBarsPadding()) }
     }
 }
 

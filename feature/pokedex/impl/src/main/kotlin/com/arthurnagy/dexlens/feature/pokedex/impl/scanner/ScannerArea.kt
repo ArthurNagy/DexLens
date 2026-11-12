@@ -64,6 +64,7 @@ import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.designsystem.CameraColors
 import com.arthurnagy.dexlens.core.designsystem.DarkScheme
+import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.model.SpeciesSummary
 import com.arthurnagy.dexlens.core.ui.MessageState
 import com.arthurnagy.dexlens.core.ui.listText
@@ -101,7 +102,8 @@ internal fun topBarAlpha(
  */
 @Composable
 internal fun ScannerArea(
-    scan: ScanState,
+    match: List<SpeciesSummary>,
+    scanError: DomainError?,
     camera: CameraStatus,
     cameraRunning: Boolean,
     topBarAlpha: () -> Float,
@@ -135,15 +137,15 @@ internal fun ScannerArea(
                 ScannerMessage(stringResource(R.string.pokedex_scanner_camera_unavailable), topInset)
             }
 
-            scan.error != null -> {
-                ScannerMessage(scan.error.toMessage(), topInset)
+            scanError != null -> {
+                ScannerMessage(scanError.toMessage(), topInset)
             }
 
             cameraRunning -> {
                 viewfinder(aimBox)
                 AimBoxOverlay(aimBox, Modifier.fillMaxSize())
                 ScanLabel(
-                    match = scan.match,
+                    match = match,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(

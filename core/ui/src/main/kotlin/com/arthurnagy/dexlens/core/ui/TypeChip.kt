@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
@@ -54,8 +53,8 @@ fun TypeChip(
     Box(
         modifier = modifier
             .defaultMinSize(minHeight = AppDimens.typeChipHeight)
-            .clip(CircleShape)
-            .background(type.color)
+            // A shaped background draws the pill without the graphics layer a clip would add to every chip.
+            .background(type.color, CircleShape)
             .padding(horizontal = AppSpacing.sm + AppSpacing.xs),
         contentAlignment = Alignment.Center,
     ) {
