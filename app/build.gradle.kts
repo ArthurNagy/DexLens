@@ -14,9 +14,10 @@ android {
     }
     splits {
         abi {
-            // Only for the release workflow (-PabiSplits=true): one APK per ABI, about half the universal APK's size,
-            // since the text and picture recognisers ship native libraries for every ABI. Play builds its own splits
-            // from the AAB; local builds stay a single APK.
+            // Only for the release workflow's APK run (-PabiSplits=true): one APK per ABI, about half the universal APK's
+            // size, since the text and picture recognisers ship native libraries for every ABI. Never together with
+            // bundleRelease, which fails while splits are on. Play builds its own splits from the AAB; local builds stay
+            // a single APK.
             isEnable = providers.gradleProperty("abiSplits").map(String::toBoolean).getOrElse(false)
             reset()
             include("arm64-v8a", "armeabi-v7a", "x86_64")
