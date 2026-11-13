@@ -143,10 +143,6 @@ Signing uses an upload key, provided through these repository secrets:
 | `ANDROID_KEY_ALIAS` | The key alias |
 | `ANDROID_KEY_PASSWORD` | The key password |
 
-Keystores and passwords never go in the repository. If the app goes to Google Play, choose to upload this same key as
-the app signing key when setting up Play App Signing. If Google generates a different key, Play installs and APKs from
-GitHub can't update each other.
-
 ## Credits
 
 Pokémon data, artwork and flavor text come from [PokeAPI](https://pokeapi.co/)
