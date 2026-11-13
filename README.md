@@ -5,7 +5,9 @@ browsing, searching and reading an entry work in airplane mode from the first la
 from Game Boy to Switch, and it recognises the Pokémon from its name on the screen or from its sprite, then lists it on
 the home screen.
 
-**[Download the latest APK from GitHub Releases](https://github.com/arthurnagy/DexLens/releases/latest)**
+**[Download the latest APK from GitHub Releases](https://github.com/arthurnagy/DexLens/releases/latest)**:
+`app-arm64-v8a-release.apk` for almost every phone from the last several years, or `app-universal-release.apk`, about
+twice the size, if that one doesn't install.
 
 | Scan and browse | Search | Entry | In game |
 | --- | --- | --- | --- |
@@ -30,6 +32,9 @@ the home screen.
   short description. Without it, type-tinted placeholders are used and everything else works the same.
 - **Adaptive.** Phone, tablet and foldable, with a list-detail layout, shared-element transition, predictive back,
   dark theme, edge-to-edge drawing and TalkBack labels.
+- **Quick to start and scroll.** The release build is shrunk and optimized with R8 and ships Baseline and startup
+  profiles, so startup and list scrolling run precompiled code from the first launch, including on APKs installed
+  from GitHub. A splash screen shows the app icon until the saved theme is loaded.
 
 ## Privacy
 
@@ -65,7 +70,10 @@ Kotlin, Jetpack Compose and Material 3, on the [android-forge](https://github.co
 :core:network            HTTP client limited to the download host
 :core:datastore          preferences
 :core:model              plain Kotlin models
+:core:navigation         navigator shared by the features
 :core:ui, :core:designsystem   shared composables and tokens
+:core:testing            fakes and test data
+:benchmarks              Baseline Profile generator and Macrobenchmarks (run on a device)
 ```
 
 Features see only `:core:domain` and shared UI. Decisions are recorded in [docs/DECISIONS](docs/DECISIONS), and behavior
@@ -76,13 +84,26 @@ from a pinned PokeAPI commit, so the file always passes Room's validation. It ho
 
 ## Build
 
-Requires JDK 17 or later, Android SDK 37 and a device or emulator on Android 10 or later.
+Requires JDK 21, Android SDK 37 and a device or emulator on Android 10 or later. The JDK 17 toolchain the modules
+compile with is downloaded by Gradle if it's missing.
 
 ```bash
 ./gradlew assembleDebug                      # debug APK
 ./gradlew unitTests                          # local tests
 ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true   # the CI gate
 ./gradlew recordRoborazziDebug               # re-record screenshot goldens
+./gradlew :app:assembleRelease               # minified release APK, unsigned unless signing is set up
+```
+
+Pull requests run the gate and a release build, so a class R8 removes or renames shows up before merging.
+
+To refresh the Baseline and startup profiles after a change to startup or the main screens, connect a device or
+start an emulator (Android 10 or later), then commit the regenerated files in
+`app/src/release/generated/baselineProfiles/`:
+
+```bash
+./gradlew :app:generateReleaseBaselineProfile          # records the profiles on the connected device
+./gradlew :benchmarks:connectedBenchmarkReleaseAndroidTest   # startup and scrolling, with and without profiles
 ```
 
 To regenerate the bundled database after a schema or data change:
@@ -94,8 +115,26 @@ python3 tools/build_database.py              # fetches PokeAPI and writes the da
 
 ## Releasing
 
-Pushing a `v*` tag runs `.github/workflows/release.yml`, which builds a signed APK and AAB and attaches them to a GitHub
-Release. Add these repository secrets first:
+1. Bump `versionName` and `versionCode` in `app/build.gradle.kts` in a `chore(release): vX.Y.Z` pull request.
+   `git cliff --bumped-version` suggests the next version from the commit messages.
+2. Once it's merged, tag that commit and push the tag:
+   `git tag -a vX.Y.Z -m "Release vX.Y.Z" && git push origin vX.Y.Z`.
+
+The tag runs `.github/workflows/release.yml`. It stops if the tag doesn't match `versionName` or a signing secret is
+missing. Otherwise it builds and signs the app and creates a GitHub Release with these files and release notes written
+by git-cliff from the commit messages:
+
+| File | What |
+| --- | --- |
+| `app-release.aab` | The bundle for Google Play |
+| `app-arm64-v8a-release.apk` | The APK for 64-bit ARM phones, about half the size of the universal one |
+| `app-universal-release.apk` | The APK for every device |
+| `app-mapping.txt` | The R8 mapping, to turn obfuscated stack traces back into readable ones |
+
+Running the workflow by hand from the Actions tab is a dry run: it builds and signs everything and keeps the files as a
+workflow artifact, but publishes no Release.
+
+Signing uses an upload key, provided through these repository secrets:
 
 | Secret | Value |
 | --- | --- |
@@ -103,6 +142,10 @@ Release. Add these repository secrets first:
 | `ANDROID_KEYSTORE_PASSWORD` | The keystore password |
 | `ANDROID_KEY_ALIAS` | The key alias |
 | `ANDROID_KEY_PASSWORD` | The key password |
+
+Keystores and passwords never go in the repository. If the app goes to Google Play, choose to upload this same key as
+the app signing key when setting up Play App Signing. If Google generates a different key, Play installs and APKs from
+GitHub can't update each other.
 
 ## Credits
 
