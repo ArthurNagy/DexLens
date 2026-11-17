@@ -425,7 +425,7 @@ internal class PokedexScreenTest {
     fun rationaleOffersToAllowTheCamera() {
         var requested = false
         show(camera = needsPermission, onRequest = { requested = true })
-        composeRule.onNodeWithText("Read names with your camera").assertExists()
+        composeRule.onNodeWithText("Recognise Pokémon by camera").assertExists()
         composeRule.onNodeWithText("Allow camera").performClick()
         assertTrue(requested)
     }
@@ -444,6 +444,7 @@ internal class PokedexScreenTest {
     fun permanentDenialOffersSettings() {
         var opened = false
         show(camera = ready.copy(permission = CameraPermission.PERMANENTLY_DENIED), onAppSettings = { opened = true })
+        composeRule.onNodeWithText("to recognise Pokémon. You can still search by typing.", substring = true).assertExists()
         composeRule.onNodeWithText("Open settings").performClick()
         assertTrue(opened)
     }
@@ -718,7 +719,7 @@ internal class PokedexScreenTest {
     fun noPermissionPromptWithTheScannerOff() {
         show(scannerOff, camera = needsPermission)
         composeRule.onNodeWithText("Allow camera").assertDoesNotExist()
-        composeRule.onNodeWithText("Read names with your camera").assertDoesNotExist()
+        composeRule.onNodeWithText("Recognise Pokémon by camera").assertDoesNotExist()
     }
 
     // Scenario: Search works with the scanner off
