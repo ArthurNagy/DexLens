@@ -12,9 +12,9 @@
     <string name="pokedex_scanner_aim_box">Aiming box</string>
     <string name="pokedex_scanner_torch_on">Turn torch on</string>
     <string name="pokedex_scanner_torch_off">Turn torch off</string>
-    <string name="pokedex_scanner_permission_title">Read names with your camera</string>
-    <string name="pokedex_scanner_permission_rationale">DexLens reads the Pokémon\'s name on your game\'s screen. Everything is processed on this phone. Nothing is recorded or sent anywhere.</string>
-    <string name="pokedex_scanner_permission_denied">Camera access is off. Turn it on in the app\'s settings to scan names. You can still search by typing.</string>
+    <string name="pokedex_scanner_permission_title">Recognise Pokémon by camera</string>
+    <string name="pokedex_scanner_permission_rationale">DexLens recognises a Pokémon from its picture or its name on your game\'s screen. Everything is processed on this phone. Nothing is recorded or sent.</string>
+    <string name="pokedex_scanner_permission_denied">Camera access is off. Turn it on in the app\'s settings to recognise Pokémon. You can still search by typing.</string>
     <string name="pokedex_scanner_allow_camera">Allow camera</string>
     <string name="pokedex_scanner_open_settings">Open settings</string>
     <string name="pokedex_scanner_camera_unavailable">This device has no camera DexLens can use.</string>
