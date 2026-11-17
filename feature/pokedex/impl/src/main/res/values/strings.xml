@@ -13,7 +13,7 @@
     <string name="pokedex_scanner_torch_on">Turn torch on</string>
     <string name="pokedex_scanner_torch_off">Turn torch off</string>
     <string name="pokedex_scanner_permission_title">Recognise Pokémon by camera</string>
-    <string name="pokedex_scanner_permission_rationale">DexLens recognises a Pokémon from its picture or its name on your game\'s screen. Everything is processed on this phone. Nothing is recorded or sent.</string>
+    <string name="pokedex_scanner_permission_rationale">DexLens recognises Pokémon by sight or by name, in games, pictures or toys. Everything is processed on this phone. Nothing is recorded or sent.</string>
     <string name="pokedex_scanner_permission_denied">Camera access is off. Turn it on in the app\'s settings to recognise Pokémon. You can still search by typing.</string>
     <string name="pokedex_scanner_allow_camera">Allow camera</string>
     <string name="pokedex_scanner_open_settings">Open settings</string>
