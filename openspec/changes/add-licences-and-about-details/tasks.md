@@ -2,10 +2,10 @@
 
 ## 1. Model and domain (:core:model, :core:domain, :core:testing)
 
-- [ ] 1.1 :core:model — add `OpenSourceLibrary`, `OpenSourceLibraryDetail` and `LibraryLicense` (no defaults); verify `./gradlew :core:model:compileKotlin` passes
-- [ ] 1.2 :core:domain — add `OpenSourceLibraryRepository` and `AppInfoRepository` in a new `about` package, and `GetOpenSourceLibrariesUseCase`, `GetOpenSourceLibraryUseCase`, `GetAppVersionUseCase`, one per file; verify `./gradlew :core:domain:compileKotlin` passes
-- [ ] 1.3 :core:testing — add `FakeOpenSourceLibraryRepository` (settable libraries, details by id, `NotFound` for unknown ids, settable failure) and `FakeAppInfoRepository`, plus a small fixture list; verify they compile with `./gradlew :core:testing:compileDebugKotlin`
-- [ ] 1.4 :core:domain — use-case tests over the fakes (list passes through, unknown id gives `NotFound`, version passes through); verify `./gradlew :core:domain:test` passes
+- [x] 1.1 :core:model — add `OpenSourceLibrary`, `OpenSourceLibraryDetail` and `LibraryLicense` (no defaults); verify `./gradlew :core:model:compileKotlin` passes
+- [x] 1.2 :core:domain — add `OpenSourceLibraryRepository` and `AppInfoRepository` in a new `about` package, and `GetOpenSourceLibrariesUseCase`, `GetOpenSourceLibraryUseCase`, `GetAppVersionUseCase`, one per file; verify `./gradlew :core:domain:compileKotlin` passes
+- [x] 1.3 :core:testing — add `FakeOpenSourceLibraryRepository` (settable libraries, details by id, `NotFound` for unknown ids, settable failure) and `FakeAppInfoRepository`, plus a small fixture list; verify they compile with `./gradlew :core:testing:compileDebugKotlin`
+- [x] 1.4 :core:domain — use-case tests over the fakes (list passes through, unknown id gives `NotFound`, version passes through); verify `./gradlew :core:domain:test` passes
 
 ## 2. Data (:core:data)
 
