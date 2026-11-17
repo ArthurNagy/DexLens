@@ -35,7 +35,7 @@
 
 ## 6. App integration (:app)
 
-- [ ] 6.1 :app — navigation tests in `AppNavigationTest`: `// Scenario: Licence beside the list` (foldable: Settings → licences → a library shows the list and the licence together, not the home list; opening another library replaces it), `// Scenario: Licence placeholder on a wide window`, `// Scenario: Back to the licences list on a phone`, `// Scenario: Leaving the licences on a wide window` (the list's Back on a foldable with a licence open returns to Settings in one tap); verify `./gradlew :app:testDebugUnitTest` passes
+- [x] 6.1 :app — navigation tests in `AppNavigationTest`: `// Scenario: Licence beside the list` (foldable: Settings → licences → a library shows the list and the licence together, not the home list; opening another library replaces it), `// Scenario: Licence placeholder on a wide window`, `// Scenario: Back to the licences list on a phone`, `// Scenario: Leaving the licences on a wide window` (the list's Back on a foldable with a licence open returns to Settings in one tap); verify `./gradlew :app:testDebugUnitTest` passes
 - [ ] 6.2 :app — check the release build: `./gradlew :app:assembleRelease`, install the release APK on an emulator, open Settings → Open-source licences → ML Kit text recognition and LiteRT in airplane mode, and confirm the list, the licence texts and the notices show (`android-qa` journey on a release build as well as debug)
 
 ## 7. Gate
