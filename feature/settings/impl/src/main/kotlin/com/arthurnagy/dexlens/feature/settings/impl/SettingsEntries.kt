@@ -5,11 +5,12 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.scene.DialogSceneStrategy
 import com.arthurnagy.dexlens.core.navigation.Navigator
 import com.arthurnagy.dexlens.feature.settings.api.ContentOfferKey
+import com.arthurnagy.dexlens.feature.settings.api.LicensesKey
 import com.arthurnagy.dexlens.feature.settings.api.SettingsKey
 
 internal fun EntryProviderScope<NavKey>.settingsEntries(navigator: Navigator) {
     entry<SettingsKey> {
-        SettingsScreen(onNavigateBack = navigator::goBack)
+        SettingsScreen(onNavigateBack = navigator::goBack, onOpenLicences = { navigator.navigate(LicensesKey) })
     }
     entry<ContentOfferKey>(metadata = DialogSceneStrategy.dialog()) {
         ContentOfferDialog(onClose = navigator::goBack)

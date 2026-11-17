@@ -5,12 +5,14 @@ import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
+import com.arthurnagy.dexlens.core.domain.about.GetAppVersionUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentPackStateUseCase
 import com.arthurnagy.dexlens.core.domain.content.StartContentDownloadUseCase
 import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.github.michaelbull.result.onErr
+import com.github.michaelbull.result.onOk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import org.orbitmvi.orbit.OrbitContainerHost
 import org.orbitmvi.orbit.viewmodel.orbitContainer
@@ -28,12 +30,19 @@ internal class SettingsViewModel
         private val startDownload: StartContentDownloadUseCase,
         private val cancelDownload: CancelContentDownloadUseCase,
         private val deleteContent: DeleteContentPackUseCase,
+        private val getAppVersion: GetAppVersionUseCase,
     ) : ViewModel(),
         OrbitContainerHost<SettingsState, SettingsState, Nothing> {
         override val container = orbitContainer<SettingsState, Nothing>(SettingsState.Initial) {
             observeTheme()
             observeScannerSwitch()
             observeContentState()
+            loadVersion()
+        }
+
+        /** A version that can't be read leaves [SettingsState.versionName] null, and the screen shows no version line. */
+        private fun loadVersion() = intent {
+            getAppVersion().onOk { version -> reduce { state.copy(versionName = version) } }
         }
 
         private fun observeTheme() = intent {
@@ -70,5 +79,14 @@ internal class SettingsViewModel
 
         fun onErrorConsumed() = intent {
             reduce { state.copy(pendingError = null) }
+        }
+
+        /** No app on the device could open the source code link. */
+        fun onSourceLinkUnavailable() = intent {
+            reduce { state.copy(pendingMessage = R.string.settings_source_unavailable) }
+        }
+
+        fun onMessageConsumed() = intent {
+            reduce { state.copy(pendingMessage = null) }
         }
     }

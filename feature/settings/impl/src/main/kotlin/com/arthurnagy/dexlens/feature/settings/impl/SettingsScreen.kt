@@ -1,10 +1,14 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +62,7 @@ import com.arthurnagy.dexlens.core.ui.R as CoreUiR
 @Composable
 internal fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onOpenLicences: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -70,6 +75,12 @@ internal fun SettingsScreen(
         snackbarHostState.showSnackbar(resources.getString(error.messageRes()))
         viewModel.onErrorConsumed()
     }
+    LaunchedEffect(state.pendingMessage) {
+        val message = state.pendingMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(resources.getString(message))
+        viewModel.onMessageConsumed()
+    }
+    val openSource = rememberOpenLink(stringResource(R.string.settings_source_url), onUnavailable = viewModel::onSourceLinkUnavailable)
     SettingsContent(
         state = state,
         snackbarHostState = snackbarHostState,
@@ -79,8 +90,29 @@ internal fun SettingsScreen(
         onCancelDownload = viewModel::onCancelDownload,
         onDeleteContent = viewModel::onDeleteContent,
         onScannerEnabledChange = viewModel::onScannerEnabledChanged,
+        onOpenLicences = onOpenLicences,
+        onOpenSource = openSource,
         modifier = modifier,
     )
+}
+
+/**
+ * Hands [url] to whichever app opens web links: DexLens fetches nothing itself. Calls [onUnavailable] when no app can
+ * open it. The screen starts the activity because that needs a Context, which the ViewModel doesn't hold.
+ */
+@Composable
+internal fun rememberOpenLink(
+    url: String,
+    onUnavailable: () -> Unit,
+): () -> Unit {
+    val context = LocalContext.current
+    return {
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: ActivityNotFoundException) {
+            onUnavailable()
+        }
+    }
 }
 
 /** Asks for the notification that shows download progress if it is not granted yet, then starts either way. */
@@ -106,6 +138,8 @@ internal fun SettingsContent(
     onCancelDownload: () -> Unit,
     onDeleteContent: () -> Unit,
     onScannerEnabledChange: (Boolean) -> Unit,
+    onOpenLicences: () -> Unit,
+    onOpenSource: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -129,6 +163,7 @@ internal fun SettingsContent(
         val content = state.content
         val scannerEnabled = state.scannerEnabled
         val themeMode = state.themeMode
+        val versionName = state.versionName
         LazyColumn(
             contentPadding = innerPadding,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -148,7 +183,9 @@ internal fun SettingsContent(
             item(key = "theme") {
                 Section(stringResource(R.string.settings_theme), sectionModifier) { ThemeSection(themeMode, onThemeSelect) }
             }
-            item(key = "about") { Section(stringResource(R.string.settings_about), sectionModifier) { AboutSection() } }
+            item(key = "about") {
+                Section(stringResource(R.string.settings_about), sectionModifier) { AboutSection(versionName, onOpenLicences, onOpenSource) }
+            }
         }
     }
 }
@@ -298,13 +335,61 @@ private fun themeLabel(mode: ThemeMode): Int = when (mode) {
 }
 
 @Composable
-private fun AboutSection() {
+private fun AboutSection(
+    versionName: String?,
+    onOpenLicences: () -> Unit,
+    onOpenSource: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-        Text(stringResource(R.string.settings_credit), style = MaterialTheme.typography.bodyMedium)
+        if (versionName != null) {
+            Text(
+                stringResource(R.string.settings_version, versionName),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.testTag("settings:version"),
+            )
+        }
+        listOf(
+            R.string.settings_credit,
+            R.string.settings_credit_recognition,
+            R.string.settings_credit_model,
+            R.string.settings_credit_open_source,
+        ).forEach { credit -> Text(stringResource(credit), style = MaterialTheme.typography.bodyMedium) }
         Text(
             stringResource(R.string.settings_legal),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        LinkRow(
+            title = stringResource(R.string.settings_licences),
+            description = stringResource(R.string.settings_licences_description),
+            onClick = onOpenLicences,
+            modifier = Modifier.testTag("settings:licenses"),
+        )
+        LinkRow(
+            title = stringResource(R.string.settings_source),
+            description = stringResource(R.string.settings_source_url),
+            onClick = onOpenSource,
+            modifier = Modifier.testTag("settings:source"),
+        )
+    }
+}
+
+@Composable
+private fun LinkRow(
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = AppDimens.touchTargetMin)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = AppSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge)
+        Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
