@@ -19,8 +19,21 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_about">About</string>
-    <string name="settings_credit">Pokémon data comes from PokeAPI (pokeapi.co), used under the BSD-3-Clause license.</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_credit">Pokémon data comes from PokeAPI (pokeapi.co), used under the BSD-3-Clause licence.</string>
+    <string name="settings_credit_recognition">The scanner reads names with ML Kit text recognition and recognises pictures on the device with LiteRT.</string>
+    <string name="settings_credit_model">Image recognition uses a MobileNetV4 model (timm, Apache-2.0), fine-tuned for DexLens.</string>
+    <string name="settings_credit_open_source">DexLens is open source under the MIT License.</string>
     <string name="settings_legal">Unofficial fan project, not affiliated with or endorsed by Nintendo, Game Freak or The Pokémon Company. Pokémon names are trademarks of their owners. No game artwork is bundled with the app.</string>
+    <string name="settings_licences">Open-source licences</string>
+    <string name="settings_licences_description">The libraries DexLens uses and their licences</string>
+    <string name="settings_source">Source code</string>
+    <string name="settings_source_url" translatable="false">https://github.com/ArthurNagy/DexLens</string>
+    <string name="settings_source_unavailable">The link can\'t be opened. No app on this device opens web links.</string>
+    <string name="settings_library_summary">%1$s · %2$s</string>
+    <string name="settings_licence_placeholder">Pick a library to see its licence.</string>
+    <string name="settings_copyright">Copyright: %1$s</string>
+    <string name="settings_library_not_found">This library can\'t be found. An update may have removed it.</string>
     <string name="settings_offer_title">Add artwork?</string>
     <string name="settings_offer_skip">Not now</string>
     <string name="settings_offer_background">Continue in the background</string>

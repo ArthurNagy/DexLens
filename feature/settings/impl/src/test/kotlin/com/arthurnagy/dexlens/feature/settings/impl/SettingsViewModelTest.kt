@@ -5,6 +5,7 @@ import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
+import com.arthurnagy.dexlens.core.domain.about.GetAppVersionUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.MarkContentOfferShownUseCase
@@ -12,6 +13,7 @@ import com.arthurnagy.dexlens.core.domain.content.ObserveContentPackStateUseCase
 import com.arthurnagy.dexlens.core.domain.content.StartContentDownloadUseCase
 import com.arthurnagy.dexlens.core.model.ContentPackState
 import com.arthurnagy.dexlens.core.model.ThemeMode
+import com.arthurnagy.dexlens.core.testing.FakeAppInfoRepository
 import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import kotlinx.coroutines.flow.first
@@ -23,6 +25,10 @@ import kotlin.test.assertEquals
 class SettingsViewModelTest {
     private val content = FakeContentPackRepository()
     private val preferences = FakeUserPreferencesRepository(ThemeMode.SYSTEM)
+    private val appInfo = FakeAppInfoRepository(version = "0.1.0")
+
+    /** The state once the version has loaded, so tests of other intents see only their own change. */
+    private val loaded = SettingsState.Initial.copy(versionName = "0.1.0")
 
     private fun settings() = SettingsViewModel(
         ObserveThemeModeUseCase(preferences),
@@ -33,6 +39,7 @@ class SettingsViewModelTest {
         StartContentDownloadUseCase(content),
         CancelContentDownloadUseCase(content),
         DeleteContentPackUseCase(content),
+        GetAppVersionUseCase(appInfo),
     )
 
     private fun offer() = ContentOfferViewModel(
@@ -44,7 +51,7 @@ class SettingsViewModelTest {
     // Scenario: Theme choice applies
     @Test
     fun themeSelectionIsStored() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
+        settings().testWithInternalState(this, loaded) {
             runOnCreate()
             containerHost.onThemeSelected(ThemeMode.DARK)
             expectInternalState { copy(themeMode = ThemeMode.DARK) }
@@ -55,7 +62,7 @@ class SettingsViewModelTest {
     // Scenario: Scanner switch applies
     @Test
     fun scannerSwitchIsStored() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
+        settings().testWithInternalState(this, loaded) {
             runOnCreate()
             containerHost.onScannerEnabledChanged(false)
             expectInternalState { copy(scannerEnabled = false) }
@@ -66,7 +73,7 @@ class SettingsViewModelTest {
 
     @Test
     fun aFailedScannerSwitchWriteIsReported() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
+        settings().testWithInternalState(this, loaded) {
             runOnCreate()
             preferences.failNextWrite = DomainError.Unknown("disk full")
             containerHost.onScannerEnabledChanged(false)
@@ -78,7 +85,7 @@ class SettingsViewModelTest {
     // Scenario: Progress shown
     @Test
     fun contentStateIsObserved() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
+        settings().testWithInternalState(this, loaded) {
             runOnCreate()
             content.state.value = ContentPackState.Downloading(3, 10)
             expectInternalState { copy(content = ContentPackState.Downloading(3, 10)) }
@@ -89,7 +96,7 @@ class SettingsViewModelTest {
     // Scenario: Download from settings
     @Test
     fun downloadActionStartsTheDownload() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
+        settings().testWithInternalState(this, loaded) {
             runOnCreate()
             containerHost.onDownload().join()
             cancelAndIgnoreRemainingItems()
@@ -99,7 +106,7 @@ class SettingsViewModelTest {
 
     @Test
     fun cancelAndDeleteCallThrough() = runTest {
-        settings().testWithInternalState(this, SettingsState.Initial) {
+        settings().testWithInternalState(this, loaded) {
             runOnCreate()
             containerHost.onCancelDownload().join()
             containerHost.onDeleteContent().join()
@@ -143,12 +150,48 @@ class SettingsViewModelTest {
     @Test
     fun aFailedThemeWriteIsReportedOnce() = runTest {
         preferences.failNextWrite = DomainError.Unknown("full")
-        settings().testWithInternalState(this, SettingsState.Initial) {
+        settings().testWithInternalState(this, loaded) {
             runOnCreate()
             containerHost.onThemeSelected(ThemeMode.DARK)
             expectInternalState { copy(pendingError = DomainError.Unknown("full")) }
             containerHost.onErrorConsumed()
             expectInternalState { copy(pendingError = null) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Version shown
+    @Test
+    fun theInstalledVersionIsLoaded() = runTest {
+        settings().testWithInternalState(this, SettingsState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(versionName = "0.1.0") }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Version unavailable
+    @Test
+    fun anUnreadableVersionLeavesItUnknown() = runTest {
+        appInfo.error = DomainError.Unknown("no version")
+        settings().testWithInternalState(this, SettingsState.Initial) {
+            runOnCreate()
+            containerHost.onSourceLinkUnavailable()
+            // The version failure changes nothing and reports nothing: the next state is the link message's.
+            expectInternalState { copy(pendingMessage = R.string.settings_source_unavailable) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: No app for the source link
+    @Test
+    fun anUnopenableSourceLinkShowsAMessageOnce() = runTest {
+        settings().testWithInternalState(this, loaded) {
+            runOnCreate()
+            containerHost.onSourceLinkUnavailable()
+            expectInternalState { copy(pendingMessage = R.string.settings_source_unavailable) }
+            containerHost.onMessageConsumed()
+            expectInternalState { copy(pendingMessage = null) }
             cancelAndIgnoreRemainingItems()
         }
     }
