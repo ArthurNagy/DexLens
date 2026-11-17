@@ -1,6 +1,10 @@
 package com.arthurnagy.dexlens.core.data
 
 import android.content.Context
+import com.arthurnagy.dexlens.core.data.about.AndroidNoticesSource
+import com.arthurnagy.dexlens.core.data.about.BundledOpenSourceLibraryRepository
+import com.arthurnagy.dexlens.core.data.about.NoticesSource
+import com.arthurnagy.dexlens.core.data.about.PackageAppInfoRepository
 import androidx.work.WorkManager
 import com.arthurnagy.dexlens.core.data.content.ImageTranscoder
 import com.arthurnagy.dexlens.core.data.content.OfflineContentPackRepository
@@ -13,6 +17,8 @@ import com.arthurnagy.dexlens.core.data.species.OfflineSpeciesRepository
 import com.arthurnagy.dexlens.core.data.species.OfflineTypeChartRepository
 import com.arthurnagy.dexlens.core.domain.DispatcherProvider
 import com.arthurnagy.dexlens.core.domain.UserPreferencesRepository
+import com.arthurnagy.dexlens.core.domain.about.AppInfoRepository
+import com.arthurnagy.dexlens.core.domain.about.OpenSourceLibraryRepository
 import com.arthurnagy.dexlens.core.domain.content.ContentPackRepository
 import com.arthurnagy.dexlens.core.domain.content.FlavorTextRepository
 import com.arthurnagy.dexlens.core.domain.game.GameRepository
@@ -60,6 +66,15 @@ internal interface DataModule {
 
     @Binds
     fun bindsImageTranscoder(impl: WebpTranscoder): ImageTranscoder
+
+    @Binds
+    fun bindsNoticesSource(impl: AndroidNoticesSource): NoticesSource
+
+    @Binds
+    fun bindsOpenSourceLibraryRepository(impl: BundledOpenSourceLibraryRepository): OpenSourceLibraryRepository
+
+    @Binds
+    fun bindsAppInfoRepository(impl: PackageAppInfoRepository): AppInfoRepository
 
     companion object {
         @Provides
