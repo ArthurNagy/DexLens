@@ -3,6 +3,7 @@ plugins {
     id("android-forge.hilt")
     // Consumes the profiles :benchmarks records (app/src/release/generated/baselineProfiles/).
     id("androidx.baselineprofile")
+    id("android-forge.oss-notices")
 }
 
 android {
@@ -29,6 +30,24 @@ android {
     androidResources {
         // Stored uncompressed so it can be memory-mapped, as AGP already does for .tflite files.
         noCompress += "dexlens_references.bin"
+    }
+}
+
+aboutLibraries {
+    license {
+        // Every licence the release dependencies declare. Each needs its full text in config/aboutlibraries/licenses/
+        // (the build never downloads one); any other licence fails the build and names the library. The Google terms
+        // are shown in full like any other licence — re-check their texts when bumping ML Kit, Play services or LiteRT.
+        // The ML Kit terms have no SPDX id: their file is matched by the hash AboutLibraries derives from the POM's
+        // licence name and URL, so a changed name or URL leaves them without text and fails OpenSourceNoticesTest.
+        allowedLicenses.addAll(
+            "Apache-2.0",
+            "BSD-3-Clause",
+            "ISC",
+            "ASDKL", // Android Software Development Kit License (Play services, ML Kit's image library)
+            "PCSDKToS", // Play Core Software Development Kit Terms of Service (Play asset/AI delivery, via LiteRT)
+            "ML Kit Terms of Service",
+        )
     }
 }
 
@@ -72,6 +91,8 @@ dependencies {
     implementation(libs.androidx.hilt.work)
 
     testImplementation(libs.orbit.test)
+    // Parses the generated notices data in OpenSourceNoticesTest, the way the About screen will.
+    testImplementation(libs.aboutlibraries.core)
 
     androidTestImplementation(libs.mlkit.text.recognition)
 }

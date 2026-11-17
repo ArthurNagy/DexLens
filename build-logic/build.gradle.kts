@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.roborazzi.gradle.plugin)
     implementation(libs.room3.gradle.plugin)
     implementation(libs.baselineprofile.gradle.plugin)
+    implementation(libs.aboutlibraries.gradle.plugin)
 }
 
 // Convention plugins are PRECOMPILED SCRIPT PLUGINS in src/main/kotlin/*.gradle.kts — the
