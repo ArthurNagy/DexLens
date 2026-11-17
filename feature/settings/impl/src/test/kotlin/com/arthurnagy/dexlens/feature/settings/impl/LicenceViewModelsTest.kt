@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import org.orbitmvi.orbit.test.testWithInternalState
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class LicenceViewModelsTest {
     private val repository = FakeOpenSourceLibraryRepository()
@@ -162,5 +163,31 @@ class LicenceViewModelsTest {
             ),
             detail.toRows(),
         )
+    }
+
+    @Test
+    fun aLongParagraphIsCutAtLineBreaksIntoSeveralRows() {
+        val fileList = (1..100).joinToString("\n") { "Eigen/src/File$it.h" }
+        val detail = LiteRtLibrary.copy(
+            copyrightHolder = null,
+            licenses = emptyList(),
+            notices = listOf(LiteRtLibrary.notices.first().copy(text = fileList)),
+        )
+
+        val paragraphs = detail.toRows().filterIsInstance<LicenceRow.Paragraph>()
+
+        assertEquals(listOf(MAX_ROW_LINES, MAX_ROW_LINES, 20), paragraphs.map { it.text.lines().size })
+        assertEquals(fileList, paragraphs.joinToString("\n") { it.text })
+    }
+
+    @Test
+    fun aParagraphOverTheCharacterLimitIsCutBeforeIt() {
+        val longLines = (1..10).joinToString("\n") { "x".repeat(1_000) }
+
+        val chunks = longLines.chunkedAtLines()
+
+        assertEquals(listOf(3, 3, 3, 1), chunks.map { it.lines().size })
+        chunks.forEach { assertTrue(it.length <= MAX_ROW_CHARS) }
+        assertEquals(longLines, chunks.joinToString("\n"))
     }
 }

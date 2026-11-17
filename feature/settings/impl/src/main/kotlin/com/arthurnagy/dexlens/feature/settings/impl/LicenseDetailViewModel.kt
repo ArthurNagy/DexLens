@@ -72,8 +72,38 @@ private fun MutableList<LicenceRow>.addSection(
     text: String,
 ) {
     add(LicenceRow.SectionTitle(title))
-    text.split(BLANK_LINE).map { it.trim() }.filter { it.isNotEmpty() }.forEach { add(LicenceRow.Paragraph(it)) }
+    text
+        .split(BLANK_LINE)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .forEach { paragraph -> paragraph.chunkedAtLines().forEach { add(LicenceRow.Paragraph(it)) } }
+}
+
+/**
+ * Cuts a long paragraph at line breaks into pieces of at most [MAX_ROW_LINES] lines and about [MAX_ROW_CHARS]
+ * characters, so no single row is slow to lay out. Real notices hold paragraphs of 700 lines (Eigen's file list).
+ */
+internal fun String.chunkedAtLines(): List<String> {
+    if (length <= MAX_ROW_CHARS && count { it == '\n' } < MAX_ROW_LINES) return listOf(this)
+    val chunks = mutableListOf<String>()
+    val current = StringBuilder()
+    var lines = 0
+    lineSequence().forEach { line ->
+        if (current.isNotEmpty() && (lines >= MAX_ROW_LINES || current.length + line.length + 1 > MAX_ROW_CHARS)) {
+            chunks += current.toString()
+            current.clear()
+            lines = 0
+        }
+        if (current.isNotEmpty()) current.append('\n')
+        current.append(line)
+        lines++
+    }
+    if (current.isNotEmpty()) chunks += current.toString()
+    return chunks
 }
 
 /** A line break, any whitespace-only lines, and another line break. */
 private val BLANK_LINE = Regex("""\r?\n[ \t\r]*\n""")
+
+internal const val MAX_ROW_LINES = 40
+internal const val MAX_ROW_CHARS = 4_000

@@ -1,7 +1,6 @@
 package com.arthurnagy.dexlens.core.testing
 
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.about.AppInfoRepository
 import com.arthurnagy.dexlens.core.domain.about.OpenSourceLibraryRepository
 import com.arthurnagy.dexlens.core.model.LibraryLicense
 import com.arthurnagy.dexlens.core.model.LibraryNotice
@@ -29,15 +28,6 @@ class FakeOpenSourceLibraryRepository(
         error?.let { return Err(it) }
         return details.firstOrNull { it.library.id == id }?.let { Ok(it) } ?: Err(DomainError.NotFound)
     }
-}
-
-/** In-memory [AppInfoRepository]: answers [version], or fails with [error] when set. */
-class FakeAppInfoRepository(
-    var version: String = "0.1.0",
-) : AppInfoRepository {
-    var error: DomainError? = null
-
-    override suspend fun versionName(): Result<String, DomainError> = error?.let { Err(it) } ?: Ok(version)
 }
 
 val ApacheLicense = LibraryLicense(

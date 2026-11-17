@@ -33,6 +33,7 @@
     <string name="settings_library_summary">%1$s · %2$s</string>
     <string name="settings_licence_placeholder">Pick a library to see its licence.</string>
     <string name="settings_copyright">Copyright: %1$s</string>
+    <string name="settings_licences_unavailable">The licences can\'t be shown. Go back and open them again to retry.</string>
     <string name="settings_library_not_found">This library can\'t be found. An update may have removed it.</string>
     <string name="settings_offer_title">Add artwork?</string>
     <string name="settings_offer_skip">Not now</string>

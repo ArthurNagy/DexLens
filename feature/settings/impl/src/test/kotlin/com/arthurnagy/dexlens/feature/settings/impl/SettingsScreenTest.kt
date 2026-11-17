@@ -191,7 +191,8 @@ internal class SettingsScreenTest {
     // Scenario: Version shown
     @Test
     fun theScreenLoadsTheInstalledVersion() {
-        composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = settingsViewModel()) } }
+        val viewModel = settingsViewModel()
+        composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = viewModel) } }
         scrollTo("settings:version")
         composeRule.onNodeWithText("Version 0.1.0").assertIsDisplayed()
     }
@@ -200,7 +201,8 @@ internal class SettingsScreenTest {
     @Test
     fun anUnknownVersionShowsNoVersionLine() {
         val appInfo = FakeAppInfoRepository().apply { error = DomainError.Unknown("no version") }
-        composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = settingsViewModel(appInfo)) } }
+        val viewModel = settingsViewModel(appInfo)
+        composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = viewModel) } }
         scrollTo("settings:source")
         composeRule.onNodeWithTag("settings:version").assertDoesNotExist()
         composeRule.onNodeWithText("Version", substring = true).assertDoesNotExist()
@@ -242,7 +244,8 @@ internal class SettingsScreenTest {
     fun withoutAnAppForTheLinkAMessageShows() {
         // Robolectric then throws ActivityNotFoundException for an intent no installed activity handles.
         shadowOf(ApplicationProvider.getApplicationContext<Application>()).checkActivities(true)
-        composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = settingsViewModel()) } }
+        val viewModel = settingsViewModel()
+        composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = viewModel) } }
         scrollTo("settings:source")
         composeRule.onNodeWithTag("settings:source").performClick()
 

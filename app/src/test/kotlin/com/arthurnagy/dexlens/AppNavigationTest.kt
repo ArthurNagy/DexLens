@@ -100,6 +100,8 @@ class AppNavigationTest {
      * Settings' entries as :feature:settings:impl declares them (same keys, pane metadata and Back actions), with stand-in
      * content: the home list is a list pane of the default scene, Settings a plain entry, and the licences their own
      * list-detail scene keyed by [LicensesKey].
+     *
+     * Keep in sync with `feature/settings/impl/.../SettingsEntries.kt`: these stand-ins copy its metadata by hand.
      */
     @OptIn(ExperimentalMaterial3AdaptiveApi::class)
     private fun showLicencesFeature(): Navigator {

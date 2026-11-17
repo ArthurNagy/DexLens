@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -106,11 +107,14 @@ internal fun rememberOpenLink(
     onUnavailable: () -> Unit,
 ): () -> Unit {
     val context = LocalContext.current
-    return {
-        try {
-            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-        } catch (_: ActivityNotFoundException) {
-            onUnavailable()
+    val currentOnUnavailable by rememberUpdatedState(onUnavailable)
+    return remember(context, url) {
+        {
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+            } catch (_: ActivityNotFoundException) {
+                currentOnUnavailable()
+            }
         }
     }
 }
