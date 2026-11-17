@@ -16,8 +16,8 @@
 
 ## 3. Navigation (:core:navigation, :feature:settings:api)
 
-- [ ] 3.0 :core:navigation — add `Navigator.backFrom(key)` (removes `key` and every entry above it, never the root) and `backFromOrNull(key)` (null for the root, like `backOrNull`); `NavigatorTest` cases for a detail above the key, the key on top, and the root; verify `./gradlew :core:navigation:test` passes
-- [ ] 3.1 :feature:settings:api — add `LicensesKey` and `LicenseDetailKey(libraryId: String)`, both `@Serializable`; verify `./gradlew :feature:settings:api:compileDebugKotlin` passes
+- [x] 3.0 :core:navigation — add `Navigator.backFrom(key)` (removes `key` and every entry above it, never the root) and `backFromOrNull(key)` (null for the root, like `backOrNull`); `NavigatorTest` cases for a detail above the key, the key on top, and the root; verify `./gradlew :core:navigation:test` passes
+- [x] 3.1 :feature:settings:api — add `LicensesKey` and `LicenseDetailKey(libraryId: String)`, both `@Serializable`; verify `./gradlew :feature:settings:api:compileDebugKotlin` passes
 
 ## 4. Settings About section (:feature:settings:impl)
 
