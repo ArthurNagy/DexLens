@@ -22,6 +22,9 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     implementation(libs.androidx.core.ktx)
+    // Parses the open-source library list :app generates (raw/aboutlibraries, #22).
+    implementation(libs.aboutlibraries.core)
+    implementation(libs.kotlinx.serialization.json)
     ksp(libs.androidx.hilt.compiler)
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.okhttp.mockwebserver3)
