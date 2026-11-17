@@ -92,6 +92,12 @@ internal fun LicenseDetailContent(
                 modifier = Modifier.padding(innerPadding).testTag("licence:not-found"),
             )
 
+            // Loading failed for another reason: the snackbar said so, and this stays once it goes.
+            state.name == null -> MessageState(
+                title = stringResource(R.string.settings_licences_unavailable),
+                modifier = Modifier.padding(innerPadding).testTag("licence:unavailable"),
+            )
+
             else -> LicenceRows(state, innerPadding)
         }
     }

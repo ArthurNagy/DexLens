@@ -186,6 +186,22 @@ internal class LicensesScreenTest {
     }
 
     @Test
+    fun aFailedListShowsAMessageInsteadOfAnEmptyPane() {
+        showList(LicensesState(libraries = emptyList(), isLoading = false, pendingError = null))
+
+        composeRule.onNodeWithText("The licences can't be shown. Go back and open them again to retry.").assertIsDisplayed()
+        composeRule.onNodeWithTag("licenses:list").assertDoesNotExist()
+    }
+
+    @Test
+    fun aFailedLicenceShowsAMessageInsteadOfAnEmptyHeading() {
+        showDetail(LicenseDetailState.Initial.copy(isLoading = false))
+
+        composeRule.onNodeWithText("The licences can't be shown. Go back and open them again to retry.").assertIsDisplayed()
+        composeRule.onNodeWithTag("licence:rows").assertDoesNotExist()
+    }
+
+    @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phoneList() {
         showList()

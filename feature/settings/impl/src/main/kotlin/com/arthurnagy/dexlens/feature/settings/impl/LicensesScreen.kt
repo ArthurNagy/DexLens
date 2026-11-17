@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.model.OpenSourceLibrary
+import com.arthurnagy.dexlens.core.ui.MessageState
 import com.arthurnagy.dexlens.core.ui.listText
 import com.arthurnagy.dexlens.core.ui.messageRes
 import org.orbitmvi.orbit.compose.collectAsState
@@ -88,6 +89,12 @@ internal fun LicensesContent(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(Modifier.testTag("licenses:loading"))
             }
+        } else if (state.libraries.isEmpty()) {
+            // Loading failed: the snackbar said so, and this stays once it goes.
+            MessageState(
+                title = stringResource(R.string.settings_licences_unavailable),
+                modifier = Modifier.padding(innerPadding).testTag("licenses:unavailable"),
+            )
         } else {
             LazyColumn(contentPadding = innerPadding, modifier = Modifier.fillMaxSize().testTag("licenses:list")) {
                 items(state.libraries, key = { it.id }) { library -> LibraryRow(library, onOpenLibrary) }

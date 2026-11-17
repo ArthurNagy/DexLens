@@ -36,7 +36,8 @@ snackbar for `pendingError`. The app's list-detail scene comes from `rememberLis
 
 - `:core:model`: `OpenSourceLibrary(id: String, name: String, version: String?, licenseNames: List<String>)` for the
   list, and `OpenSourceLibraryDetail(library: OpenSourceLibrary, copyrightHolder: String?, licenses:
-  List<LibraryLicense>, notices: List<String>)` with `LibraryLicense(name: String, text: String)` for the detail. The
+  List<LibraryLicense>, notices: List<LibraryNotice>)` with `LibraryLicense(name: String, text: String)` and
+  `LibraryNotice(fileName: String, text: String)` for the detail (the file name titles the notice's section). The
   list type carries no texts, so the list screen never holds 10 MB of strings. No defaults on any property.
 - `:core:domain`: `OpenSourceLibraryRepository` with `suspend fun libraries(): Result<List<OpenSourceLibrary>,
   DomainError>` and `suspend fun library(id: String): Result<OpenSourceLibraryDetail, DomainError>` (`NotFound` for an
@@ -109,7 +110,8 @@ per BSD/ISC library back into the build, and would go stale on every bump, which
   `notFound: Boolean`, `pendingError: DomainError?`. `LicenceRow` is a sealed type: `Holder(text)`,
   `SectionTitle(text)` (a licence name, or the notice's file name for a bundled notice) and `Paragraph(text)`. The
   ViewModel builds the rows off the main thread (`DispatcherProvider.default`): holder, then per licence its title and
-  its paragraphs split on blank lines, then per notice its title and paragraphs. It keeps only the rows, not the
+  its paragraphs split on blank lines, then per notice its title and paragraphs. A paragraph longer than 40 lines or
+  about 4,000 characters is cut at line breaks into several rows (Eigen's file list in the notices is 700 lines). It keeps only the rows, not the
   `OpenSourceLibraryDetail` it built them from, so no text is held twice. `LicenseDetailScreen` renders the rows in a
   `LazyColumn` with a stable key per row index. One `Text` with a 2 MB notice (LiteRT's, or ML Kit's 2.4 MB
   `third_party_licenses.txt`) would freeze layout. `NotFound` sets `notFound` and the screen shows the "can't be

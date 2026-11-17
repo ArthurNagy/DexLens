@@ -43,7 +43,7 @@ internal class AndroidAboutSourcesTest {
         assertIs<DomainError.Unknown>(PackageAppInfoRepository(context).versionName().component2())
     }
 
-    // Scenario: Licences listed offline
+    // The generated resource is missing (as in this test APK): the failure stops at catchStorage as Unknown.
     @Test
     fun withoutTheGeneratedResourceTheListIsUnknown() = runTest {
         val repository = BundledOpenSourceLibraryRepository(AndroidNoticesSource(context), TestDispatcherProvider(testScheduler))
