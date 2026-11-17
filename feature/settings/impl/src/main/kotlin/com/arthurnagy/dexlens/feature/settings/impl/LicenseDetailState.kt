@@ -17,7 +17,8 @@ internal data class LicenseDetailState(
     val pendingError: DomainError?,
 ) {
     companion object {
-        val Initial = LicenseDetailState(name = null, version = null, rows = emptyList(), isLoading = true, notFound = false, pendingError = null)
+        val Initial =
+            LicenseDetailState(name = null, version = null, rows = emptyList(), isLoading = true, notFound = false, pendingError = null)
     }
 }
 

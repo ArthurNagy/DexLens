@@ -1,11 +1,11 @@
 package com.arthurnagy.dexlens.core.data
 
 import android.content.Context
+import androidx.work.WorkManager
 import com.arthurnagy.dexlens.core.data.about.AndroidNoticesSource
 import com.arthurnagy.dexlens.core.data.about.BundledOpenSourceLibraryRepository
 import com.arthurnagy.dexlens.core.data.about.NoticesSource
 import com.arthurnagy.dexlens.core.data.about.PackageAppInfoRepository
-import androidx.work.WorkManager
 import com.arthurnagy.dexlens.core.data.content.ImageTranscoder
 import com.arthurnagy.dexlens.core.data.content.OfflineContentPackRepository
 import com.arthurnagy.dexlens.core.data.content.OfflineFlavorTextRepository

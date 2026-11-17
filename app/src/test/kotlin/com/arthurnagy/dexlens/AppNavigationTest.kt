@@ -106,7 +106,11 @@ class AppNavigationTest {
         lateinit var navigator: Navigator
         val feature: EntryProviderInstaller = { nav ->
             navigator = nav
-            entry<PokedexKey>(metadata = ListDetailSceneStrategy.listPane(detailPlaceholder = { Text("Pick a Pokémon") })) { Text("Home list") }
+            entry<PokedexKey>(
+                metadata = ListDetailSceneStrategy.listPane(detailPlaceholder = {
+                    Text("Pick a Pokémon")
+                }),
+            ) { Text("Home list") }
             entry<SettingsKey> { Text("Settings screen") }
             entry<LicensesKey>(
                 metadata = ListDetailSceneStrategy.listPane(sceneKey = LicensesKey, detailPlaceholder = { Text("Pick a library") }),

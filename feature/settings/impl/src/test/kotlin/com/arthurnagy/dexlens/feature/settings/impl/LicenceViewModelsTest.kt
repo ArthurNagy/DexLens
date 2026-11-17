@@ -1,8 +1,8 @@
 package com.arthurnagy.dexlens.feature.settings.impl
 
 import com.arthurnagy.dexlens.core.domain.DomainError
-import com.arthurnagy.dexlens.core.domain.about.GetOpenSourceLibraryUseCase
 import com.arthurnagy.dexlens.core.domain.about.GetOpenSourceLibrariesUseCase
+import com.arthurnagy.dexlens.core.domain.about.GetOpenSourceLibraryUseCase
 import com.arthurnagy.dexlens.core.testing.FakeOpenSourceLibraryRepository
 import com.arthurnagy.dexlens.core.testing.KotlinResultLibrary
 import com.arthurnagy.dexlens.core.testing.LiteRtLibrary
@@ -21,8 +21,12 @@ class LicenceViewModelsTest {
 
     private val apacheRows = listOf(
         LicenceRow.SectionTitle("Apache License 2.0"),
-        LicenceRow.Paragraph("Licensed under the Apache License, Version 2.0 (the \"License\");\nyou may not use this file except in compliance with the License."),
-        LicenceRow.Paragraph("Unless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an \"AS IS\" BASIS."),
+        LicenceRow.Paragraph(
+            "Licensed under the Apache License, Version 2.0 (the \"License\");\nyou may not use this file except in compliance with the License.",
+        ),
+        LicenceRow.Paragraph(
+            "Unless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an \"AS IS\" BASIS.",
+        ),
     )
 
     private fun list() = LicensesViewModel(GetOpenSourceLibrariesUseCase(repository))
@@ -63,7 +67,9 @@ class LicenceViewModelsTest {
                     version = null,
                     rows = listOf(
                         LicenceRow.SectionTitle("MIT License"),
-                        LicenceRow.Paragraph("Permission is hereby granted, free of charge, to any person obtaining a copy of this software."),
+                        LicenceRow.Paragraph(
+                            "Permission is hereby granted, free of charge, to any person obtaining a copy of this software.",
+                        ),
                         LicenceRow.Paragraph("THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND."),
                     ) + apacheRows,
                     isLoading = false,
@@ -85,7 +91,9 @@ class LicenceViewModelsTest {
                     rows = listOf(
                         LicenceRow.Holder("Michael Bull"),
                         LicenceRow.SectionTitle("ISC License"),
-                        LicenceRow.Paragraph("Permission to use, copy, modify, and/or distribute this software for any purpose is hereby granted."),
+                        LicenceRow.Paragraph(
+                            "Permission to use, copy, modify, and/or distribute this software for any purpose is hereby granted.",
+                        ),
                     ),
                     isLoading = false,
                 )
@@ -146,7 +154,12 @@ class LicenceViewModelsTest {
             licenses = listOf(MitLibrary.licenses.first().copy(text = "one\r\n\r\ntwo\n   \nthree\nstill three\n\n\n")),
         )
         assertEquals(
-            listOf(LicenceRow.SectionTitle("MIT License"), LicenceRow.Paragraph("one"), LicenceRow.Paragraph("two"), LicenceRow.Paragraph("three\nstill three")),
+            listOf(
+                LicenceRow.SectionTitle("MIT License"),
+                LicenceRow.Paragraph("one"),
+                LicenceRow.Paragraph("two"),
+                LicenceRow.Paragraph("three\nstill three"),
+            ),
             detail.toRows(),
         )
     }

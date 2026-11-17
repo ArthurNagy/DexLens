@@ -24,7 +24,11 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(navigator: Navigator) {
     entry<ContentOfferKey>(metadata = DialogSceneStrategy.dialog()) {
         ContentOfferDialog(onClose = navigator::goBack)
     }
-    entry<LicensesKey>(metadata = ListDetailSceneStrategy.listPane(sceneKey = LicensesKey, detailPlaceholder = { LicencePlaceholder() })) { key ->
+    entry<LicensesKey>(
+        metadata = ListDetailSceneStrategy.listPane(sceneKey = LicensesKey, detailPlaceholder = {
+            LicencePlaceholder()
+        }),
+    ) { key ->
         // backFrom: with a licence open beside the list, Back leaves both in one step.
         LicensesScreen(
             onNavigateBack = navigator.backFromOrNull(key),
