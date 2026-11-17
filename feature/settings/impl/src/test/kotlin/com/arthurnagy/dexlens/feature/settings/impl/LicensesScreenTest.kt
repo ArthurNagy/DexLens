@@ -40,11 +40,20 @@ internal class LicensesScreenTest {
             notices = listOf(
                 LibraryNotice(
                     fileName = "THIRD_PARTY_NOTICE.txt",
-                    text = (1..60).joinToString("\n\n") { n -> "Component $n\n\nLicensed under the Apache License, Version 2.0. See the licence text above for the terms." },
+                    text = (1..60).joinToString("\n\n") { n ->
+                        "Component $n\n\nLicensed under the Apache License, Version 2.0. See the licence text above for the terms."
+                    },
                 ),
             ),
         ).let { detail ->
-            LicenseDetailState(detail.library.name, detail.library.version, detail.toRows(), isLoading = false, notFound = false, pendingError = null)
+            LicenseDetailState(
+                detail.library.name,
+                detail.library.version,
+                detail.toRows(),
+                isLoading = false,
+                notFound = false,
+                pendingError = null,
+            )
         }
 
     private val notFoundState = LicenseDetailState.Initial.copy(isLoading = false, notFound = true)
@@ -115,7 +124,16 @@ internal class LicensesScreenTest {
     @Test
     fun detailShowsHolderLicencesAndNoTemplateLine() {
         val detail = LiteRtLibrary
-        showDetail(LicenseDetailState(detail.library.name, detail.library.version, detail.toRows(), isLoading = false, notFound = false, pendingError = null))
+        showDetail(
+            LicenseDetailState(
+                detail.library.name,
+                detail.library.version,
+                detail.toRows(),
+                isLoading = false,
+                notFound = false,
+                pendingError = null,
+            ),
+        )
 
         composeRule.onNodeWithText("LiteRT").assertIsDisplayed()
         composeRule.onNodeWithText("Version 1.4.0").assertIsDisplayed()
@@ -140,7 +158,16 @@ internal class LicensesScreenTest {
     @Test
     fun aLibraryWithoutVersionOrHolderShowsItsLicences() {
         val detail = MitLibrary
-        showDetail(LicenseDetailState(detail.library.name, detail.library.version, detail.toRows(), isLoading = false, notFound = false, pendingError = null))
+        showDetail(
+            LicenseDetailState(
+                detail.library.name,
+                detail.library.version,
+                detail.toRows(),
+                isLoading = false,
+                notFound = false,
+                pendingError = null,
+            ),
+        )
 
         composeRule.onNodeWithText("Example without version").assertIsDisplayed()
         composeRule.onNodeWithTag("licence:version").assertDoesNotExist()

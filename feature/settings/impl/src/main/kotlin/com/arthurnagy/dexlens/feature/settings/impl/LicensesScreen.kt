@@ -129,4 +129,3 @@ internal fun LicencePlaceholder(modifier: Modifier = Modifier) {
         )
     }
 }
-

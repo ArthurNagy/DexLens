@@ -41,7 +41,12 @@ internal class BundledOpenSourceLibraryRepositoryTest {
                     listOf("Apache License 2.0", "BSD 3-Clause \"New\" or \"Revised\" License"),
                 ),
                 OpenSourceLibrary("com.michael-bull.kotlin-result:kotlin-result", "kotlin-result", "2.3.1", listOf("ISC License")),
-                OpenSourceLibrary("com.google.ai.edge.litert:litert", "LiteRT Android Implementation", "2.3.2", listOf("Apache License 2.0")),
+                OpenSourceLibrary(
+                    "com.google.ai.edge.litert:litert",
+                    "LiteRT Android Implementation",
+                    "2.3.2",
+                    listOf("Apache License 2.0"),
+                ),
                 OpenSourceLibrary("com.google.mlkit:text-recognition", "text-recognition", "16.0.1", listOf("ML Kit Terms of Service")),
             ),
             repository().libraries().ok(),

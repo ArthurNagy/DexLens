@@ -21,7 +21,8 @@ class FakeOpenSourceLibraryRepository(
     var error: DomainError? = null
     val requestedIds = mutableListOf<String>()
 
-    override suspend fun libraries(): Result<List<OpenSourceLibrary>, DomainError> = error?.let { Err(it) } ?: Ok(details.map { it.library })
+    override suspend fun libraries(): Result<List<OpenSourceLibrary>, DomainError> =
+        error?.let { Err(it) } ?: Ok(details.map { it.library })
 
     override suspend fun library(id: String): Result<OpenSourceLibraryDetail, DomainError> {
         requestedIds += id
@@ -41,7 +42,8 @@ class FakeAppInfoRepository(
 
 val ApacheLicense = LibraryLicense(
     name = "Apache License 2.0",
-    text = "Licensed under the Apache License, Version 2.0 (the \"License\");\nyou may not use this file except in compliance with the License.\n\n" +
+    text = "Licensed under the Apache License, Version 2.0 (the \"License\");\n" +
+        "you may not use this file except in compliance with the License.\n\n" +
         "Unless required by applicable law or agreed to in writing, software\ndistributed under the License is distributed on an \"AS IS\" BASIS.",
 )
 
@@ -59,14 +61,29 @@ val CoilLibrary = OpenSourceLibraryDetail(
 )
 
 val KotlinResultLibrary = OpenSourceLibraryDetail(
-    library = OpenSourceLibrary(id = "com.michael-bull.kotlin-result:kotlin-result", name = "kotlin-result", version = "2.1.0", licenseNames = listOf("ISC License")),
+    library = OpenSourceLibrary(
+        id = "com.michael-bull.kotlin-result:kotlin-result",
+        name = "kotlin-result",
+        version = "2.1.0",
+        licenseNames = listOf("ISC License"),
+    ),
     copyrightHolder = "Michael Bull",
-    licenses = listOf(LibraryLicense(name = "ISC License", text = "Permission to use, copy, modify, and/or distribute this software for any purpose is hereby granted.")),
+    licenses = listOf(
+        LibraryLicense(
+            name = "ISC License",
+            text = "Permission to use, copy, modify, and/or distribute this software for any purpose is hereby granted.",
+        ),
+    ),
     notices = emptyList(),
 )
 
 val LiteRtLibrary = OpenSourceLibraryDetail(
-    library = OpenSourceLibrary(id = "com.google.ai.edge.litert:litert", name = "LiteRT", version = "1.4.0", licenseNames = listOf(ApacheLicense.name)),
+    library = OpenSourceLibrary(
+        id = "com.google.ai.edge.litert:litert",
+        name = "LiteRT",
+        version = "1.4.0",
+        licenseNames = listOf(ApacheLicense.name),
+    ),
     copyrightHolder = "Google LLC",
     licenses = listOf(ApacheLicense),
     notices = listOf(
@@ -78,7 +95,12 @@ val LiteRtLibrary = OpenSourceLibraryDetail(
 )
 
 val MitLibrary = OpenSourceLibraryDetail(
-    library = OpenSourceLibrary(id = "org.example:no-version", name = "Example without version", version = null, licenseNames = listOf(MitLicense.name, ApacheLicense.name)),
+    library = OpenSourceLibrary(
+        id = "org.example:no-version",
+        name = "Example without version",
+        version = null,
+        licenseNames = listOf(MitLicense.name, ApacheLicense.name),
+    ),
     copyrightHolder = null,
     licenses = listOf(MitLicense, ApacheLicense),
     notices = emptyList(),

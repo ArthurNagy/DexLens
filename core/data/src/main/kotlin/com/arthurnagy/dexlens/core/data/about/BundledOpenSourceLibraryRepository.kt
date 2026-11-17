@@ -50,7 +50,9 @@ internal class BundledOpenSourceLibraryRepository
                     OpenSourceLibraryDetail(
                         library = library.toModel(),
                         copyrightHolder = library.holder(),
-                        licenses = library.licenses.map { LibraryLicense(name = it.name, text = it.licenseContent.orEmpty().withoutTemplateCopyright()) },
+                        licenses = library.licenses.map {
+                            LibraryLicense(name = it.name, text = it.licenseContent.orEmpty().withoutTemplateCopyright())
+                        },
                         notices = embeddedNotices(id),
                     )
                 }
@@ -82,11 +84,20 @@ internal class BundledOpenSourceLibraryRepository
                 .map { (fileName, path) -> LibraryNotice(fileName = fileName, text = source.asset(path)) }
         }
 
-        private fun Library.toModel() = OpenSourceLibrary(id = uniqueId, name = name, version = artifactVersion, licenseNames = licenses.map { it.name })
+        private fun Library.toModel() = OpenSourceLibrary(
+            id = uniqueId,
+            name = name,
+            version = artifactVersion,
+            licenseNames = licenses.map {
+                it.name
+            },
+        )
 
         /** The organisation, else the developers, else unknown. */
         private fun Library.holder(): String? = organization?.name?.takeIf { it.isNotBlank() }
-            ?: developers.mapNotNull { developer -> developer.name?.takeIf { it.isNotBlank() } }.takeIf { it.isNotEmpty() }?.joinToString(", ")
+            ?: developers.mapNotNull { developer ->
+                developer.name?.takeIf { it.isNotBlank() }
+            }.takeIf { it.isNotEmpty() }?.joinToString(", ")
 
         private companion object {
             const val NOTICES_INDEX = "embedded_notices/index.json"

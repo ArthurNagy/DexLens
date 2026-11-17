@@ -5,9 +5,21 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.arthurnagy.dexlens.core.designsystem.AppTheme
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
@@ -18,33 +30,21 @@ import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentPackStateUseCase
 import com.arthurnagy.dexlens.core.domain.content.StartContentDownloadUseCase
+import com.arthurnagy.dexlens.core.model.ContentPackState
+import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.testing.FakeAppInfoRepository
 import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
-import org.robolectric.Shadows.shadowOf
-import kotlin.test.assertFalse
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToNode
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.arthurnagy.dexlens.core.designsystem.AppTheme
-import com.arthurnagy.dexlens.core.model.ContentPackState
-import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -64,7 +64,9 @@ internal class SettingsScreenTest {
         onSource: () -> Unit = {},
     ) {
         composeRule.setContent {
-            AppTheme { SettingsContent(state, SnackbarHostState(), {}, onTheme, onDownload, onCancel, onDelete, onScanner, onLicences, onSource) }
+            AppTheme {
+                SettingsContent(state, SnackbarHostState(), {}, onTheme, onDownload, onCancel, onDelete, onScanner, onLicences, onSource)
+            }
         }
     }
 
@@ -244,7 +246,9 @@ internal class SettingsScreenTest {
         scrollTo("settings:source")
         composeRule.onNodeWithTag("settings:source").performClick()
 
-        composeRule.waitUntil { composeRule.onAllNodesWithText("The link can't be opened", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        composeRule.waitUntil {
+            composeRule.onAllNodesWithText("The link can't be opened", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("The link can't be opened. No app on this device opens web links.").assertIsDisplayed()
     }
 

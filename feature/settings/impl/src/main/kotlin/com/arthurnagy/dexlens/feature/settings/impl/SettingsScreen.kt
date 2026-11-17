@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,6 +48,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
@@ -108,7 +108,7 @@ internal fun rememberOpenLink(
     val context = LocalContext.current
     return {
         try {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
         } catch (_: ActivityNotFoundException) {
             onUnavailable()
         }
@@ -184,7 +184,9 @@ internal fun SettingsContent(
                 Section(stringResource(R.string.settings_theme), sectionModifier) { ThemeSection(themeMode, onThemeSelect) }
             }
             item(key = "about") {
-                Section(stringResource(R.string.settings_about), sectionModifier) { AboutSection(versionName, onOpenLicences, onOpenSource) }
+                Section(stringResource(R.string.settings_about), sectionModifier) {
+                    AboutSection(versionName, onOpenLicences, onOpenSource)
+                }
             }
         }
     }
