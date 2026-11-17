@@ -43,4 +43,16 @@ class Navigator(
      * scene shows the root list beside its detail, which the back-stack size alone can't tell.
      */
     fun backOrNull(key: NavKey): (() -> Unit)? = if (backStack.firstOrNull() == key) null else ::goBack
+
+    /**
+     * Leaves [key]: removes it and every entry above it, such as the detail a list-detail list shows beside it, so the
+     * list's Back control leaves in one step. Does nothing when [key] is the root (bottom) entry or isn't on the stack.
+     */
+    fun backFrom(key: NavKey) {
+        val index = backStack.lastIndexOf(key)
+        if (index > 0) repeat(backStack.size - index) { backStack.removeAt(backStack.lastIndex) }
+    }
+
+    /** Like [backOrNull], but the action is [backFrom]: null for the root entry, which shows no Back control. */
+    fun backFromOrNull(key: NavKey): (() -> Unit)? = if (backStack.firstOrNull() == key) null else ({ backFrom(key) })
 }
