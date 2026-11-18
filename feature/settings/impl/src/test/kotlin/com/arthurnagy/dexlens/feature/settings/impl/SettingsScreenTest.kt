@@ -453,7 +453,7 @@ internal class SettingsScreenTest {
         var unavailable = false
         composeRule.setContent {
             AppTheme {
-                val open = rememberOpenNetworkSettings { unavailable = true }
+                val open = rememberOpenNetworkSettings(onUnavailable = { unavailable = true })
                 ContentOfferContent(ContentPackState.NotDownloaded, false, false, {}, open, {}, {})
             }
         }
@@ -472,7 +472,7 @@ internal class SettingsScreenTest {
         var unavailable = false
         composeRule.setContent {
             AppTheme {
-                val open = rememberOpenNetworkSettings { unavailable = true }
+                val open = rememberOpenNetworkSettings(onUnavailable = { unavailable = true })
                 ContentOfferContent(ContentPackState.NotDownloaded, false, false, {}, open, {}, {})
             }
         }

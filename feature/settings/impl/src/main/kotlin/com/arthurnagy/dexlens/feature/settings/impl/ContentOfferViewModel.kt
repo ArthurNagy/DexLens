@@ -72,8 +72,8 @@ internal class ContentOfferViewModel
             startDownload()
         }
 
-        /** A new attempt to open network settings: the previous failure no longer applies. */
-        fun onConnectTapped() = intent {
+        /** Network settings opened on a later try: the earlier failure no longer applies. */
+        fun onNetworkSettingsOpened() = intent {
             reduce { state.copy(networkSettingsUnavailable = false) }
         }
 

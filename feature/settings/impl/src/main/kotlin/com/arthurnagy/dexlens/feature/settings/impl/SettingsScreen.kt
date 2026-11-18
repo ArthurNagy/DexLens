@@ -2,6 +2,7 @@ package com.arthurnagy.dexlens.feature.settings.impl
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -128,25 +129,32 @@ internal fun rememberOpenLink(
 
 /**
  * Opens Android's internet connectivity panel over DexLens, or the device's network settings when the panel can't
- * open, and calls [onUnavailable] when neither can. Nothing is sent: the screens follow the connection by themselves.
+ * open. Calls [onOpen] when one of them opened and [onUnavailable] when neither can: exactly one of the two per try,
+ * so a screen can record the outcome in a single state change. Nothing is sent: the screens follow the connection.
  */
 @Composable
-internal fun rememberOpenNetworkSettings(onUnavailable: () -> Unit): () -> Unit {
+internal fun rememberOpenNetworkSettings(
+    onUnavailable: () -> Unit,
+    onOpen: () -> Unit = {},
+): () -> Unit {
     val context = LocalContext.current
     val currentOnUnavailable by rememberUpdatedState(onUnavailable)
+    val currentOnOpened by rememberUpdatedState(onOpen)
     return remember(context) {
         {
-            try {
-                context.startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
-            } catch (_: ActivityNotFoundException) {
-                try {
-                    context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
-                } catch (_: ActivityNotFoundException) {
-                    currentOnUnavailable()
-                }
-            }
+            val opened = context.tryStart(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY)) ||
+                context.tryStart(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+            if (opened) currentOnOpened() else currentOnUnavailable()
         }
     }
+}
+
+/** Starts [intent], or returns false when no installed activity handles it. */
+private fun Context.tryStart(intent: Intent): Boolean = try {
+    startActivity(intent)
+    true
+} catch (_: ActivityNotFoundException) {
+    false
 }
 
 /** Asks for the notification that shows download progress if it is not granted yet, then starts either way. */

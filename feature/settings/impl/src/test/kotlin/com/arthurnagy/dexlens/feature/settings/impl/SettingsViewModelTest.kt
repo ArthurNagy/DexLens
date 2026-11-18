@@ -240,7 +240,7 @@ class SettingsViewModelTest {
             expectInternalState { copy(internetAvailable = false) }
             containerHost.onNetworkSettingsUnavailable()
             expectInternalState { copy(networkSettingsUnavailable = true) }
-            containerHost.onConnectTapped()
+            containerHost.onNetworkSettingsOpened()
             expectInternalState { copy(networkSettingsUnavailable = false) }
             containerHost.onNetworkSettingsUnavailable()
             expectInternalState { copy(networkSettingsUnavailable = true) }
