@@ -91,6 +91,7 @@ below wraps `PokedexContent` in `Box(Modifier.width(360.dp))`.
   - `// Scenario: Scanner off has no corner gap`: with the scanner switched off, no viewfinder is composed and the list's surface starts right below the top bar, as in `scannerOffShowsTheListBelowTheStrip`.
   - Verify `./gradlew :feature:pokedex:impl:testDebugUnitTest --tests '*PokedexScreenTest*'` passes.
 - [x] 4.8 :feature:pokedex:impl — (optional, recommended) a drag test tagged `// Scenario: Sheet corners fade with the camera` on `Pixel7`: hold a partial drag on the sheet (`down`, then `moveBy` up a third of the travel, no `up`), capture the root, and check a corner pixel below the area's bottom is not `CameraColors.background`. Verify the test passes
+  - Dropped in review. Whenever the sheet leaves its collapsed position it covers the strip under its corners, so a screen-level drag can only sample the visible area, and that check passes without this change. The strip's fade is pinned instead by `ScannerAreaTest.theStripUnderTheSheetFadesWithTheArea`, with `topBarAlpha` held at 0.5 and 1.
 - [x] 4.9 :feature:pokedex:impl — goldens:
   - First run `./gradlew :feature:pokedex:impl:testDebugUnitTest -Proborazzi.test.verify=true` before recording, and note in the PR which goldens fail.
   - Expect the `phone*` camera-on goldens (Pixel 7 portrait, full width) to fail.
