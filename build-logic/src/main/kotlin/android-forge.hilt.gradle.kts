@@ -1,4 +1,5 @@
 import com.android.build.api.variant.AndroidComponentsExtension
+import com.google.devtools.ksp.gradle.KspAATask
 
 /*
  * Hilt (Dagger) on KSP for an Android module: applied after an android-forge Android convention.
@@ -22,20 +23,21 @@ dependencies {
 }
 
 val projectPath = path
-val buildDirectory = layout.buildDirectory
-val mainKotlinSources = layout.projectDirectory.dir("src/main").asFileTree.matching { include("**/*.kt") }
 
 // Application and library modules register different public types under the same name.
 (extensions.getByName("androidComponents") as AndroidComponentsExtension<*, *, *>).onVariants { variant ->
     val variantTask = variant.name.replaceFirstChar { it.uppercase() }
+    // KSP registers its per-variant task after this callback runs, so look it up lazily: by type first, so
+    // resolving the outputs realizes only KSP tasks.
+    val kspTask = "ksp${variantTask}Kotlin"
     val check = tasks.register<HiltAggregatedDepsCheck>("check${variantTask}HiltAggregatedDeps") {
         group = "verification"
         description = "Fails when KSP left out a Hilt class's hilt_aggregated_deps entry in the ${variant.name} variant."
         modulePath = projectPath
         variantName = variant.name
-        sources.from(mainKotlinSources)
-        kspJavaOutput.from(buildDirectory.dir("generated/ksp/${variant.name}/java"))
-        dependsOn("ksp${variantTask}Kotlin")
+        listOfNotNull(variant.sources.kotlin, variant.sources.java).forEach { sources.from(it.static) }
+        kspOutputs.from(tasks.withType<KspAATask>().named { it == kspTask })
+        dependsOn(kspTask)
     }
     tasks.named { it == "compile${variantTask}JavaWithJavac" }.configureEach { dependsOn(check) }
 }
