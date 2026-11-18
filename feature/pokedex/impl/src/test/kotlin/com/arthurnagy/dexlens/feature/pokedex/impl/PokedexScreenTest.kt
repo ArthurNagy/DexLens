@@ -1,9 +1,11 @@
 package com.arthurnagy.dexlens.feature.pokedex.impl
 
+import android.content.res.Configuration
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
@@ -12,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
@@ -37,10 +40,15 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.arthurnagy.dexlens.core.designsystem.AppDimens
+import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
+import com.arthurnagy.dexlens.core.designsystem.CameraColors
 import com.arthurnagy.dexlens.core.designsystem.LightScheme
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
@@ -59,9 +67,11 @@ import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
 import com.arthurnagy.dexlens.core.testing.speciesSummary
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AimBox
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraPermission
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.CameraStatus
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScanState
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.aimBoxFor
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.scannerAreaHeight
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.topBarAlpha
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -104,8 +114,12 @@ internal class PokedexScreenTest {
     private var viewfinderStarts = 0
     private var viewfinderRunning = false
 
+    /** The aiming box the viewfinder was last handed: what the analyser would crop, in the viewfinder's own fractions. */
+    private var viewfinderBox: AimBox? = null
+
     @Composable
-    private fun ViewfinderStub() {
+    private fun ViewfinderStub(box: AimBox) {
+        viewfinderBox = box
         DisposableEffect(Unit) {
             viewfinderStarts++
             viewfinderRunning = true
@@ -129,6 +143,10 @@ internal class PokedexScreenTest {
         onTorch: () -> Unit = {},
         onRequest: () -> Unit = {},
         onAppSettings: () -> Unit = {},
+        // What a back camera with sensor orientation 90 reports: portrait in portrait windows, landscape otherwise.
+        uprightPortrait: Boolean? = portraitWindow(),
+        // Production shows home as a 360dp list pane from medium width up.
+        pane: Boolean = false,
     ) {
         currentState = state
         composeRule.setContent {
@@ -146,13 +164,17 @@ internal class PokedexScreenTest {
                         onToggleTorch = onTorch,
                         onRequestPermission = onRequest,
                         onOpenAppSettings = onAppSettings,
-                        viewfinder = { ViewfinderStub() },
+                        cameraUprightPortrait = { uprightPortrait },
+                        modifier = if (pane) Modifier.width(PANE_WIDTH) else Modifier,
+                        viewfinder = { ViewfinderStub(it) },
                     )
                 }
             }
         }
         composeRule.waitForIdle()
     }
+
+    private fun portraitWindow() = composeRule.activity.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
     private fun rowExists(id: Int) =
         composeRule.onAllNodesWithTag("pokedex:row:$id", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
@@ -279,11 +301,16 @@ internal class PokedexScreenTest {
     fun scannerSitsAboveTheSheet() {
         show()
         assertTrue(viewfinderRunning)
-        val viewfinder = composeRule.onNodeWithTag("test:viewfinder").getUnclippedBoundsInRoot()
+        val area = composeRule.onNodeWithTag("pokedex:scannerArea").getUnclippedBoundsInRoot()
         val search = composeRule.onNodeWithTag("pokedex:search").getUnclippedBoundsInRoot()
-        assertEquals(viewfinder.right, composeRule.onRoot().getUnclippedBoundsInRoot().right)
-        assertTrue(search.top >= viewfinder.bottom)
-        assertEquals(((viewfinder.right - viewfinder.left) / 1.5f).value, (viewfinder.bottom - viewfinder.top).value, 1f)
+        assertEquals(area.right, composeRule.onRoot().getUnclippedBoundsInRoot().right)
+        assertTrue(search.top >= area.bottom)
+        // 3:2 (Robolectric reports no status bar inset).
+        assertEquals((area.spanX / 1.5f).value, area.spanY.value, 1f)
+        // The camera reaches the sheet's corner radius past the area at both ends.
+        val viewfinder = composeRule.onNodeWithTag("test:viewfinder").getUnclippedBoundsInRoot()
+        assertEquals((area.top - 28.dp).value, viewfinder.top.value, 1f)
+        assertEquals((area.bottom + 28.dp).value, viewfinder.bottom.value, 1f)
     }
 
     // Scenario: No separate scan step
@@ -326,6 +353,185 @@ internal class PokedexScreenTest {
     fun anEntryBesideTheListKeepsTheCameraRunning() {
         show(canNavigateBack = true)
         assertTrue(viewfinderRunning)
+    }
+
+    // --- The sheet's corners ---
+
+    private fun bounds(tag: String) = composeRule.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
+
+    private fun Dp.px() = with(composeRule.density) { roundToPx() }
+
+    /** The pixels just inside each of the sheet's rounded corners, and the pixels just above the sheet at the same x. */
+    private fun cornerPixels(): List<Pair<Color, Color>> {
+        val area = bounds("pokedex:scannerArea")
+        val image = composeRule.onRoot().captureToImage().toPixelMap()
+        val edge = area.bottom.px()
+        return listOf(area.left.px() + 2, area.right.px() - 3).map { x -> image[x, edge + 2] to image[x, edge - 3] }
+    }
+
+    /** The aiming box the viewfinder was handed, laid onto the viewfinder's own bounds. */
+    private fun analysedBox(): DpRect {
+        val viewfinder = bounds("test:viewfinder")
+        val box = checkNotNull(viewfinderBox)
+        return DpRect(
+            left = viewfinder.left + viewfinder.spanX * box.left,
+            top = viewfinder.top + viewfinder.spanY * box.top,
+            right = viewfinder.left + viewfinder.spanX * box.right,
+            bottom = viewfinder.top + viewfinder.spanY * box.bottom,
+        )
+    }
+
+    /** The aiming box laid out on the visible area alone, as the unfilled layout always has. */
+    private fun visibleAimBox(): AimBox {
+        val area = bounds("pokedex:scannerArea")
+        val density = composeRule.density
+        return with(density) {
+            aimBoxFor(
+                width = area.spanX.roundToPx().toFloat(),
+                height = area.spanY.roundToPx().toFloat(),
+                topInset = 0f,
+                reservedWidth = AppDimens.scannerButtonRowWidth.toPx(),
+                buttonRowHeight = AppDimens.scannerButtonRowHeight.toPx(),
+                margin = AppSpacing.md.toPx(),
+            )
+        }
+    }
+
+    private fun assertCornersShowTheCamera() {
+        cornerPixels().forEachIndexed { side, (corner, above) ->
+            assertNotEquals(CameraColors.background, corner, "corner $side is not the dark background")
+            assertEquals(above, corner, "corner $side shows what the camera shows just above the sheet")
+        }
+    }
+
+    private fun assertCornersStayDarkAndNothingChanges() {
+        val area = bounds("pokedex:scannerArea")
+        val viewfinder = bounds("test:viewfinder")
+        assertEquals(area.top.value, viewfinder.top.value, 0.5f)
+        assertEquals(area.bottom.value, viewfinder.bottom.value, 0.5f)
+        cornerPixels().forEachIndexed { side, (corner, _) -> assertEquals(CameraColors.background, corner, "corner $side") }
+        assertEquals(visibleAimBox(), viewfinderBox, "the analysed region is the visible area's own box")
+    }
+
+    // Scenario: Camera behind the sheet corners
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun aPhoneInPortraitShowsTheCameraBehindTheCorners() {
+        show()
+        assertCornersShowTheCamera()
+    }
+
+    // Scenario: Camera behind the sheet corners
+    @Test
+    @Config(qualifiers = PORTRAIT_TABLET)
+    fun aPortraitTabletPaneShowsTheCameraBehindTheCorners() {
+        show(pane = true)
+        assertCornersShowTheCamera()
+    }
+
+    // Scenario: Corners where filling would enlarge the preview
+    // Scenario: Preview under the sheet not analysed
+    @Test
+    @Config(qualifiers = "w914dp-h411dp-xxhdpi")
+    fun aPhoneInLandscapeKeepsItsCorners() {
+        show(pane = true)
+        assertCornersStayDarkAndNothingChanges()
+    }
+
+    // Scenario: Corners where filling would enlarge the preview
+    // Scenario: Preview under the sheet not analysed
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun aLandscapeTabletPaneKeepsItsCorners() {
+        show(pane = true)
+        assertCornersStayDarkAndNothingChanges()
+    }
+
+    // Scenario: Corners where filling would enlarge the preview
+    // Scenario: Preview under the sheet not analysed
+    @Test
+    @Config(qualifiers = "w400dp-h800dp-xhdpi")
+    fun aCompactWindowOnALandscapeDisplayKeepsItsCorners() {
+        show(uprightPortrait = false)
+        assertCornersStayDarkAndNothingChanges()
+    }
+
+    // Scenario: Preview under the sheet not analysed
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun thePhoneAnalysesOnlyTheDrawnBox() {
+        show()
+        assertAnalysedBoxIsTheDrawnBox()
+    }
+
+    // Scenario: Preview under the sheet not analysed
+    @Test
+    @Config(qualifiers = PORTRAIT_TABLET)
+    fun thePortraitTabletPaneAnalysesOnlyTheDrawnBox() {
+        show(pane = true)
+        assertAnalysedBoxIsTheDrawnBox()
+    }
+
+    private fun assertAnalysedBoxIsTheDrawnBox() {
+        val analysed = analysedBox()
+        val drawn = bounds("pokedex:aimBox")
+        val onePixel = 1f / composeRule.density.density
+        assertEquals(drawn.left.value, analysed.left.value, onePixel)
+        assertEquals(drawn.top.value, analysed.top.value, onePixel)
+        assertEquals(drawn.right.value, analysed.right.value, onePixel)
+        assertEquals(drawn.bottom.value, analysed.bottom.value, onePixel)
+        assertTrue(analysed.bottom < bounds("pokedex:scannerArea").bottom, "the analysed box ends above the sheet")
+    }
+
+    // Scenario: Corner preview keeps the scanner layout
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun thePhoneKeepsItsScannerLayout() {
+        show()
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertScannerLayoutKept(scannerAreaHeight(root.spanX, root.spanY, 0.dp))
+    }
+
+    // Scenario: Corner preview keeps the scanner layout
+    @Test
+    @Config(qualifiers = PORTRAIT_TABLET)
+    fun thePortraitTabletPaneKeepsItsScannerLayout() {
+        show(pane = true)
+        val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertScannerLayoutKept(scannerAreaHeight(PANE_WIDTH, root.spanY, 0.dp))
+    }
+
+    private fun assertScannerLayoutKept(expectedHeight: Dp) {
+        val area = bounds("pokedex:scannerArea")
+        assertEquals(expectedHeight.value, area.spanY.value, 0.5f)
+        // The sheet's top edge is the area's bottom.
+        assertTrue(bounds("pokedex:search").top >= area.bottom)
+        listOf("pokedex:aimBox", "pokedex:scanLabel", "pokedex:torch", "pokedex:settings").forEach {
+            assertTrue(bounds(it).bottom <= area.bottom, "$it ends above the sheet")
+        }
+    }
+
+    // Scenario: Sheet corners fade with the camera
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
+    fun theCornersKeepTheCameraWhileTheSheetIsDragged() {
+        show()
+        val area = bounds("pokedex:scannerArea")
+        val travel = (area.bottom - AppDimens.scannerButtonRowHeight).px().toFloat()
+        composeRule.onNodeWithTag("pokedex:search").performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -travel / 3f))
+        }
+        composeRule.waitForIdle()
+        val image = composeRule.onRoot().captureToImage().toPixelMap()
+        // The sheet's edge, mid-drag: its content starts below the drag handle.
+        val sheetTop = (bounds("pokedex:search").top - AppDimens.sheetDragHandleHeight).px()
+        assertTrue(sheetTop < area.bottom.px(), "the sheet has moved up")
+        // Behind the rounded corner the scanner area shows, fading like the area just above the sheet: never dark.
+        val corner = image[2, sheetTop + 2]
+        assertNotEquals(CameraColors.background, corner)
+        assertEquals(image[2, sheetTop - 3], corner)
+        composeRule.onNodeWithTag("pokedex:search").performTouchInput { up() }
     }
 
     // --- The scanner area ---
@@ -698,11 +904,19 @@ internal class PokedexScreenTest {
     }
 
     // Scenario: Scanner off shows only the list
+    // Scenario: Scanner off has no corner gap
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun scannerOffShowsTheListBelowTheStrip() {
         show(scannerOff)
         assertEquals(0, viewfinderStarts)
+        composeRule.onNodeWithTag("pokedex:scannerArea").assertDoesNotExist()
+        // The list's surface starts right below the top bar: no camera, no corners, no gap.
+        val image = composeRule.onRoot().captureToImage().toPixelMap()
+        val barBottom = with(composeRule.density) { AppDimens.scannerButtonRowHeight.roundToPx() }
+        assertEquals(LightScheme.surfaceContainer, image[2, barBottom - 2])
+        assertEquals(LightScheme.surface, image[2, barBottom + 1])
+        assertEquals(LightScheme.surface, image[image.width - 3, barBottom + 1])
         composeRule.onNodeWithTag("pokedex:aimBox").assertDoesNotExist()
         composeRule.onNodeWithTag("pokedex:torch").assertDoesNotExist()
         composeRule.onNode(hasText("DexLens") and isHeading()).assertIsDisplayed()
@@ -847,10 +1061,35 @@ internal class PokedexScreenTest {
         composeRule.onRoot().captureRoboImage()
     }
 
+    // Full window width, which production never shows on a tablet: the list-pane goldens below are the real layouts.
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tablet() {
         show()
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    // Scenario: Corners where filling would enlarge the preview
+    @Test
+    @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
+    fun tabletListPane() {
+        show(pane = true)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    // Scenario: Corners where filling would enlarge the preview
+    @Test
+    @Config(qualifiers = "w914dp-h411dp-xxhdpi")
+    fun phoneLandscapePane() {
+        show(pane = true)
+        composeRule.onRoot().captureRoboImage()
+    }
+
+    // Scenario: Camera behind the sheet corners
+    @Test
+    @Config(qualifiers = PORTRAIT_TABLET)
+    fun tabletPortraitPane() {
+        show(pane = true)
         composeRule.onRoot().captureRoboImage()
     }
 
@@ -936,5 +1175,11 @@ internal class PokedexScreenTest {
         const val TOP_BAR_PIXEL = 20
         const val SHEET_PIXEL_ABOVE_SEARCH = 4
         const val SWIPE_DISTANCE = 1_500f
+        val PANE_WIDTH = 360.dp
+        const val PORTRAIT_TABLET = "w800dp-h1280dp-xhdpi"
     }
 }
+
+private val DpRect.spanX: Dp get() = right - left
+
+private val DpRect.spanY: Dp get() = bottom - top
