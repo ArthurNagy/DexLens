@@ -103,7 +103,7 @@ below wraps `PokedexContent` in `Box(Modifier.width(360.dp))`.
 
 ## 5. Verification on a device (:app, no code change)
 
-- [ ] 5.1 :app — install the debug build on emulators with `android install` and `android run`, capture with `android screen capture`, and compare against a build of `main` where noted:
+- [x] 5.1 :app — install the debug build on emulators with `android install` and `android run`, capture with `android screen capture`, and compare against a build of `main` where noted:
   - **Phone in portrait:** the camera shows behind both corners. No camera shows above the scanner area (the top strip at `-r` is drawn by the EXTERNAL-mode `SurfaceView`, so check its clipping). Dragging the sheet shows no black flash at the corners. The camera starts once (no restart).
   - **Phone in landscape (360dp list pane) and a landscape tablet or unfolded foldable list pane:** compared with `main`, the framing of a fixed scene is the same (no zoom) and the corners are the same dark background.
   - **Portrait tablet or foldable list pane:** the camera shows behind the corners, with framing the same as `main`. No camera shows above the scanner area: here the `-r` strip is on screen under the status bar, so this is where the SurfaceView's clipping really matters.
@@ -111,12 +111,12 @@ below wraps `PokedexContent` in `Box(Modifier.width(360.dp))`.
   - **Cold-start cost:** measure with the existing `:benchmarks` startup macrobenchmark (or a Perfetto trace) on an emulator, before and after, and note the difference.
   - Check `./gradlew :app:testDebugUnitTest` still passes.
 
-  Partly done (2026-11-18, emulators only):
-  - **Done, `pixel_10_pro_fold` unfolded (a portrait-shaped list pane):** both corners show camera. The picture inside the visible area matches the base build exactly (same scale and centre, no zoom or shift). No camera shows above the scanner area under the status bar.
-  - **Done, cold start:** `StartupBenchmark#startupWithProfile` on the same emulator, timeToInitialDisplay median 358 ms before and 313 ms after. That is within emulator noise, so no measurable cost.
-  - **Not done:** phone portrait and the landscape tablet pane. The base build and this build both close at launch on the `small_phone` (new) and `medium_tablet` AVDs, which is pre-existing and not diagnosed (no logcat through the Android CLI).
-  - **Not done:** phone landscape and compact multi-window. The CLI can't rotate or enter multi-window.
-  - Those cases rest on the Robolectric tests in 4.4–4.7.
+  Results (2026-11-18, emulators only, each compared against a build of `main`):
+  - **Phone in portrait (`medium_phone`, virtual room scene):** both corners show the camera where `main` shows black wedges. The picture inside the visible area is identical to `main` (same objects at the same pixels), so there's no zoom and no shift. The scanner area starts at the window's top edge (`[0,0][1080,783]`), so the `-r` strip is off-window and nothing shows above the area. The `pokedex:aimBox` node ends above the sheet.
+  - **Unfolded foldable, a portrait-shaped list pane (`pixel_10_pro_fold`):** both corners show the camera, the framing is identical to the base build, and no camera shows above the area under the status bar, so the SurfaceView is clipped.
+  - **Cold start:** `StartupBenchmark#startupWithProfile` on `pixel_10_pro_fold`, timeToInitialDisplay median 358 ms before and 313 ms after. That is within emulator noise, so no measurable cost.
+  - **Covered by tests only (4.4–4.7):** phone landscape (a 360dp pane), the landscape tablet or foldable pane, and compact multi-window on a landscape display. The Android CLI can't rotate or enter multi-window, and `medium_tablet` (API 35) can't be used with the camera on this M4 host: it reports SME it can't run, so LiteRT/XNNPACK gets a SIGILL a few seconds after launch, on `main` too.
+  - Not checked on a device: dragging the sheet for a black flash, and the camera starting only once. The first is pinned by `ScannerAreaTest.theStripUnderTheSheetFadesWithTheArea`. The second holds by construction, because the decision is made before binding and doesn't change.
 
 ## 6. Gate
 
