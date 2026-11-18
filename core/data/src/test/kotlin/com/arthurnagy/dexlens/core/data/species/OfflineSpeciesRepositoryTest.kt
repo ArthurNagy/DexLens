@@ -1,6 +1,7 @@
 package com.arthurnagy.dexlens.core.data.species
 
 import com.arthurnagy.dexlens.core.database.ChainSpeciesRow
+import com.arthurnagy.dexlens.core.database.GenerationStartRow
 import com.arthurnagy.dexlens.core.database.ScanNameRow
 import com.arthurnagy.dexlens.core.database.SpeciesSearchRow
 import com.arthurnagy.dexlens.core.database.SpeciesSummaryRow
@@ -13,9 +14,11 @@ import com.arthurnagy.dexlens.core.database.entity.SpeciesNameEntity
 import com.arthurnagy.dexlens.core.database.entity.VarietyEntity
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.model.EvolutionTrigger
+import com.arthurnagy.dexlens.core.model.GenerationStart
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrThrow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
@@ -188,12 +191,23 @@ internal class OfflineSpeciesRepositoryTest {
         assertEquals(SpeciesId(1), repository.scanNames().getOrThrow { error("unexpected") }.single().speciesId)
     }
 
+    // Scenario: Dragging jumps to each generation's first species
+    @Test
+    fun generationStartsMapInOrder() = runTest {
+        dao.generationStarts = listOf(GenerationStartRow(1, 1), GenerationStartRow(2, 152), GenerationStartRow(3, 252))
+        assertEquals(
+            Ok(listOf(GenerationStart(1, SpeciesId(1)), GenerationStart(2, SpeciesId(152)), GenerationStart(3, SpeciesId(252)))),
+            repository.generationStarts(),
+        )
+    }
+
     @Test
     fun failuresBecomeDomainErrors() = runTest {
         dao.failure = IllegalStateException("broken")
         assertEquals(Err(DomainError.Unknown("broken")), repository.summaries())
         assertEquals(Err(DomainError.Unknown("broken")), repository.searchNames("x"))
         assertEquals(Err(DomainError.Unknown("broken")), repository.scanNames())
+        assertEquals(Err(DomainError.Unknown("broken")), repository.generationStarts())
         assertEquals(Err(DomainError.Unknown("broken")), repository.detail(SpeciesId(1)))
     }
 

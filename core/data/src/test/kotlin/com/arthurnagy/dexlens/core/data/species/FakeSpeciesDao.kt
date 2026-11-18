@@ -1,6 +1,7 @@
 package com.arthurnagy.dexlens.core.data.species
 
 import com.arthurnagy.dexlens.core.database.ChainSpeciesRow
+import com.arthurnagy.dexlens.core.database.GenerationStartRow
 import com.arthurnagy.dexlens.core.database.ScanNameRow
 import com.arthurnagy.dexlens.core.database.SpeciesDao
 import com.arthurnagy.dexlens.core.database.SpeciesSearchRow
@@ -28,6 +29,7 @@ internal class FakeSpeciesDao(
     var evolutions: List<EvolutionEntity> = emptyList(),
     var searchRows: List<SpeciesSearchRow> = emptyList(),
     var scanRows: List<ScanNameRow> = emptyList(),
+    var generationStarts: List<GenerationStartRow> = emptyList(),
     var failure: Exception? = null,
 ) : SpeciesDao {
     var summaryLoads = 0
@@ -46,6 +48,11 @@ internal class FakeSpeciesDao(
     override suspend fun searchNames(matchQuery: String): List<SpeciesSearchRow> {
         check()
         return searchRows
+    }
+
+    override suspend fun generationStarts(): List<GenerationStartRow> {
+        check()
+        return generationStarts
     }
 
     override suspend fun species(speciesId: Int): SpeciesEntity? {

@@ -1,6 +1,7 @@
 package com.arthurnagy.dexlens.core.domain.species
 
 import com.arthurnagy.dexlens.core.domain.DomainError
+import com.arthurnagy.dexlens.core.model.GenerationStart
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesNameHit
@@ -18,4 +19,7 @@ interface SpeciesRepository {
 
     /** Names in every script a game might display. The camera's matcher builds its index from these. */
     suspend fun scanNames(): Result<List<SpeciesNameHit>, DomainError>
+
+    /** Each generation's first species, in generation order, from the bundled data. */
+    suspend fun generationStarts(): Result<List<GenerationStart>, DomainError>
 }

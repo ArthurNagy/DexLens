@@ -2,6 +2,7 @@ package com.arthurnagy.dexlens.core.testing
 
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
+import com.arthurnagy.dexlens.core.model.GenerationStart
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesNameHit
@@ -16,6 +17,7 @@ class FakeSpeciesRepository(
     var hits: Map<String, List<SpeciesNameHit>> = emptyMap(),
     var details: Map<SpeciesId, SpeciesDetail> = emptyMap(),
     var scanNames: List<SpeciesNameHit> = emptyList(),
+    var generationStarts: List<GenerationStart> = emptyList(),
 ) : SpeciesRepository {
     var nextError: DomainError? = null
 
@@ -36,4 +38,6 @@ class FakeSpeciesRepository(
     }
 
     override suspend fun scanNames(): Result<List<SpeciesNameHit>, DomainError> = respond { Ok(scanNames) }
+
+    override suspend fun generationStarts(): Result<List<GenerationStart>, DomainError> = respond { Ok(generationStarts) }
 }

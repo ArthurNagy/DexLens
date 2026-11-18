@@ -25,6 +25,10 @@ interface SpeciesDao {
     )
     suspend fun summaries(languageId: Int): List<SpeciesSummaryRow>
 
+    /** Each generation's first species, in generation order. Generations are contiguous runs of ids in the bundled data. */
+    @Query("SELECT generation, MIN(id) AS first_species_id FROM species GROUP BY generation ORDER BY generation")
+    suspend fun generationStarts(): List<GenerationStartRow>
+
     @Query(
         """
         SELECT f.species_id AS species_id, f.language_id AS language_id, n.name AS name
