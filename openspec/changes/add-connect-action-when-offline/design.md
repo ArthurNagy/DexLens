@@ -133,10 +133,12 @@ closed when connectivity can't be read. A nullable "unknown" adds a third layout
   - `ContentOfferContent` shows `settings_network_settings_unavailable` as a `Text` (`offer:message`) directly under
     the "Connect to a network" button while the flag is true, with `liveRegion = Polite` so TalkBack reads it. It
     appears only in the offline `NotDownloaded` branch.
-  - `ContentOfferViewModel.onConnectTapped()` clears the flag. `ContentOfferDialog` calls it at the start of each
-    Connect tap, before opening network settings again. If that attempt fails too, the flag is set again in the same
-    frame, so the line stays. If it succeeds, the line is gone. The ViewModel also clears the flag in the same
-    `reduce` that sets `internetAvailable = true`, so the line disappears when the connection returns.
+  - `ContentOfferViewModel.onNetworkSettingsOpened()` clears the flag. `rememberOpenNetworkSettings` takes an
+    optional `onOpen` callback next to `onUnavailable` and calls exactly one of them per tap, so each tap ends in a
+    single intent: a failed retry keeps the line, and a try that opens the panel or settings removes it. (Orbit
+    reduces off the main thread, so a "clear, then maybe set again" pair of intents could land out of order and hide
+    the message after a failed retry. The implementation review caught this.) The ViewModel also clears the flag in
+    the same `reduce` that sets `internetAvailable = true`, so the line disappears when the connection returns.
   - The online branch never renders the line, so the existing online `offer` golden stays the same.
 - *Alternative: a `SnackbarHost` inside the dialog surface.* Rejected by the maintainer. It adds a host to a dialog
   window, a timed message that is easy to miss in a one-time offer, and a layout slot in the online branch too.
