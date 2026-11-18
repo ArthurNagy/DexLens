@@ -9,6 +9,7 @@ import org.orbitmvi.orbit.compose.collectAsState
 internal fun EntryScreen(
     viewModel: EntryViewModel,
     onNavigateBack: (() -> Unit)?,
+    showBackArrow: Boolean,
     onOpenSpecies: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -16,6 +17,7 @@ internal fun EntryScreen(
     EntryContent(
         state = state,
         onNavigateBack = onNavigateBack,
+        showBackArrow = showBackArrow,
         onOpenSpecies = onOpenSpecies,
         onSelectVariety = viewModel::onSelectVariety,
         onSelectGame = viewModel::onSelectGame,

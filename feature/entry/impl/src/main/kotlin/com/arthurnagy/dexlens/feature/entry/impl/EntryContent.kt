@@ -101,6 +101,7 @@ import com.arthurnagy.dexlens.core.ui.R as CoreUiR
 internal fun EntryContent(
     state: EntryState,
     onNavigateBack: (() -> Unit)?,
+    showBackArrow: Boolean,
     onOpenSpecies: (Int) -> Unit,
     onSelectVariety: (Int) -> Unit,
     onSelectGame: (Int) -> Unit,
@@ -113,7 +114,8 @@ internal fun EntryContent(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    if (onNavigateBack != null) {
+                    // Hidden beside the list; the failed message below keeps its own way back.
+                    if (showBackArrow && onNavigateBack != null) {
                         IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("entry:back")) {
                             Icon(
                                 painterResource(CoreUiR.drawable.core_ui_ic_arrow_back),
