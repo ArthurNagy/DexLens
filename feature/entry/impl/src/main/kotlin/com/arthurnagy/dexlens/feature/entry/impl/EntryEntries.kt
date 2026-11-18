@@ -13,12 +13,14 @@ import com.arthurnagy.dexlens.feature.entry.api.EntryKey
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 internal fun EntryProviderScope<NavKey>.entryEntries(navigator: Navigator) {
     entry<EntryKey>(metadata = ListDetailSceneStrategy.detailPane()) { key ->
-        // Beside the home list the entry needs no Back arrow of its own: the list is right there.
+        // Right above the home list and beside it, the entry needs no Back arrow: the list is right there. Opened from
+        // another entry's evolution line it keeps the arrow, which goes back to the previous species.
         val besideList = isDetailShownBesideList()
+        val openedFromAnEntry = navigator.entryBelow(key) is EntryKey
         EntryScreen(
             viewModel = hiltViewModel<EntryViewModel, EntryViewModel.Factory>(creationCallback = { it.create(key) }),
             onNavigateBack = navigator.backOrNull(key),
-            showBackArrow = !besideList,
+            showBackArrow = !besideList || openedFromAnEntry,
             onOpenSpecies = { id -> navigator.navigate(EntryKey(id)) },
         )
     }

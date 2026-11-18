@@ -49,11 +49,17 @@ class AppNavigationTest {
     @Serializable
     private data object TestKey : NavKey
 
-    private var recreatedContent: Application.ActivityLifecycleCallbacks? = null
+    /** The callback [showApp] registered and the Application it registered it with, so it is unregistered there. */
+    private var recreatedContent: Pair<Application, Application.ActivityLifecycleCallbacks>? = null
 
     @After
     fun stopSettingContentOnRecreation() {
-        recreatedContent?.let { composeRule.activity.application.unregisterActivityLifecycleCallbacks(it) }
+        stopSettingRecreatedContent()
+    }
+
+    private fun stopSettingRecreatedContent() {
+        recreatedContent?.let { (application, callbacks) -> application.unregisterActivityLifecycleCallbacks(callbacks) }
+        recreatedContent = null
     }
 
     @Test
@@ -155,7 +161,8 @@ class AppNavigationTest {
 
     /**
      * The home list and the entry as :feature:pokedex:impl and :feature:entry:impl declare them (same keys, pane metadata
-     * and Back wiring), with stand-in content: the entry shows its Back arrow only when it isn't beside the list.
+     * and Back wiring), with stand-in content: the entry shows its Back arrow unless it sits right above the list and
+     * beside it; opened from another entry's evolution line it keeps the arrow.
      *
      * Keep in sync with `feature/entry/impl/.../EntryEntries.kt`: these stand-ins copy its metadata and wiring by hand.
      */
@@ -169,10 +176,13 @@ class AppNavigationTest {
             ) { Text("Home list") }
             entry<EntryKey>(metadata = ListDetailSceneStrategy.detailPane()) { key ->
                 val besideList = isDetailShownBesideList()
+                val openedFromAnEntry = nav.entryBelow(key) is EntryKey
                 val back = nav.backOrNull(key)
                 Column {
                     Text("Entry #${key.speciesId}")
-                    if (!besideList && back != null) Text("Back", Modifier.testTag("entry:back").clickable { back() })
+                    if ((!besideList || openedFromAnEntry) && back != null) {
+                        Text("Back", Modifier.testTag("entry:back").clickable { back() })
+                    }
                 }
             }
         }
@@ -182,9 +192,15 @@ class AppNavigationTest {
 
     /**
      * Shows the app, and shows it again on every activity recreated during the test: the activity declares no
-     * `configChanges`, so a fold or resize recreates it and `rememberNavBackStack` restores the back stack.
+     * `configChanges`, so a fold or resize recreates it and `rememberNavBackStack` restores the back stack. An
+     * Application activity-lifecycle callback sets the same content on each recreated activity (the compose rule only
+     * sets it on the first one); a callback from an earlier call is unregistered first.
+     *
+     * The Navigator a `show…Feature()` returns belongs to the first activity's back stack: after [resizeTo] the
+     * recreated activity has its own, so don't navigate through the returned Navigator after a resize.
      */
     private fun showApp(feature: EntryProviderInstaller) {
+        stopSettingRecreatedContent()
         val content: @Composable () -> Unit = { AppTheme { AppNavigation(entryProviderInstallers = setOf(feature)) } }
         val callbacks = object : Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(
@@ -209,8 +225,9 @@ class AppNavigationTest {
 
             override fun onActivityDestroyed(activity: Activity) = Unit
         }
-        composeRule.activity.application.registerActivityLifecycleCallbacks(callbacks)
-        recreatedContent = callbacks
+        val application = composeRule.activity.application
+        application.registerActivityLifecycleCallbacks(callbacks)
+        recreatedContent = application to callbacks
         composeRule.setContent(content)
     }
 
@@ -379,6 +396,28 @@ class AppNavigationTest {
         composeRule.onNodeWithText("Licences list").assertExists()
         composeRule.onNodeWithText("Licence of androidx.core:core").assertExists()
         composeRule.onNodeWithTag("licence:back").assertDoesNotExist()
+    }
+
+    // Scenario: Back arrow to the previous species beside the list
+    @Test
+    @Config(qualifiers = FOLDABLE)
+    fun anEntryOpenedFromTheEvolutionLineKeepsItsBackArrowOnAFoldable() {
+        val navigator = showEntryFeature()
+        composeRule.runOnIdle {
+            navigator.navigateDetail(EntryKey(1))
+            // The evolution line pushes the next species on top of the current entry.
+            navigator.navigate(EntryKey(2))
+        }
+
+        composeRule.onNodeWithText("Home list").assertExists()
+        composeRule.onNodeWithText("Entry #2").assertExists()
+
+        composeRule.onNodeWithTag("entry:back").performClick()
+
+        composeRule.onNodeWithText("Entry #1").assertExists()
+        composeRule.onNodeWithText("Entry #2").assertDoesNotExist()
+        composeRule.onNodeWithText("Home list").assertExists()
+        composeRule.onNodeWithTag("entry:back").assertDoesNotExist()
     }
 
     // Scenario: Entry Back arrow follows the window size

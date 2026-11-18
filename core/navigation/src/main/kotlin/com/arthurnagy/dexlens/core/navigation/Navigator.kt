@@ -53,6 +53,13 @@ class Navigator(
         if (index > 0) repeat(backStack.size - index) { backStack.removeAt(backStack.lastIndex) }
     }
 
+    /**
+     * The entry directly below [key] on the back stack — what Back from [key] returns to. Null when [key] is the root
+     * (bottom) entry or isn't on the stack. A list-detail detail uses it to tell whether it sits right above its list or
+     * above another detail it was opened from.
+     */
+    fun entryBelow(key: NavKey): NavKey? = backStack.lastIndexOf(key).takeIf { it > 0 }?.let { backStack[it - 1] }
+
     /** Like [backOrNull], but the action is [backFrom]: null for the root entry, which shows no Back control. */
     fun backFromOrNull(key: NavKey): (() -> Unit)? = if (backStack.firstOrNull() == key) null else ({ backFrom(key) })
 }
