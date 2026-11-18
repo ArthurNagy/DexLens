@@ -7,6 +7,7 @@ import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
 import com.arthurnagy.dexlens.core.domain.scan.FrameObservation
 import com.arthurnagy.dexlens.core.domain.scan.combineSignals
+import com.arthurnagy.dexlens.core.domain.species.GetGenerationStartsUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedFrame
@@ -36,6 +37,7 @@ internal class PokedexViewModel
         private val observeScannerEnabled: ObserveScannerEnabledUseCase,
         private val buildSignal: BuildSpeciesSignalUseCase,
         private val getSpeciesList: GetSpeciesListUseCase,
+        private val getGenerationStarts: GetGenerationStartsUseCase,
     ) : ViewModel(),
         OrbitContainerHost<PokedexState, PokedexState, Nothing> {
         override val container = orbitContainer<PokedexState, Nothing>(PokedexState.Initial) {
@@ -43,6 +45,7 @@ internal class PokedexViewModel
             observeScannerSwitch()
             checkOffer()
             loadMatcher()
+            loadGenerations()
             search(state.query)
         }
 
@@ -72,11 +75,18 @@ internal class PokedexViewModel
                 }.onErr { error -> reduce { state.copy(scan = state.scan.copy(error = error)) } }
         }
 
+        /** Without them the list still works, just without the generation thumb, so a failure is only logged. */
+        private fun loadGenerations() = intent {
+            getGenerationStarts()
+                .onOk { starts -> if (starts.isNotEmpty()) reduce { state.copy(generations = starts) } }
+                .onErr { error -> Timber.w("generation starts unavailable: %s", error) }
+        }
+
         /** A slower answer to an older query is dropped, so results always match the text. */
         private suspend fun Syntax<PokedexState, Nothing>.search(query: String) {
             searchSpecies(query)
-                .onOk { results -> answer(query) { copy(loading = false, error = null, results = results) } }
-                .onErr { error -> answer(query) { copy(loading = false, error = error, results = emptyList()) } }
+                .onOk { results -> answer(query) { copy(loading = false, error = null, results = results, answeredQuery = query) } }
+                .onErr { error -> answer(query) { copy(loading = false, error = error, results = emptyList(), answeredQuery = query) } }
         }
 
         private suspend fun Syntax<PokedexState, Nothing>.answer(

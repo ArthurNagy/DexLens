@@ -45,6 +45,14 @@ object AppDimens {
     val moveTypeWidth = 88.dp
     val movePowerWidth = 40.dp
 
+    /** The fast-scroll thumb's visible pill. Its touch target is [touchTargetMin] square. */
+    val fastScrollThumbWidth = 4.dp
+    val fastScrollThumbHeight = 32.dp
+
+    /** The track shown behind the tick marks while the thumb is dragged, and each tick's dot. */
+    val fastScrollTrackWidth = 36.dp
+    val fastScrollTickDot = 4.dp
+
     val skeletonLineHeight = 16.dp
     val skeletonLineShort = 64.dp
     val skeletonLineMedium = 120.dp
