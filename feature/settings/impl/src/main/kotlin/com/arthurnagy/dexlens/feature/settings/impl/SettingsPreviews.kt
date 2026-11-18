@@ -6,6 +6,7 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.arthurnagy.dexlens.core.designsystem.AppTheme
+import com.arthurnagy.dexlens.core.model.Connectivity
 import com.arthurnagy.dexlens.core.model.ContentPackState
 
 @PreviewLightDark
@@ -22,7 +23,7 @@ private fun SettingsPreview() {
 private fun SettingsOfflinePreview() {
     AppTheme {
         SettingsContent(
-            SettingsState.Initial.copy(content = ContentPackState.Interrupted(320, 2051), internetAvailable = false),
+            SettingsState.Initial.copy(content = ContentPackState.Interrupted(320, 2051), connectivity = Connectivity.Offline),
             SnackbarHostState(),
             {},
             {},
@@ -43,7 +44,7 @@ private fun ContentOfferOfflinePreview() {
     AppTheme {
         ContentOfferContent(
             state = ContentPackState.NotDownloaded,
-            internetAvailable = false,
+            connectivity = Connectivity.Offline,
             networkSettingsUnavailable = false,
             onDownload = {},
             onConnect = {},

@@ -30,12 +30,13 @@ import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.about.GetAppVersionUseCase
-import com.arthurnagy.dexlens.core.domain.connectivity.ObserveInternetAvailableUseCase
+import com.arthurnagy.dexlens.core.domain.connectivity.ObserveConnectivityUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.MarkContentOfferShownUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentPackStateUseCase
 import com.arthurnagy.dexlens.core.domain.content.StartContentDownloadUseCase
+import com.arthurnagy.dexlens.core.model.Connectivity
 import com.arthurnagy.dexlens.core.model.ContentPackState
 import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.testing.FakeAppInfoRepository
@@ -110,7 +111,7 @@ internal class SettingsScreenTest {
             CancelContentDownloadUseCase(content),
             DeleteContentPackUseCase(content),
             GetAppVersionUseCase(appInfo),
-            ObserveInternetAvailableUseCase(connectivity),
+            ObserveConnectivityUseCase(connectivity),
         )
     }
 
@@ -284,7 +285,7 @@ internal class SettingsScreenTest {
     fun offerShowsSizeAndChoices() {
         var skipped = false
         composeRule.setContent {
-            AppTheme { ContentOfferContent(ContentPackState.NotDownloaded, true, false, {}, {}, { skipped = true }, {}) }
+            AppTheme { ContentOfferContent(ContentPackState.NotDownloaded, Connectivity.Online, false, {}, {}, { skipped = true }, {}) }
         }
         composeRule.onNodeWithText("About 183 MB to download, 27 MB on this device").assertExists()
         composeRule.onNodeWithTag("offer:skip").performClick()
@@ -296,7 +297,7 @@ internal class SettingsScreenTest {
     fun offerShowsProgressAndContinuesInBackground() {
         var hidden = false
         composeRule.setContent {
-            AppTheme { ContentOfferContent(ContentPackState.Downloading(1, 4), true, false, {}, {}, {}, { hidden = true }) }
+            AppTheme { ContentOfferContent(ContentPackState.Downloading(1, 4), Connectivity.Online, false, {}, {}, {}, { hidden = true }) }
         }
         composeRule.onNodeWithText("1 of 4").assertExists()
         composeRule.onNodeWithTag("offer:hide").performClick()
@@ -307,7 +308,7 @@ internal class SettingsScreenTest {
     fun offerResumesAndCompletes() {
         var resumed = false
         composeRule.setContent {
-            AppTheme { ContentOfferContent(ContentPackState.Interrupted(1, 4), true, false, { resumed = true }, {}, {}, {}) }
+            AppTheme { ContentOfferContent(ContentPackState.Interrupted(1, 4), Connectivity.Online, false, { resumed = true }, {}, {}, {}) }
         }
         composeRule.onNodeWithTag("offer:resume").performClick()
         assertTrue(resumed)
@@ -316,7 +317,14 @@ internal class SettingsScreenTest {
     @Test
     fun offerClosesWhenReady() {
         var closed = false
-        composeRule.setContent { AppTheme { ContentOfferContent(ContentPackState.Ready, true, false, {}, {}, {}, { closed = true }) } }
+        composeRule.setContent {
+            AppTheme {
+                ContentOfferContent(ContentPackState.Ready, Connectivity.Online, false, {}, {}, {}, {
+                    closed =
+                        true
+                })
+            }
+        }
         composeRule.onNodeWithTag("offer:done").performClick()
         assertTrue(closed)
     }
@@ -368,7 +376,9 @@ internal class SettingsScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun offer() {
-        composeRule.setContent { AppTheme { ContentOfferContent(ContentPackState.NotDownloaded, true, false, {}, {}, {}, {}) } }
+        composeRule.setContent {
+            AppTheme { ContentOfferContent(ContentPackState.NotDownloaded, Connectivity.Online, false, {}, {}, {}, {}) }
+        }
         composeRule.onRoot().captureRoboImage()
     }
 
@@ -381,12 +391,12 @@ internal class SettingsScreenTest {
             ObserveContentPackStateUseCase(content),
             StartContentDownloadUseCase(content),
             MarkContentOfferShownUseCase(preferences),
-            ObserveInternetAvailableUseCase(connectivity),
+            ObserveConnectivityUseCase(connectivity),
         )
     }
 
     private fun showOffer(
-        internetAvailable: Boolean = false,
+        connectivity: Connectivity = Connectivity.Offline,
         networkSettingsUnavailable: Boolean = false,
         onConnect: () -> Unit = {},
         onSkip: () -> Unit = {},
@@ -395,7 +405,7 @@ internal class SettingsScreenTest {
             AppTheme {
                 ContentOfferContent(
                     state = ContentPackState.NotDownloaded,
-                    internetAvailable = internetAvailable,
+                    connectivity = connectivity,
                     networkSettingsUnavailable = networkSettingsUnavailable,
                     onDownload = {},
                     onConnect = onConnect,
@@ -454,7 +464,7 @@ internal class SettingsScreenTest {
         composeRule.setContent {
             AppTheme {
                 val open = rememberOpenNetworkSettings(onUnavailable = { unavailable = true })
-                ContentOfferContent(ContentPackState.NotDownloaded, false, false, {}, open, {}, {})
+                ContentOfferContent(ContentPackState.NotDownloaded, Connectivity.Offline, false, {}, open, {}, {})
             }
         }
         composeRule.onNodeWithTag("offer:connect").performClick()
@@ -473,7 +483,7 @@ internal class SettingsScreenTest {
         composeRule.setContent {
             AppTheme {
                 val open = rememberOpenNetworkSettings(onUnavailable = { unavailable = true })
-                ContentOfferContent(ContentPackState.NotDownloaded, false, false, {}, open, {}, {})
+                ContentOfferContent(ContentPackState.NotDownloaded, Connectivity.Offline, false, {}, open, {}, {})
             }
         }
         composeRule.onNodeWithTag("offer:connect").performClick()
@@ -486,7 +496,7 @@ internal class SettingsScreenTest {
     @Test
     fun theOfferSaysWhenNetworkSettingsCantOpen() {
         shadowOf(application).checkActivities(true)
-        val viewModel = offerViewModel(FakeConnectivityRepository(internetAvailable = false))
+        val viewModel = offerViewModel(FakeConnectivityRepository(Connectivity.Offline))
         composeRule.setContent { AppTheme { ContentOfferDialog(onClose = {}, viewModel = viewModel) } }
         awaitTag("offer:connect")
 
@@ -508,18 +518,18 @@ internal class SettingsScreenTest {
     // Scenario: Offer goes back offline
     @Test
     fun theOfferFollowsTheConnection() {
-        val connectivity = FakeConnectivityRepository(internetAvailable = false)
+        val connectivity = FakeConnectivityRepository(Connectivity.Offline)
         val viewModel = offerViewModel(connectivity)
         composeRule.setContent { AppTheme { ContentOfferDialog(onClose = {}, viewModel = viewModel) } }
         awaitTag("offer:connect")
         composeRule.onNodeWithTag("offer:connect").assertIsDisplayed()
 
-        connectivity.internetAvailable.value = true
+        connectivity.connectivity.value = Connectivity.Online
         awaitTag("offer:download")
         composeRule.onNodeWithTag("offer:download").assertIsDisplayed()
         composeRule.onNodeWithTag("offer:connect").assertDoesNotExist()
 
-        connectivity.internetAvailable.value = false
+        connectivity.connectivity.value = Connectivity.Offline
         awaitTag("offer:connect")
         composeRule.onNodeWithTag("offer:connect").assertIsDisplayed()
         composeRule.onNodeWithTag("offer:download").assertDoesNotExist()
@@ -529,7 +539,7 @@ internal class SettingsScreenTest {
     @Test
     fun offlineSettingsOffersToConnect() {
         var connected = false
-        show(state = SettingsState.Initial.copy(internetAvailable = false), onConnect = { connected = true })
+        show(state = SettingsState.Initial.copy(connectivity = Connectivity.Offline), onConnect = { connected = true })
         composeRule.onNodeWithText("About 183 MB to download, 27 MB on this device").assertExists()
         composeRule.onNodeWithText("No internet connection.").assertIsDisplayed()
         composeRule.onNodeWithTag("settings:download").assertDoesNotExist()
@@ -542,7 +552,7 @@ internal class SettingsScreenTest {
     fun offlineInterruptedSettingsOffersToConnectAndDelete() {
         var deleted = false
         show(
-            state = SettingsState.Initial.copy(content = ContentPackState.Interrupted(5, 10), internetAvailable = false),
+            state = SettingsState.Initial.copy(content = ContentPackState.Interrupted(5, 10), connectivity = Connectivity.Offline),
             onDelete = { deleted = true },
         )
         composeRule.onNodeWithText("5 of 10").assertExists()
@@ -556,18 +566,18 @@ internal class SettingsScreenTest {
     // Scenario: Settings download returns when connected
     @Test
     fun settingsFollowsTheConnection() {
-        val connectivity = FakeConnectivityRepository(internetAvailable = false)
+        val connectivity = FakeConnectivityRepository(Connectivity.Offline)
         val viewModel = settingsViewModel(connectivity = connectivity)
         composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = viewModel) } }
         awaitTag("settings:connect")
         composeRule.onNodeWithTag("settings:connect").assertIsDisplayed()
 
-        connectivity.internetAvailable.value = true
+        connectivity.connectivity.value = Connectivity.Online
         awaitTag("settings:download")
         composeRule.onNodeWithTag("settings:download").assertIsDisplayed()
         composeRule.onNodeWithTag("settings:connect").assertDoesNotExist()
 
-        connectivity.internetAvailable.value = false
+        connectivity.connectivity.value = Connectivity.Offline
         awaitTag("settings:connect")
         composeRule.onNodeWithTag("settings:connect").assertIsDisplayed()
         composeRule.onNodeWithTag("settings:download").assertDoesNotExist()
@@ -576,7 +586,7 @@ internal class SettingsScreenTest {
     // Scenario: Connect from settings
     @Test
     fun settingsConnectOpensTheInternetPanel() {
-        val viewModel = settingsViewModel(connectivity = FakeConnectivityRepository(internetAvailable = false))
+        val viewModel = settingsViewModel(connectivity = FakeConnectivityRepository(Connectivity.Offline))
         composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = viewModel) } }
         awaitTag("settings:connect")
         composeRule.onNodeWithTag("settings:connect").performClick()
@@ -588,7 +598,7 @@ internal class SettingsScreenTest {
     @Test
     fun settingsSaysWhenNetworkSettingsCantOpen() {
         shadowOf(application).checkActivities(true)
-        val viewModel = settingsViewModel(connectivity = FakeConnectivityRepository(internetAvailable = false))
+        val viewModel = settingsViewModel(connectivity = FakeConnectivityRepository(Connectivity.Offline))
         composeRule.setContent { AppTheme { SettingsScreen({}, {}, viewModel = viewModel) } }
         awaitTag("settings:connect")
         composeRule.onNodeWithTag("settings:connect").performClick()
@@ -623,28 +633,28 @@ internal class SettingsScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phoneOffline() {
-        show(state = SettingsState.Initial.copy(internetAvailable = false))
+        show(state = SettingsState.Initial.copy(connectivity = Connectivity.Offline))
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tabletOffline() {
-        show(state = SettingsState.Initial.copy(internetAvailable = false))
+        show(state = SettingsState.Initial.copy(connectivity = Connectivity.Offline))
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
     fun phoneInterruptedOffline() {
-        show(state = SettingsState.Initial.copy(content = ContentPackState.Interrupted(320, 2051), internetAvailable = false))
+        show(state = SettingsState.Initial.copy(content = ContentPackState.Interrupted(320, 2051), connectivity = Connectivity.Offline))
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tabletInterruptedOffline() {
-        show(state = SettingsState.Initial.copy(content = ContentPackState.Interrupted(320, 2051), internetAvailable = false))
+        show(state = SettingsState.Initial.copy(content = ContentPackState.Interrupted(320, 2051), connectivity = Connectivity.Offline))
         composeRule.onRoot().captureRoboImage()
     }
 }

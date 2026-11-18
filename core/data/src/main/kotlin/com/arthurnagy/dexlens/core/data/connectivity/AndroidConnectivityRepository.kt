@@ -6,6 +6,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import com.arthurnagy.dexlens.core.data.catchStorage
 import com.arthurnagy.dexlens.core.domain.connectivity.ConnectivityRepository
+import com.arthurnagy.dexlens.core.model.Connectivity
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
 import com.github.michaelbull.result.runCatching
@@ -18,17 +19,17 @@ import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * Reads the default network from [ConnectivityManager]: nothing is sent over the network. "Available" means the
+ * Reads the default network from [ConnectivityManager]: nothing is sent over the network. [Connectivity.Online] means the
  * default network has internet, Android has validated it (so not behind a sign-in page) and it isn't blocked for this
- * app. When connectivity can't be read at all, it reports available, so the screens keep today's behaviour.
+ * app. When connectivity can't be read at all, it reports [Connectivity.Online], so the screens keep today's behaviour.
  */
 internal class AndroidConnectivityRepository
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
     ) : ConnectivityRepository {
-        override fun observeInternetAvailable(): Flow<Boolean> = callbackFlow {
-            val callback = DefaultNetworkCallback { available -> trySend(available) }
+        override fun observeConnectivity(): Flow<Connectivity> = callbackFlow {
+            val callback = DefaultNetworkCallback { connectivity -> trySend(connectivity) }
             val registered = catchStorage {
                 val manager = checkNotNull(context.getSystemService(ConnectivityManager::class.java)) { "No ConnectivityManager" }
                 val active = manager.activeNetwork
@@ -36,7 +37,7 @@ internal class AndroidConnectivityRepository
                 manager.registerDefaultNetworkCallback(callback)
                 manager
             }
-            registered.onErr { trySend(true) }
+            registered.onErr { trySend(Connectivity.Online) }
             // Unregistering a callback that was never registered throws, so only undo a successful registration. Any
             // other platform failure on teardown stops here too, so it never reaches the collector.
             awaitClose {
@@ -53,7 +54,7 @@ internal class AndroidConnectivityRepository
  * connectivity thread one at a time, so the fields need no locking.
  */
 private class DefaultNetworkCallback(
-    private val send: (Boolean) -> Unit,
+    private val send: (Connectivity) -> Unit,
 ) : ConnectivityManager.NetworkCallback() {
     private var current: Network? = null
     private var usable = false
@@ -97,7 +98,7 @@ private class DefaultNetworkCallback(
         publish()
     }
 
-    private fun publish() = send(usable && !blocked)
+    private fun publish() = send(if (usable && !blocked) Connectivity.Online else Connectivity.Offline)
 }
 
 private fun NetworkCapabilities?.isUsable(): Boolean = this != null &&
