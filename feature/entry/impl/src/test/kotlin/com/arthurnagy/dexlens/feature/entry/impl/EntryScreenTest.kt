@@ -83,8 +83,20 @@ class EntryScreenTest {
         onOpen: (Int) -> Unit = {},
         onSelect: (Int) -> Unit = {},
         onSelectGame: (Int) -> Unit = {},
+        showBackArrow: Boolean = true,
     ) {
-        composeRule.setContent { AppTheme { EntryContent(state, onBack, onOpen, onSelect, onSelectGame) } }
+        composeRule.setContent {
+            AppTheme {
+                EntryContent(
+                    state = state,
+                    onNavigateBack = onBack,
+                    showBackArrow = showBackArrow,
+                    onOpenSpecies = onOpen,
+                    onSelectVariety = onSelect,
+                    onSelectGame = onSelectGame,
+                )
+            }
+        }
     }
 
     private fun scrollTo(text: String) {
@@ -131,6 +143,33 @@ class EntryScreenTest {
         var back = false
         show(EntryState.Failed(DomainError.NotFound), onBack = { back = true })
         composeRule.onNodeWithText("That item is no longer available.").assertExists()
+        composeRule.onNodeWithText("Go back").performClick()
+        assertEquals(true, back)
+    }
+
+    // Scenario: Entry Back arrow on a phone
+    @Test
+    fun theBackArrowGoesBack() {
+        var back = false
+        show(loaded, onBack = { back = true })
+        composeRule.onNodeWithTag("entry:back").performClick()
+        assertEquals(true, back)
+    }
+
+    // Scenario: No Back arrow on an entry beside the list
+    @Test
+    fun theBackArrowIsHiddenBesideTheList() {
+        show(loaded, showBackArrow = false)
+        composeRule.onNodeWithText("Seed Pokémon").assertExists()
+        composeRule.onNodeWithTag("entry:back").assertDoesNotExist()
+    }
+
+    // Scenario: Unknown species
+    @Test
+    fun aFailedEntryBesideTheListKeepsItsWayBack() {
+        var back = false
+        show(EntryState.Failed(DomainError.NotFound), onBack = { back = true }, showBackArrow = false)
+        composeRule.onNodeWithTag("entry:back").assertDoesNotExist()
         composeRule.onNodeWithText("Go back").performClick()
         assertEquals(true, back)
     }
@@ -190,7 +229,9 @@ class EntryScreenTest {
             ),
             SetPreferredGameUseCase(FakeUserPreferencesRepository(ThemeMode.SYSTEM)),
         )
-        composeRule.setContent { AppTheme { EntryScreen(viewModel = viewModel, onNavigateBack = {}, onOpenSpecies = {}) } }
+        composeRule.setContent {
+            AppTheme { EntryScreen(viewModel = viewModel, onNavigateBack = {}, showBackArrow = true, onOpenSpecies = {}) }
+        }
         composeRule.waitUntil(WAIT_MS) { composeRule.onAllNodesWithText("Seed Pokémon").fetchSemanticsNodes().isNotEmpty() }
         composeRule.onNodeWithText("Seed Pokémon").assertExists()
         // The section is a lazy item further down, so it can only be found by scrolling once it has loaded.
@@ -394,7 +435,8 @@ class EntryScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tabletLoading() {
-        show(EntryState.Loading)
+        // Tablet and foldable goldens show the entry as it sits beside the home list: no Back arrow.
+        show(EntryState.Loading, showBackArrow = false)
         composeRule.onRoot().captureRoboImage()
     }
 
@@ -409,14 +451,14 @@ class EntryScreenTest {
     @Test
     @Config(qualifiers = "w841dp-h701dp-xxhdpi")
     fun foldable() {
-        show(loaded)
+        show(loaded, showBackArrow = false)
         composeRule.onRoot().captureRoboImage()
     }
 
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tablet() {
-        show(loaded)
+        show(loaded, showBackArrow = false)
         composeRule.onRoot().captureRoboImage()
     }
 
@@ -431,7 +473,7 @@ class EntryScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tabletInGame() {
-        show(described)
+        show(described, showBackArrow = false)
         composeRule.onNodeWithTag("entry:list").performScrollToNode(hasTestTag("entry:location:1"))
         composeRule.onRoot().captureRoboImage()
     }
