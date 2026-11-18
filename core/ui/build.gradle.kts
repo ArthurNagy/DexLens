@@ -11,4 +11,7 @@ dependencies {
     api(project(":core:domain"))
     implementation(project(":core:designsystem"))
     implementation(libs.coil.compose)
+    implementation(libs.androidx.compose.material3.adaptive.navigation3)
+
+    testImplementation(libs.androidx.navigation3.ui)
 }
