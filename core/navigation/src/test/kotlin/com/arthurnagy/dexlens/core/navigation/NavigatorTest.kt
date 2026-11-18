@@ -102,4 +102,20 @@ class NavigatorTest {
 
         assertEquals(listOf(Root, Entry(1)), backStack.toList())
     }
+
+    @Test
+    fun entryBelowIsWhatBackReturnsTo() {
+        val navigator = Navigator(NavBackStack<NavKey>(Root, Entry(1), Entry(2)))
+
+        assertEquals(Entry(1), navigator.entryBelow(Entry(2)))
+        assertEquals(Root, navigator.entryBelow(Entry(1)))
+    }
+
+    @Test
+    fun theRootAndAMissingKeyHaveNothingBelow() {
+        val navigator = Navigator(NavBackStack<NavKey>(Root, Entry(1)))
+
+        assertNull(navigator.entryBelow(Root))
+        assertNull(navigator.entryBelow(Detail))
+    }
 }
