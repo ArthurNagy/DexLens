@@ -36,3 +36,9 @@ data class ScanNameRow(
     @ColumnInfo(name = "species_id") val speciesId: Int,
     val name: String,
 )
+
+/** A generation and the lowest National Pokédex number in it. */
+data class GenerationStartRow(
+    val generation: Int,
+    @ColumnInfo(name = "first_species_id") val firstSpeciesId: Int,
+)

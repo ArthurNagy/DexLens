@@ -13,6 +13,12 @@ data class SpeciesSummary(
     val types: List<PokemonType>,
 )
 
+/** The first species of a generation, by National Pokédex number. */
+data class GenerationStart(
+    val generation: Int,
+    val firstSpecies: SpeciesId,
+)
+
 /** A search result. [matchedName] is set when the query matched a name other than the displayed one. */
 data class SpeciesSearchResult(
     val summary: SpeciesSummary,

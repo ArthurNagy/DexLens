@@ -6,6 +6,7 @@ import com.arthurnagy.dexlens.core.model.EvolutionMethod
 import com.arthurnagy.dexlens.core.model.EvolutionNode
 import com.arthurnagy.dexlens.core.model.EvolutionTrigger
 import com.arthurnagy.dexlens.core.model.GenderRatio
+import com.arthurnagy.dexlens.core.model.GenerationStart
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.SpeciesId
@@ -17,6 +18,19 @@ fun speciesSummary(
     name: String,
     vararg types: PokemonType,
 ): SpeciesSummary = SpeciesSummary(id = SpeciesId(id), name = name, types = types.toList().ifEmpty { listOf(PokemonType.NORMAL) })
+
+/** The nine generations' first species, as the bundled data has them. */
+fun nationalGenerationStarts(): List<GenerationStart> =
+    listOf(1, 152, 252, 387, 494, 650, 722, 810, 906).mapIndexed { index, first -> GenerationStart(index + 1, SpeciesId(first)) }
+
+/** All 1,025 species in Pokédex order, named "Species <id>" except the generation starts the tests look for. */
+fun nationalDexSummaries(): List<SpeciesSummary> = (1..NATIONAL_DEX_SIZE).map { id ->
+    speciesSummary(id, NATIONAL_DEX_NAMES[id] ?: "Species $id", PokemonType.NORMAL)
+}
+
+private const val NATIONAL_DEX_SIZE = 1025
+
+private val NATIONAL_DEX_NAMES = mapOf(1 to "Bulbasaur", 252 to "Treecko", 387 to "Turtwig", 906 to "Sprigatito")
 
 fun levelUpMethod(level: Int): EvolutionMethod = EvolutionMethod(
     trigger = EvolutionTrigger.LEVEL_UP,

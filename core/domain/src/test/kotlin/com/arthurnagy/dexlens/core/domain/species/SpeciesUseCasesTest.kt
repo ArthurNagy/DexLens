@@ -5,6 +5,7 @@ import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeTypeChartRepository
 import com.arthurnagy.dexlens.core.testing.bulbasaurDetail
+import com.arthurnagy.dexlens.core.testing.nationalGenerationStarts
 import com.arthurnagy.dexlens.core.testing.sampleTypeChart
 import com.arthurnagy.dexlens.core.testing.speciesSummary
 import com.github.michaelbull.result.Err
@@ -37,5 +38,18 @@ internal class SpeciesUseCasesTest {
     fun typeChartReturned() = runTest {
         val chart = sampleTypeChart()
         assertEquals(Ok(chart), GetTypeChartUseCase(FakeTypeChartRepository(chart))())
+    }
+
+    // Scenario: Dragging jumps to each generation's first species
+    @Test
+    fun generationStartsReturnsRepositoryStarts() = runTest {
+        val starts = nationalGenerationStarts()
+        assertEquals(Ok(starts), GetGenerationStartsUseCase(FakeSpeciesRepository(generationStarts = starts))())
+    }
+
+    @Test
+    fun generationStartsPassesErrorsThrough() = runTest {
+        val repository = FakeSpeciesRepository(generationStarts = nationalGenerationStarts()).apply { nextError = DomainError.NotFound }
+        assertEquals(Err(DomainError.NotFound), GetGenerationStartsUseCase(repository)())
     }
 }

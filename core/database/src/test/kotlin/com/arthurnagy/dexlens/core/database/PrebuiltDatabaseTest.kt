@@ -47,6 +47,19 @@ internal class PrebuiltDatabaseTest {
 
     private suspend fun search(match: String) = dao.searchNames(match).map { it.speciesId }.toSet()
 
+    // Scenario: Dragging jumps to each generation's first species
+    @Test
+    fun generationStartsComeFromTheBundledData() = runTest {
+        val starts = dao.generationStarts()
+        assertEquals((1..9).toList(), starts.map { it.generation })
+        assertEquals(listOf(1, 152, 252, 387, 494, 650, 722, 810, 906), starts.map { it.firstSpeciesId })
+        // A row's generation is read from these starts, which holds only while each generation is one run of ids.
+        assertEquals(
+            0L,
+            scalar("SELECT COUNT(*) FROM species a JOIN species b ON b.id = a.id + 1 WHERE b.generation < a.generation"),
+        )
+    }
+
     @Test
     fun onePicturePerVarietyWithSpeciesSharingTheirDefaultId() = runTest {
         val ids = dao.pictureIds()

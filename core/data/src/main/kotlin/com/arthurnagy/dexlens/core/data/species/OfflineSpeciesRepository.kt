@@ -5,6 +5,7 @@ import com.arthurnagy.dexlens.core.database.SpeciesDao
 import com.arthurnagy.dexlens.core.domain.DomainError
 import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
 import com.arthurnagy.dexlens.core.model.GenderRatio
+import com.arthurnagy.dexlens.core.model.GenerationStart
 import com.arthurnagy.dexlens.core.model.SpeciesDetail
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesNameHit
@@ -39,6 +40,10 @@ internal class OfflineSpeciesRepository
 
         override suspend fun scanNames(): Result<List<SpeciesNameHit>, DomainError> = catchStorage {
             dao.allScanNames().map { SpeciesNameHit(SpeciesId(it.speciesId), it.name) }
+        }
+
+        override suspend fun generationStarts(): Result<List<GenerationStart>, DomainError> = catchStorage {
+            dao.generationStarts().map { GenerationStart(it.generation, SpeciesId(it.firstSpeciesId)) }
         }
 
         override suspend fun detail(id: SpeciesId): Result<SpeciesDetail, DomainError> = catchStorage {
