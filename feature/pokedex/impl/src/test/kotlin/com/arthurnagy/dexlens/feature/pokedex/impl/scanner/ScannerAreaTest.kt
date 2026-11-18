@@ -178,7 +178,8 @@ internal class ScannerAreaTest {
         val states = listOf(
             Triple(ready.copy(permission = CameraPermission.NEEDS_REQUEST), null, "Allow camera"),
             Triple(ready.copy(failed = true), null, "This device has no camera DexLens can use."),
-            Triple(ready, DomainError.Unknown("x"), null),
+            // DomainError.Unknown's wording.
+            Triple(ready, DomainError.Unknown("x"), "Something went wrong. Please try again."),
         )
         show()
         states.forEach { (status, error, text) ->
@@ -187,15 +188,13 @@ internal class ScannerAreaTest {
             upright = true
             composeRule.waitForIdle()
             assertEquals(CameraColors.background, stripAndAbove().first, "behind the corners with $status $error")
-            if (text != null) {
-                val area = bounds("pokedex:scannerArea")
-                val filled = composeRule.onNodeWithText(text).getUnclippedBoundsInRoot()
-                assertTrue(filled.top >= area.top && filled.bottom <= area.bottom, "$text inside the visible area")
-                assertEquals(((area.left + area.right) / 2).value, ((filled.left + filled.right) / 2).value, 1f, "$text centred")
-                upright = false
-                composeRule.waitForIdle()
-                assertSame(filled, composeRule.onNodeWithText(text).getUnclippedBoundsInRoot(), "$text in the same place")
-            }
+            val area = bounds("pokedex:scannerArea")
+            val filled = composeRule.onNodeWithText(text).getUnclippedBoundsInRoot()
+            assertTrue(filled.top >= area.top && filled.bottom <= area.bottom, "$text inside the visible area")
+            assertEquals(((area.left + area.right) / 2).value, ((filled.left + filled.right) / 2).value, 1f, "$text centred")
+            upright = false
+            composeRule.waitForIdle()
+            assertSame(filled, composeRule.onNodeWithText(text).getUnclippedBoundsInRoot(), "$text in the same place")
         }
     }
 

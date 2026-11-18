@@ -14,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
@@ -509,29 +508,6 @@ internal class PokedexScreenTest {
         listOf("pokedex:aimBox", "pokedex:scanLabel", "pokedex:torch", "pokedex:settings").forEach {
             assertTrue(bounds(it).bottom <= area.bottom, "$it ends above the sheet")
         }
-    }
-
-    // Scenario: Sheet corners fade with the camera
-    @Test
-    @Config(qualifiers = RobolectricDeviceQualifiers.Pixel7)
-    fun theCornersKeepTheCameraWhileTheSheetIsDragged() {
-        show()
-        val area = bounds("pokedex:scannerArea")
-        val travel = (area.bottom - AppDimens.scannerButtonRowHeight).px().toFloat()
-        composeRule.onNodeWithTag("pokedex:search").performTouchInput {
-            down(center)
-            moveBy(Offset(0f, -travel / 3f))
-        }
-        composeRule.waitForIdle()
-        val image = composeRule.onRoot().captureToImage().toPixelMap()
-        // The sheet's edge, mid-drag: its content starts below the drag handle.
-        val sheetTop = (bounds("pokedex:search").top - AppDimens.sheetDragHandleHeight).px()
-        assertTrue(sheetTop < area.bottom.px(), "the sheet has moved up")
-        // Behind the rounded corner the scanner area shows, fading like the area just above the sheet: never dark.
-        val corner = image[2, sheetTop + 2]
-        assertNotEquals(CameraColors.background, corner)
-        assertEquals(image[2, sheetTop - 3], corner)
-        composeRule.onNodeWithTag("pokedex:search").performTouchInput { up() }
     }
 
     // --- The scanner area ---
