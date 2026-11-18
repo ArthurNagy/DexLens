@@ -45,6 +45,7 @@ private fun PokedexPreview() {
             onToggleTorch = {},
             onRequestPermission = {},
             onOpenAppSettings = {},
+            cameraUprightPortrait = { true },
             viewfinder = { Box(Modifier.fillMaxSize().background(CameraColors.toolbar)) },
         )
     }

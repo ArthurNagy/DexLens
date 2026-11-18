@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -73,6 +74,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -80,6 +82,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -129,8 +132,10 @@ import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScannerArea
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ScannerButtons
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.ThreadedPictureRecognizer
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.TopBarTitle
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.rememberBackCameraUprightPortrait
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.scannerAreaHeight
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.topBarAlpha
+import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.topCornerRadius
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -194,6 +199,7 @@ internal fun PokedexScreen(
         onOpenAppSettings = {
             context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
         },
+        cameraUprightPortrait = { rememberBackCameraUprightPortrait() },
         modifier = modifier,
         viewfinder = { aimBox ->
             val recognizer = remember { MlKitLineRecognizer() }
@@ -305,6 +311,7 @@ internal fun PokedexContent(
     onToggleTorch: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    cameraUprightPortrait: @Composable () -> Boolean?,
     modifier: Modifier = Modifier,
     viewfinder: @Composable (AimBox) -> Unit,
 ) {
@@ -356,6 +363,7 @@ internal fun PokedexContent(
                 textFieldState = textFieldState,
                 camera = camera,
                 canNavigateBack = canNavigateBack,
+                windowWidth = maxWidth,
                 windowHeight = maxHeight,
                 areaHeight = scannerAreaHeight(maxWidth, maxHeight, topInset),
                 topInset = topInset,
@@ -364,6 +372,7 @@ internal fun PokedexContent(
                 onToggleTorch = onToggleTorch,
                 onRequestPermission = onRequestPermission,
                 onOpenAppSettings = onOpenAppSettings,
+                cameraUprightPortrait = cameraUprightPortrait,
                 viewfinder = viewfinder,
             )
 
@@ -400,6 +409,7 @@ private fun ScannerHome(
     textFieldState: TextFieldState,
     camera: CameraStatus,
     canNavigateBack: Boolean,
+    windowWidth: Dp,
     windowHeight: Dp,
     areaHeight: Dp,
     topInset: Dp,
@@ -408,6 +418,7 @@ private fun ScannerHome(
     onToggleTorch: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    cameraUprightPortrait: @Composable () -> Boolean?,
     viewfinder: @Composable (AimBox) -> Unit,
 ) {
     // Text can already be there when the switch is turned on mid-search, and collapsed always means scanning.
@@ -457,10 +468,21 @@ private fun ScannerHome(
     // The status bar icons and the buttons change at the fade's midpoint, when the top bar has become the brighter of the two.
     val overTopBar by remember { derivedStateOf { fade > TOP_BAR_MIDPOINT } }
     if (!isWideWindow() && !overTopBar) LightStatusBarIcons()
+    // The shape the sheet draws, measured for how far its rounded corners leave the scanner area showing.
+    val sheetShape = BottomSheetDefaults.ExpandedShape
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val cornerRadius = remember(sheetShape, windowWidth, windowHeight, areaHeight, density, layoutDirection) {
+        val sheetSize = with(density) { Size(windowWidth.toPx(), (windowHeight - areaHeight).toPx()) }
+        with(density) { topCornerRadius(sheetShape, sheetSize, layoutDirection, density).toDp() }
+    }
+    // Looked up only here, with the scanner on.
+    val uprightPortrait = cameraUprightPortrait()
     Box(Modifier.fillMaxSize()) {
         BottomSheetScaffold(
             scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState),
             sheetPeekHeight = windowHeight - areaHeight,
+            sheetShape = sheetShape,
             sheetMaxWidth = Dp.Unspecified,
             sheetContainerColor = MaterialTheme.colorScheme.surface,
             sheetShadowElevation = AppSpacing.none,
@@ -483,6 +505,8 @@ private fun ScannerHome(
                 cameraRunning = cameraRunning,
                 topBarAlpha = { topBarAlpha(sheetState.requireOffset(), collapsedOffset, expandedOffset) },
                 height = areaHeight,
+                cornerRadius = cornerRadius,
+                cameraUprightPortrait = uprightPortrait,
                 topInset = topInset,
                 onRequestPermission = onRequestPermission,
                 onOpenAppSettings = onOpenAppSettings,

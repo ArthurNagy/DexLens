@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
@@ -45,6 +46,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -97,8 +99,15 @@ internal fun topBarAlpha(
 ): Float = ((collapsedOffset - sheetOffset) / (collapsedOffset - expandedOffset).coerceAtLeast(1f)).coerceIn(0f, 1f)
 
 /**
- * The top of the home screen. [viewfinder] is a slot so tests and goldens can run without camera hardware, and it is
- * composed only while [cameraRunning], because leaving composition is what turns the camera off.
+ * The top of the home screen, [height] tall where it can be seen. [viewfinder] is a slot so tests and goldens can run
+ * without camera hardware, and it is composed only while [cameraRunning], because leaving composition is what turns the
+ * camera off.
+ *
+ * Where the camera picture is sure to reach past the area by the sheet's [cornerRadius] above and below at its current
+ * scale ([cornersFit], given [cameraUprightPortrait]), the camera, its overlay and the fade carry on that far under the
+ * sheet, so its rounded corners show the camera. The viewfinder then grows by the radius at both ends, keeping its
+ * centre and scale, so the aiming box covers the same sensor pixels. Everything the user reads or taps stays laid out
+ * in the visible [height].
  */
 @Composable
 internal fun ScannerArea(
@@ -108,26 +117,96 @@ internal fun ScannerArea(
     cameraRunning: Boolean,
     topBarAlpha: () -> Float,
     height: Dp,
+    cornerRadius: Dp,
+    cameraUprightPortrait: Boolean?,
     topInset: Dp,
     onRequestPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
     modifier: Modifier = Modifier,
     viewfinder: @Composable (AimBox) -> Unit,
 ) {
-    BoxWithConstraints(modifier.fillMaxWidth().height(height).clipToBounds().background(CameraColors.background)) {
-        val areaWidth = maxWidth
-        val areaHeight = maxHeight
-        val density = LocalDensity.current
-        val aimBox = remember(constraints.maxWidth, constraints.maxHeight, topInset, density) {
+    val density = LocalDensity.current
+    val heightPx = with(density) { height.roundToPx() }
+    val radiusPx = with(density) { cornerRadius.roundToPx() }
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val widthPx = constraints.maxWidth
+        // Recomputed on every composition: the same window always gives the same answer, so the camera binds once.
+        val underlapPx = if (cornersFit(widthPx, heightPx, radiusPx, cameraUprightPortrait)) radiusPx else 0
+        val aimBox = remember(widthPx, heightPx, topInset, density) {
             aimBoxFor(
-                width = constraints.maxWidth.toFloat(),
-                height = constraints.maxHeight.toFloat(),
+                width = widthPx.toFloat(),
+                height = heightPx.toFloat(),
                 topInset = with(density) { topInset.toPx() },
                 reservedWidth = with(density) { AppDimens.scannerButtonRowWidth.toPx() },
                 buttonRowHeight = with(density) { AppDimens.scannerButtonRowHeight.toPx() },
                 margin = with(density) { AppSpacing.md.toPx() },
             )
         }
+        val cameraBox = remember(aimBox, heightPx, underlapPx) {
+            aimBox.inViewfinder(heightPx.toFloat(), underlapPx.toFloat(), underlapPx.toFloat())
+        }
+        val showCamera = camera.permission == CameraPermission.GRANTED && !camera.failed && scanError == null && cameraRunning
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(with(density) { (heightPx + underlapPx).toDp() })
+                .clipToBounds()
+                .background(CameraColors.background),
+        ) {
+            if (showCamera) {
+                Box(Modifier.fillMaxWidth().viewfinderLayer(heightPx, underlapPx)) {
+                    viewfinder(cameraBox)
+                    AimBoxOverlay(cameraBox, Modifier.fillMaxSize())
+                }
+            }
+            ScannerContent(
+                match = match,
+                scanError = scanError,
+                camera = camera,
+                showCamera = showCamera,
+                aimBox = aimBox,
+                topInset = topInset,
+                onRequestPermission = onRequestPermission,
+                onOpenAppSettings = onOpenAppSettings,
+                modifier = Modifier.fillMaxWidth().height(with(density) { heightPx.toDp() }),
+            )
+            // Read while drawing, so following the sheet doesn't recompose the camera on every frame.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = topBarAlpha() }
+                    .background(MaterialTheme.colorScheme.surfaceContainer),
+            )
+        }
+    }
+}
+
+/** Measures the camera layer exactly [underlapPx] taller at both ends than the visible [heightPx], from [underlapPx] above. */
+private fun Modifier.viewfinderLayer(
+    heightPx: Int,
+    underlapPx: Int,
+): Modifier = layout { measurable, constraints ->
+    val layerHeight = heightPx + 2 * underlapPx
+    val placeable = measurable.measure(constraints.copy(minHeight = layerHeight, maxHeight = layerHeight))
+    layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, -underlapPx) }
+}
+
+/** What the user reads or taps in the visible part of the area: the label, the messages and the aiming box's description. */
+@Composable
+private fun ScannerContent(
+    match: List<SpeciesSummary>,
+    scanError: DomainError?,
+    camera: CameraStatus,
+    showCamera: Boolean,
+    aimBox: AimBox,
+    topInset: Dp,
+    onRequestPermission: () -> Unit,
+    onOpenAppSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier.testTag("pokedex:scannerArea")) {
+        val areaWidth = maxWidth
+        val areaHeight = maxHeight
         when {
             camera.permission != CameraPermission.GRANTED -> {
                 PermissionPrompt(camera.permission, topInset, onRequestPermission, onOpenAppSettings)
@@ -141,9 +220,12 @@ internal fun ScannerArea(
                 ScannerMessage(scanError.toMessage(), topInset)
             }
 
-            cameraRunning -> {
-                viewfinder(aimBox)
-                AimBoxOverlay(aimBox, Modifier.fillMaxSize())
+            showCamera -> {
+                AimBoxDescription(
+                    Modifier
+                        .padding(start = areaWidth * aimBox.left, top = areaHeight * aimBox.top)
+                        .size(width = areaWidth * (aimBox.right - aimBox.left), height = areaHeight * (aimBox.bottom - aimBox.top)),
+                )
                 ScanLabel(
                     match = match,
                     modifier = Modifier
@@ -156,14 +238,17 @@ internal fun ScannerArea(
                 )
             }
         }
-        // Read while drawing, so following the sheet doesn't recompose the camera on every frame.
-        Box(
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = topBarAlpha() }
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-        )
     }
+}
+
+/**
+ * The aiming box for screen readers, sized to the box the user sees. The drawn box reaches under the sheet with the
+ * camera, so its description lives here instead, where focus can't land under the sheet.
+ */
+@Composable
+private fun AimBoxDescription(modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.pokedex_scanner_aim_box)
+    Box(modifier.testTag("pokedex:aimBox").semantics { contentDescription = description })
 }
 
 /** The hint, or the matched names in its place. Screen readers announce the change. */
@@ -292,7 +377,7 @@ private fun ScannerMessage(
     }
 }
 
-/** Dims everything outside the aiming box and draws its corner brackets. */
+/** Dims everything outside the aiming box and draws its corner brackets. Drawing only: [AimBoxDescription] describes it. */
 @Composable
 private fun AimBoxOverlay(
     box: AimBox,
@@ -301,13 +386,7 @@ private fun AimBoxOverlay(
     val cornerRadius = with(LocalDensity.current) { AppDimens.aimBoxCorner.toPx() }
     val strokeWidth = with(LocalDensity.current) { AppDimens.aimBoxStroke.toPx() }
     val cornerLength = with(LocalDensity.current) { AppDimens.aimBoxCornerLength.toPx() }
-    val description = stringResource(R.string.pokedex_scanner_aim_box)
-    Canvas(
-        modifier
-            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-            .testTag("pokedex:aimBox")
-            .clearAndSetSemantics { contentDescription = description },
-    ) {
+    Canvas(modifier.graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)) {
         drawRect(CameraColors.scrim)
         val topLeft = Offset(size.width * box.left, size.height * box.top)
         val boxSize = Size(size.width * (box.right - box.left), size.height * (box.bottom - box.top))

@@ -5,7 +5,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** The aiming box as fractions of the visible camera area. */
+/** The aiming box as fractions of the surface it is drawn on: the visible camera area, or the taller viewfinder. */
 @Immutable
 internal data class AimBox(
     val left: Float,
@@ -50,6 +50,38 @@ internal fun aimBoxFor(
         right = (left + box.width) / width,
         bottom = (box.top + box.height) / height,
     )
+}
+
+/**
+ * The same box as fractions of a viewfinder that reaches [above] pixels above and [below] pixels below the
+ * [visibleHeight] it was laid out in. Left and right don't change, because the width doesn't.
+ */
+internal fun AimBox.inViewfinder(
+    visibleHeight: Float,
+    above: Float,
+    below: Float,
+): AimBox {
+    // Exactly the same box when nothing is added, so the unfilled layout analyses what it always has.
+    if (above == 0f && below == 0f) return this
+    val total = visibleHeight + above + below
+    return copy(top = (top * visibleHeight + above) / total, bottom = (bottom * visibleHeight + above) / total)
+}
+
+/**
+ * Whether the camera picture is sure to reach [radiusPx] past the [visibleHeightPx]-tall area both above and below at
+ * the scale it has at that size, so a viewfinder that much taller keeps the same scale and centre. The picture both
+ * camera streams share is between 4:3 and 16:9, so upright in portrait it is at least 4/3 of [widthPx] tall and upright
+ * in landscape at least 9/16 of it. An unknown orientation never fits.
+ */
+internal fun cornersFit(
+    widthPx: Int,
+    visibleHeightPx: Int,
+    radiusPx: Int,
+    uprightPortrait: Boolean?,
+): Boolean {
+    if (uprightPortrait == null || radiusPx <= 0) return false
+    val pictureHeight = if (uprightPortrait) widthPx * PORTRAIT_HEIGHT_OVER_WIDTH else widthPx * LANDSCAPE_HEIGHT_OVER_WIDTH
+    return pictureHeight >= visibleHeightPx + 2 * radiusPx
 }
 
 private data class Placed(
@@ -124,6 +156,8 @@ internal fun lumaCropToNv21(
     return output
 }
 
+private const val PORTRAIT_HEIGHT_OVER_WIDTH = 4f / 3f
+private const val LANDSCAPE_HEIGHT_OVER_WIDTH = 9f / 16f
 private const val HEIGHT_SHARE = 0.8f
 private const val NEAR_SQUARE = 1.05f
 private const val MAX_WIDTH_OVER_HEIGHT = 1.5f
