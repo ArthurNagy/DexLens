@@ -5,6 +5,7 @@ import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.view.Surface
+import androidx.annotation.VisibleForTesting
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -69,15 +70,21 @@ internal object BackCameraSensor {
         cached
     }
 
-    /** For tests: forgets the cached lookup. */
+    /** Forgets the cached lookup. */
+    @VisibleForTesting
     fun reset() = synchronized(this) {
         looked = false
         cached = null
     }
 
-    /** The camera CameraX's `DEFAULT_BACK_CAMERA` binds: the first back-facing, backward-compatible id. */
+    /**
+     * The camera CameraX's `DEFAULT_BACK_CAMERA` binds: the first back-facing, backward-compatible id. Stops at that id,
+     * so the main thread only asks for the characteristics it needs. Any failure, including a `SecurityException` or an
+     * OEM's own, means an unknown orientation, which never fills the corners.
+     */
     private fun lookUp(manager: CameraManager?): Int? = try {
         manager?.cameraIdList
+            ?.asSequence()
             ?.map(manager::getCameraCharacteristics)
             ?.firstOrNull { it.isBackwardCompatibleBackCamera() }
             ?.get(CameraCharacteristics.SENSOR_ORIENTATION)
@@ -85,7 +92,7 @@ internal object BackCameraSensor {
     } catch (e: CameraAccessException) {
         Timber.w(e, "back camera orientation unavailable")
         null
-    } catch (e: IllegalArgumentException) {
+    } catch (e: RuntimeException) {
         Timber.w(e, "back camera orientation unavailable")
         null
     }
