@@ -4,7 +4,7 @@ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import androidx.activity.ComponentActivity
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowCameraCharacteristics
+import org.robolectric.shadows.ShadowCameraManager
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -99,6 +100,23 @@ internal class CameraOrientationTest {
         composeRule.setContent { upright = rememberBackCameraUprightPortrait() }
         composeRule.waitForIdle()
         assertNull(upright)
+    }
+
+    // Scenario: Corners where filling would enlarge the preview
+    @Test
+    fun aFailingLookupGivesAnUnknownOrientationAndIsNotRepeated() {
+        // A listed id whose characteristics can't be read: the shadow throws, as a SecurityException or an OEM's would.
+        @Suppress("UNCHECKED_CAST")
+        val registered = ShadowCameraManager::class.java
+            .getDeclaredField("cameraIdToCharacteristics")
+            .apply { isAccessible = true }
+            .get(null) as MutableMap<String, CameraCharacteristics?>
+        registered["0"] = null
+        assertNull(BackCameraSensor.orientation(context))
+
+        registered.remove("0")
+        addCamera("1", CameraCharacteristics.LENS_FACING_BACK, orientation = 90)
+        assertNull(BackCameraSensor.orientation(context), "the failed lookup is cached, not retried")
     }
 
     @Test
