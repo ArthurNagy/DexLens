@@ -10,10 +10,12 @@ import com.arthurnagy.dexlens.core.domain.scan.FrameEvidence
 import com.arthurnagy.dexlens.core.domain.scan.LockOnTracker
 import com.arthurnagy.dexlens.core.domain.scan.PictureScores
 import com.arthurnagy.dexlens.core.domain.scan.SpeciesScore
+import com.arthurnagy.dexlens.core.domain.species.GetGenerationStartsUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.domain.species.SpeciesRepository
 import com.arthurnagy.dexlens.core.model.ArtworkLocation
+import com.arthurnagy.dexlens.core.model.GenerationStart
 import com.arthurnagy.dexlens.core.model.PokemonType
 import com.arthurnagy.dexlens.core.model.SpeciesId
 import com.arthurnagy.dexlens.core.model.SpeciesNameHit
@@ -24,6 +26,7 @@ import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeSpeciesRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import com.arthurnagy.dexlens.core.testing.TestDispatcherProvider
+import com.arthurnagy.dexlens.core.testing.nationalGenerationStarts
 import com.arthurnagy.dexlens.core.testing.speciesSummary
 import com.arthurnagy.dexlens.feature.pokedex.impl.scanner.AnalyzedFrame
 import com.github.michaelbull.result.Err
@@ -35,6 +38,7 @@ import org.orbitmvi.orbit.test.OrbitScopedTestContextInternal
 import org.orbitmvi.orbit.test.testWithInternalState
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -71,6 +75,7 @@ internal class PokedexViewModelTest {
         ObserveScannerEnabledUseCase(userPreferences),
         BuildSpeciesSignalUseCase(speciesRepository, TestDispatcherProvider(testScheduler)),
         GetSpeciesListUseCase(speciesRepository),
+        GetGenerationStartsUseCase(speciesRepository),
     )
 
     private fun frame(vararg lines: String) = AnalyzedFrame(lines.toList(), pictureScores = null)
@@ -88,12 +93,16 @@ internal class PokedexViewModelTest {
     private fun PokedexState.lockedOn(vararg locked: SpeciesSummary) =
         copy(scan = scan.copy(lockOn = LockOnTracker.Empty, match = locked.toList(), pendingHaptic = true))
 
-    /** Waits for the list, the matcher and the switch, which load side by side. */
+    /** Waits for the list, the matcher, the switch and any seeded generation starts, which load side by side. */
     private suspend fun Context.settled(): PokedexState {
         var seen = awaitInternalState()
-        while (seen.loading || seen.scan.signal == null || seen.scannerEnabled == null) seen = awaitInternalState()
+        while (seen.loading || seen.scan.signal == null || seen.scannerEnabled == null || seen.generationsPending()) {
+            seen = awaitInternalState()
+        }
         return seen
     }
+
+    private fun PokedexState.generationsPending() = repository.generationStarts.isNotEmpty() && generations.isEmpty()
 
     private fun home(block: suspend Context.(PokedexState) -> Unit) = runTest {
         viewModel().testWithInternalState(this, PokedexState.Initial) {
@@ -128,7 +137,7 @@ internal class PokedexViewModelTest {
         repository.hits = mapOf("\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu")))
         containerHost.onQueryChanged("pika")
         expectInternalState { copy(query = "pika") }
-        expectInternalState { copy(results = results(25)) }
+        expectInternalState { copy(results = results(25), answeredQuery = "pika") }
     }
 
     @Test
@@ -152,7 +161,7 @@ internal class PokedexViewModelTest {
             expectInternalState { copy(query = "pi") }
             containerHost.onQueryChanged("pika")
             expectInternalState { copy(query = "pika") }
-            expectInternalState { copy(results = results(25)) }
+            expectInternalState { copy(results = results(25), answeredQuery = "pika") }
             slowFirstQuery.complete(Unit)
             cancelAndIgnoreRemainingItems()
             assertEquals(results(25), viewModel.container.stateFlow.value.results)
@@ -318,7 +327,7 @@ internal class PokedexViewModelTest {
         repository.hits = mapOf("\"bul\"*" to listOf(SpeciesNameHit(SpeciesId(1), "Bulbasaur")))
         containerHost.onQueryChanged("bul")
         expectInternalState { copy(query = "bul", scan = scan.copy(match = emptyList(), lockOn = LockOnTracker.Empty)) }
-        expectInternalState { copy(results = results(1)) }
+        expectInternalState { copy(results = results(1), answeredQuery = "bul") }
         assertEquals(results(1), awaitLatest().listed)
     }
 
@@ -326,7 +335,7 @@ internal class PokedexViewModelTest {
     fun framesAreIgnoredWhileTextIsTyped() = home {
         containerHost.onQueryChanged("zzz")
         expectInternalState { copy(query = "zzz") }
-        expectInternalState { copy(results = emptyList()) }
+        expectInternalState { copy(results = emptyList(), answeredQuery = "zzz") }
         containerHost.onFrame(frame("PIKACHU"))
         expectNoItems()
     }
@@ -373,7 +382,7 @@ internal class PokedexViewModelTest {
     fun turningTheScannerOffKeepsTheQuery() = home {
         containerHost.onQueryChanged("zzz")
         expectInternalState { copy(query = "zzz") }
-        expectInternalState { copy(results = emptyList()) }
+        expectInternalState { copy(results = emptyList(), answeredQuery = "zzz") }
         preferences.setScannerEnabled(false)
         expectInternalState { copy(scannerEnabled = false) }
         assertEquals("zzz", awaitLatest().query)
@@ -385,5 +394,94 @@ internal class PokedexViewModelTest {
         expectInternalState { copy(scannerEnabled = false) }
         containerHost.onFrame(frame("PIKACHU"))
         expectNoItems()
+    }
+
+    /** A home screen whose repository also has the nine generation starts. */
+    private fun withGenerations(block: suspend Context.(PokedexState) -> Unit) = run {
+        repository.generationStarts = nationalGenerationStarts()
+        home(block)
+    }
+
+    // Scenario: Dragging jumps to each generation's first species
+    @Test
+    fun generationStartsLoadWithTheList() = withGenerations { ready ->
+        assertEquals(nationalGenerationStarts(), ready.generations)
+        assertTrue(ready.fullListShown)
+    }
+
+    // Scenario: No thumb while loading, failed or empty
+    @Test
+    fun theInitialStateIsNotTheFullList() {
+        assertFalse(PokedexState.Initial.fullListShown)
+    }
+
+    // Scenario: No thumb while loading, failed or empty
+    @Test
+    fun aFailedListIsNotTheFullList() = runTest {
+        listError = DomainError.Unknown("broken")
+        viewModel().testWithInternalState(this, PokedexState.Initial) {
+            runOnCreate()
+            var seen = awaitInternalState()
+            while (seen.loading) seen = awaitInternalState()
+            assertFalse(seen.fullListShown)
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: No thumb while loading, failed or empty
+    @Test
+    fun noResultsIsNotTheFullList() = withGenerations {
+        containerHost.onQueryChanged("zzz")
+        expectInternalState { copy(query = "zzz") }
+        expectInternalState { copy(results = emptyList(), answeredQuery = "zzz") }
+        assertFalse(awaitLatest().fullListShown)
+    }
+
+    // Scenario: No thumb while loading, failed or empty
+    @Test
+    fun missingGenerationStartsLeaveTheListWorking() = runTest {
+        val noStarts = object : SpeciesRepository by species {
+            override suspend fun generationStarts(): Result<List<GenerationStart>, DomainError> = Err(DomainError.Unknown("broken"))
+        }
+        viewModel(speciesRepository = noStarts).testWithInternalState(this, PokedexState.Initial) {
+            runOnCreate()
+            val ready = settled()
+            assertEquals(emptyList(), ready.generations)
+            assertNull(ready.error)
+            assertEquals(everySpecies, ready.results)
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: No thumb over search results
+    @Test
+    fun searchResultsAreNotTheFullList() = withGenerations {
+        repository.hits = mapOf("\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu")))
+        containerHost.onQueryChanged("pika")
+        expectInternalState { copy(query = "pika") }
+        expectInternalState { copy(results = results(25), answeredQuery = "pika") }
+        assertFalse(awaitLatest().fullListShown)
+    }
+
+    // Scenario: Thumb returns with the full list
+    @Test
+    fun theFullListCountsOnlyOnceItsAnswerArrives() = withGenerations {
+        repository.hits = mapOf("\"pika\"*" to listOf(SpeciesNameHit(SpeciesId(25), "Pikachu")))
+        containerHost.onQueryChanged("pika")
+        expectInternalState { copy(query = "pika") }
+        expectInternalState { copy(results = results(25), answeredQuery = "pika") }
+        containerHost.onQueryChanged("")
+        val cleared = awaitInternalState()
+        assertEquals("", cleared.query)
+        assertFalse(cleared.fullListShown)
+        val answered = awaitInternalState()
+        assertEquals(everySpecies, answered.results)
+        assertTrue(answered.fullListShown)
+    }
+
+    // Scenario: No thumb over a scan match
+    @Test
+    fun aMatchIsNotTheFullList() = matched { state ->
+        assertFalse(state.fullListShown)
     }
 }

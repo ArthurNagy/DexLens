@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
@@ -91,6 +92,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.core.app.ActivityCompat
@@ -332,14 +335,18 @@ internal fun PokedexContent(
             state.scan.match.takeIf {
                 matchListed
             },
+            state.answeredQuery,
+            state.generations,
         ) {
+            val listed = state.listed
             ListModel(
                 loading = state.loading,
                 error = state.error,
                 query = state.query,
-                listed = state.listed,
+                listed = listed,
                 artwork = state.artwork,
                 matchListed = matchListed,
+                slots = if (state.fullListShown) generationSlots(listed, state.generations) else emptyList(),
             )
         }
     // Nothing but the surface until the switch has been read, so neither layout appears and then jumps.
@@ -389,6 +396,8 @@ private class ListModel(
     val listed: List<SpeciesSearchResult>,
     val artwork: ArtworkLocation,
     val matchListed: Boolean,
+    /** Where each generation starts, only while the full list in Pokédex order shows. Empty means no generation thumb. */
+    val slots: List<GenerationSlot>,
 )
 
 /** What the list and its search field can do, in both layouts. */
@@ -671,37 +680,47 @@ private fun PokedexBody(
             modifier = bodyModifier,
         )
 
-        else -> SpeciesList(listed, list.artwork, onOpenSpecies, bodyModifier)
+        else -> SpeciesList(listed, list.artwork, list.slots, onOpenSpecies, bodyModifier)
     }
 }
 
-/** The rows. The shared-transition scopes are read once here, not in every row a fling composes. */
+/**
+ * The rows, with the generation thumb over them when [slots] has any. The shared-transition scopes are read once here,
+ * not in every row a fling composes. The box is a traversal group so screen readers reach the generation control before
+ * the first row.
+ */
 @Composable
 private fun SpeciesList(
     listed: List<SpeciesSearchResult>,
     artwork: ArtworkLocation,
+    slots: List<GenerationSlot>,
     onOpenSpecies: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = if (sharedScope != null) LocalNavAnimatedContentScope.current else null
-    LazyColumn(
-        modifier = modifier.fillMaxSize().testTag("pokedex:list"),
-        contentPadding = PaddingValues(
-            top = AppSpacing.xs,
-            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppSpacing.md,
-        ),
-    ) {
-        items(listed, key = { it.summary.id.value }, contentType = { "species" }) { result ->
-            SpeciesRow(
-                result = result,
-                artwork = artwork,
-                sharedScope = sharedScope,
-                animatedScope = animatedScope,
-                onClick = { onOpenSpecies(result.summary.id.value) },
-                modifier = Modifier.animateItem(),
-            )
+    val listState = rememberLazyListState()
+    Box(modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().testTag("pokedex:list"),
+            contentPadding = PaddingValues(
+                top = AppSpacing.xs,
+                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppSpacing.md,
+            ),
+        ) {
+            items(listed, key = { it.summary.id.value }, contentType = { "species" }) { result ->
+                SpeciesRow(
+                    result = result,
+                    artwork = artwork,
+                    sharedScope = sharedScope,
+                    animatedScope = animatedScope,
+                    onClick = { onOpenSpecies(result.summary.id.value) },
+                    modifier = Modifier.animateItem(),
+                )
+            }
         }
+        if (slots.isNotEmpty()) GenerationScroller(listState, slots, Modifier.matchParentSize())
     }
 }
 

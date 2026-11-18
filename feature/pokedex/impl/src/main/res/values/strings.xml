@@ -18,4 +18,18 @@
     <string name="pokedex_scanner_allow_camera">Allow camera</string>
     <string name="pokedex_scanner_open_settings">Open settings</string>
     <string name="pokedex_scanner_camera_unavailable">This device has no camera DexLens can use.</string>
+    <string name="pokedex_region_kanto">Kanto</string>
+    <string name="pokedex_region_johto">Johto</string>
+    <string name="pokedex_region_hoenn">Hoenn</string>
+    <string name="pokedex_region_sinnoh">Sinnoh</string>
+    <string name="pokedex_region_unova">Unova</string>
+    <string name="pokedex_region_kalos">Kalos</string>
+    <string name="pokedex_region_alola">Alola</string>
+    <string name="pokedex_region_galar">Galar</string>
+    <string name="pokedex_region_paldea">Paldea</string>
+    <!-- The fast-scroll bubble: generation number, then its region. -->
+    <string name="pokedex_generation_bubble">Generation %1$d · %2$s</string>
+    <!-- What TalkBack reads as the generation slider's value: generation number, then its region. -->
+    <string name="pokedex_generation_state">Generation %1$d, %2$s</string>
+    <string name="pokedex_generation_number">Generation %1$d</string>
 </resources>

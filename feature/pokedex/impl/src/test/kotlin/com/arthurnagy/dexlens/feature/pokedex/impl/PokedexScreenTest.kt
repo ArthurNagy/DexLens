@@ -54,6 +54,7 @@ import com.arthurnagy.dexlens.core.domain.ObserveScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveArtworkUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentOfferUseCase
 import com.arthurnagy.dexlens.core.domain.scan.BuildSpeciesSignalUseCase
+import com.arthurnagy.dexlens.core.domain.species.GetGenerationStartsUseCase
 import com.arthurnagy.dexlens.core.domain.species.GetSpeciesListUseCase
 import com.arthurnagy.dexlens.core.domain.species.SearchSpeciesUseCase
 import com.arthurnagy.dexlens.core.model.PokemonType
@@ -277,6 +278,7 @@ internal class PokedexScreenTest {
             ObserveScannerEnabledUseCase(preferences),
             BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(TestCoroutineScheduler())),
             GetSpeciesListUseCase(repository),
+            GetGenerationStartsUseCase(repository),
         )
         composeRule.setContent {
             AppTheme {
@@ -928,6 +930,7 @@ internal class PokedexScreenTest {
             ObserveScannerEnabledUseCase(preferences),
             BuildSpeciesSignalUseCase(repository, TestDispatcherProvider(TestCoroutineScheduler())),
             GetSpeciesListUseCase(repository),
+            GetGenerationStartsUseCase(repository),
         )
         composeRule.setContent {
             AppTheme {
