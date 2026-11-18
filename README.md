@@ -50,9 +50,10 @@ DexLens has no accounts, ads, analytics or crash reporting.
   [ML Kit collects device and app information, per-installation identifiers and usage metrics](https://developers.google.com/ml-kit/android-data-disclosure)
   and sends them over HTTPS. DexLens removes the `datatransport` components that perform that upload, so the data is
   never sent. ML Kit's own log confirms it at runtime: `Transport backend 'cct' is not registered`.
-- **Measured result.** On a Pixel 6 (Android 17 beta) with Wi-Fi on, using the list, search, entries and the camera on a
-  fresh install, Android's per-app traffic counter recorded no bytes for DexLens. This was measured before image
-  recognition was added.
+- **Measured result.** Measured on 18 November 2026 with the signed v0.1.0 release APK on a Pixel 6 (Android 17 beta,
+  build CP31.260623.012). On a fresh install in airplane mode, the list, search, entries and camera recognition by
+  name and by picture all worked. On another fresh install with Wi-Fi on, the same steps (optional download not started)
+  left Android's per-app traffic counter at 0 bytes for DexLens.
 - **Backups.** Android Auto Backup and device-to-device transfer are turned off.
 
 ## Architecture
