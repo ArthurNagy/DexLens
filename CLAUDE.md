@@ -103,6 +103,7 @@ the tests the gates expect) — they load when you work in that layer.
 ## Project-specific overrides
 
 - Atomics: use `kotlin.concurrent.atomics`, never `java.util.concurrent.atomic` ([ADR 0012](docs/DECISIONS/0012-kotlin-atomics.md)).
+- Hilt codegen: keep KSP at 2.3.14 or later, and never skip or unwire the `check<Variant>HiltAggregatedDeps` guard ([ADR 0015](docs/DECISIONS/0015-reliable-hilt-code-generation.md)).
 
 ## Timeline
 
