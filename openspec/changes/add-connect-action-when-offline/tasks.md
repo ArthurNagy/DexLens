@@ -1,0 +1,122 @@
+# Tasks
+
+Every new scenario test carries a `// Scenario: <scenario name>` comment naming the scenario it checks (names as in
+this change's delta specs). Tests use the fakes in `:core:testing` and Orbit's test harness, never mocks of our
+interfaces.
+
+## 1. Domain and test fakes (:core:domain, :core:testing)
+
+- [ ] 1.1 `:core:domain`: add `core.domain.connectivity.ConnectivityRepository` (`fun observeInternetAvailable(): Flow<Boolean>`, KDoc: never throws, emits the current value on collection, "available" = default network has INTERNET and VALIDATED and is not blocked) and `ObserveInternetAvailableUseCase @Inject constructor(repository) : UseCase` returning it (design D1). Verify `./gradlew :core:domain:compileKotlin` passes.
+- [ ] 1.2 `:core:testing`: add `FakeConnectivityRepository(internetAvailable: Boolean = true)` exposing `val internetAvailable = MutableStateFlow(...)` that tests set. Verify `./gradlew :core:testing:compileDebugKotlin` passes.
+- [ ] 1.3 `:core:domain` test: `connectivity/ObserveInternetAvailableUseCaseTest` collects the use case over a `FakeConnectivityRepository` and sees `false` then `true` as the fake changes. This is a pass-through test with no scenario marker. Verify `./gradlew :core:domain:test` passes.
+
+## 2. Data (:core:data)
+
+- [ ] 2.1 `:core:data`: add internal `core.data.connectivity.AndroidConnectivityRepository` per design D2.
+  - It is a `callbackFlow` whose `NetworkCallback` tracks the current default `Network` with its `usable` and `blocked` flags and sends `usable && !blocked`. `usable` means INTERNET && VALIDATED.
+  - `onCapabilitiesChanged` makes the network current, `onBlockedStatusChanged` updates `blocked` for the current network, and `onLost` sends false only for the current network.
+  - One `catchStorage { }` block gets the `ConnectivityManager` (null fails it), seeds from `activeNetwork` capabilities and calls `registerDefaultNetworkCallback`. On `Err` it sends `true`.
+  - `awaitClose` unregisters only when registration succeeded. The flow ends with `distinctUntilChanged()`.
+  - No hand-written try/catch, no `Dispatchers.*`, nothing from `:core:network`.
+
+  Verify it compiles.
+- [ ] 2.2 `:core:data`: `@Binds` `AndroidConnectivityRepository` to `ConnectivityRepository` in `DataModule`, and declare `<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />` in `core/data/src/main/AndroidManifest.xml` with a one-line comment (read-only connectivity check). Verify `./gradlew :app:assembleDebug` passes (the Hilt graph resolves).
+- [ ] 2.3 `:core:data` Robolectric test `connectivity/AndroidConnectivityRepositoryTest`. It uses `shadowOf(connectivityManager)`: `setDefaultNetworkActive(true)` with `setActiveNetworkInfo(...)` for an active network, `setNetworkCapabilities(network, ShadowNetworkCapabilities.newInstance().apply { addCapability(...) })` for its capabilities, and `getNetworkCallbacks()` to reach the registered callback and drive it. It checks that:
+  - an active network with INTERNET+VALIDATED emits `true` first;
+  - INTERNET without VALIDATED emits `false` (`// Scenario: Network that needs sign-in counts as offline`);
+  - no active network emits `false`;
+  - `onCapabilitiesChanged` / `onLost` on the callback emit `true` / `false` without repeats;
+  - `onLost` for a network other than the current one emits nothing;
+  - `onBlockedStatusChanged(network, true)` emits `false`;
+  - a `ContextWrapper` whose `getSystemService` returns a null `ConnectivityManager` makes the flow emit `true` without throwing;
+  - `onCapabilitiesChanged` for a different network after a blocked one resets `blocked` and emits `true`;
+  - cancelling collection leaves `getNetworkCallbacks()` empty, and cancelling after a failed registration doesn't throw. A failed registration is reachable only through the null-`ConnectivityManager` `ContextWrapper`, because Robolectric's `registerDefaultNetworkCallback` never throws.
+
+  Verify `./gradlew :core:data:testDebugUnitTest` passes.
+
+## 3. Presentation: state and ViewModels (:feature:settings:impl)
+
+- [ ] 3.1 `ContentOfferState` gains `internetAvailable: Boolean` (`Initial` = `true`) and `networkSettingsUnavailable: Boolean` (`Initial` = `false`). `ContentOfferViewModel` takes `ObserveInternetAvailableUseCase` and collects it from the on-create block inside `repeatOnSubscription { }`. The same `reduce` clears `networkSettingsUnavailable` when `internetAvailable` becomes `true`. The ViewModel adds `onNetworkSettingsUnavailable()` (sets the flag) and `onConnectTapped()` (clears it) (design D3, D4). Add the three strings from design D6 to `feature/settings/impl/src/main/res/values/strings.xml`. Verify it compiles.
+- [ ] 3.2 `SettingsState` gains `internetAvailable: Boolean` (`Initial` = `true`). `SettingsViewModel` takes `ObserveInternetAvailableUseCase`, collects it the same way, and adds `onNetworkSettingsUnavailable()` setting `pendingMessage = R.string.settings_network_settings_unavailable`. Verify it compiles.
+- [ ] 3.3 In the same change as 3.1 and 3.2, update the call sites that the new constructors and state break:
+  - `SettingsViewModelTest.settings()` and `SettingsViewModelTest.offer()`;
+  - `SettingsScreenTest.settingsViewModel()`;
+  - `SettingsViewModelTest.offerFollowsProgress`, which builds `ContentOfferState(ContentPackState.Downloading(1, 2))` directly and becomes `ContentOfferState.Initial.copy(content = ContentPackState.Downloading(1, 2))`.
+
+  Each factory passes `ObserveInternetAvailableUseCase(FakeConnectivityRepository())`. Verify `./gradlew :feature:settings:impl:testDebugUnitTest` passes with no other test changed.
+- [ ] 3.4 `SettingsViewModelTest` (Orbit `testWithInternalState`), checking that:
+  - the offer goes from offline to connected and back with `internetAvailable` false → true → false, tagged `// Scenario: Offer while offline`, `// Scenario: Offer shows Download once connected` and `// Scenario: Offer goes back offline`;
+  - an offline offer still marks itself answered and starts nothing (`// Scenario: Skip while offline`);
+  - the offer's `onNetworkSettingsUnavailable()` sets `networkSettingsUnavailable`, `onConnectTapped()` clears it, and the connection returning also clears it (`// Scenario: Offer can't open network settings`);
+  - Settings follows offline → connected → offline (`// Scenario: Download from settings while offline` and `// Scenario: Settings download returns when connected`);
+  - Settings' `onNetworkSettingsUnavailable()` sets the message once and clears it (`// Scenario: Connect from settings`).
+
+  Verify `./gradlew :feature:settings:impl:testDebugUnitTest` passes.
+
+## 4. Presentation: screens, the connect action and goldens (:feature:settings:impl)
+
+- [ ] 4.1 Add `rememberOpenNetworkSettings(onUnavailable): () -> Unit` next to `rememberOpenLink` in `SettingsScreen.kt` (design D5). It tries `Settings.Panel.ACTION_INTERNET_CONNECTIVITY`, then `Settings.ACTION_WIRELESS_SETTINGS`, then `onUnavailable`, catching each `ActivityNotFoundException`, and holds the callback with `rememberUpdatedState`. Verify it compiles.
+- [ ] 4.2 `ContentOfferContent` takes `internetAvailable`, `networkSettingsUnavailable` and `onConnect` (design D6).
+  - `NotDownloaded` + offline shows `SizeText()`, `OfflineText()` (polite live region), "Connect to a network" (`offer:connect`), the inline message `Text` (`offer:message`, polite live region) while `networkSettingsUnavailable`, and "Not now" (`offer:skip`), with no `offer:download`.
+  - Other branches stay unchanged, with no snackbar host.
+  - `ContentOfferDialog` wires `onConnect = { viewModel.onConnectTapped(); openNetworkSettings() }`, where `openNetworkSettings = rememberOpenNetworkSettings(viewModel::onNetworkSettingsUnavailable)`.
+
+  In the same task, update the 5 positional `ContentOfferContent(...)` calls in `SettingsScreenTest` (`offerShowsSizeAndChoices`, `offerShowsProgressAndContinuesInBackground`, `offerResumesAndCompletes`, `offerClosesWhenReady`, and the `offer` golden), passing `internetAvailable = true, networkSettingsUnavailable = false, onConnect = {}`. Add an offline-offer preview to `SettingsPreviews.kt`. Verify `./gradlew :feature:settings:impl:testDebugUnitTest -Proborazzi.test.verify=true` passes, which shows the existing `offer` golden unchanged.
+- [ ] 4.3 `ContentPackSection` and `SettingsContent` take `internetAvailable` / `onConnect` (design D6).
+  - Offline `NotDownloaded` shows `SizeText()`, `OfflineText()` and "Connect to a network" (`settings:connect`).
+  - Offline `Interrupted` shows the progress, the interrupted line, `OfflineText()`, then Connect (`settings:connect`) and Delete (`settings:delete`) in a `FlowRow` with `spacedBy(AppSpacing.sm)` both ways.
+  - `Downloading`, `Ready` and the online rows stay unchanged.
+  - `SettingsScreen` wires `rememberOpenNetworkSettings(viewModel::onNetworkSettingsUnavailable)`.
+
+  In the same task, update the positional `SettingsContent(...)` calls in `SettingsScreenTest.show()`, `SettingsScreenTest.theSourceRowHandsTheLinkToAnotherApp` and `SettingsPreviews.kt`. Add an offline-Settings preview. Verify `./gradlew :feature:settings:impl:testDebugUnitTest -Proborazzi.test.verify=true` passes, which shows the existing Settings goldens unchanged.
+- [ ] 4.4 `SettingsScreenTest` for the offer and the shared helper, checking that:
+  - the offline offer shows the size and "No internet connection.", and that `offer:connect` and `offer:skip` exist while `offer:download` and `offer:message` do not (`// Scenario: Offer while offline`);
+  - `offer:skip` on the offline offer calls `onSkip` (`// Scenario: Skip while offline`);
+  - tapping `offer:connect` wired to `rememberOpenNetworkSettings` starts an intent with action `Settings.Panel.ACTION_INTERNET_CONNECTIVITY` (`// Scenario: Connect opens the internet panel`);
+  - with `checkActivities(true)` and a `ResolveInfo` added for `ACTION_WIRELESS_SETTINGS` only, `rememberOpenNetworkSettings` starts `ACTION_WIRELESS_SETTINGS` (`// Scenario: Network settings as the fallback` and `// Scenario: Connect from settings`; Settings uses this same helper, so this test also covers its fallback step);
+  - with `checkActivities(true)` and nothing resolvable, `ContentOfferDialog` with a real `ContentOfferViewModel` shows "Network settings can't be opened on this device." inline under Connect and keeps the offer open. Then, with the message showing, the test makes the panel intent resolvable (a `ResolveInfo` for `ACTION_INTERNET_CONNECTIVITY`), taps `offer:connect`, and asserts that `offer:message` is gone and the panel intent started (`// Scenario: Offer can't open network settings`);
+  - with a real `ContentOfferViewModel` over `FakeConnectivityRepository`, flipping it to `true` shows `offer:download` and flipping it back shows `offer:connect`, without re-setting content (`// Scenario: Offer shows Download once connected` and `// Scenario: Offer goes back offline`).
+
+  Verify `./gradlew :feature:settings:impl:testDebugUnitTest` passes.
+- [ ] 4.5 `SettingsScreenTest` for Settings, checking that:
+  - offline `NotDownloaded` shows the size, "No internet connection." and `settings:connect`, with no `settings:download` (`// Scenario: Download from settings while offline`);
+  - offline `Interrupted` shows the progress, `settings:connect` and `settings:delete`, with no `settings:resume` (`// Scenario: Resume from settings while offline`);
+  - with a real `SettingsViewModel` over `FakeConnectivityRepository`, Download comes back on connect and goes away on disconnect (`// Scenario: Settings download returns when connected`);
+  - `settings:connect` starts the panel intent, and with nothing resolvable, `SettingsScreen` shows the network-settings message in its snackbar (`// Scenario: Connect from settings`). The middle step, network settings, is covered by the shared-helper fallback test in 4.4.
+
+  Verify `./gradlew :feature:settings:impl:testDebugUnitTest` passes.
+- [ ] 4.6 Roborazzi goldens in `SettingsScreenTest`:
+  - `offerOffline` (Pixel7) and `offerOfflineTablet` (MediumTablet) for the offline offer;
+  - `offerOfflineMessage` (Pixel7) for the offline offer with the inline message showing;
+  - `phoneOffline` and `tabletOffline` for offline `NotDownloaded` Settings;
+  - `phoneInterruptedOffline` and `tabletInterruptedOffline` for offline `Interrupted` Settings. On the phone, Delete wraps under Connect.
+
+  Run `./gradlew recordRoborazziDebug` and check that the new PNGs show the offline branches as designed. `git status` must show only new PNGs: the existing `offer`, `phone`, `tablet`, `foldable` and other goldens are byte-identical. Commit the new PNGs.
+
+## 5. Local gate (all modules)
+
+- [ ] 5.1 Run `./gradlew unitTests` and verify it is green.
+- [ ] 5.2 Run `./gradlew spotlessApply && ./gradlew spotlessCheck lint coverageVerify assembleDebug -Proborazzi.test.verify=true` and verify it passes. If coverage falls short, add the missing `AndroidConnectivityRepository` or composable branch tests, never an exclusion.
+- [ ] 5.3 Permission check (`// Scenario: Connection check stays on the device`).
+  - On this branch and on `origin/main`, run `./gradlew :app:processReleaseMainManifest`, then `grep -o 'uses-permission android:name="[^"]*"' app/build/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml | sort -u` (adjust the path if AGP places it elsewhere).
+  - Verify both sorted, unique lists are identical and include `android.permission.ACCESS_NETWORK_STATE`.
+  - Paste both lists in the PR body.
+- [ ] 5.4 Ask the `android-reviewer` agent to audit `git diff origin/main...HEAD`, including that `core.data.connectivity` imports nothing from `:core:network` and makes no network call (the review half of "Connection check stays on the device"). Fix every blocking finding before opening the PR.
+
+## 6. Acceptance on a device (android-qa)
+
+- [ ] 6.1 Ask the `android-qa` agent to QA `add-connect-action-when-offline` on emulators, driving them only through the Android CLI and capturing a screenshot at each step. Use a current-API phone emulator plus a tablet for the layout, and also an API 29 or 30 emulator for the "Tap Connect" journey, where the panel is Settings' `SettingsPanelActivity`. The journeys:
+  - fresh install with airplane mode on: the offer shows the size, "No internet connection.", "Connect to a network" and "Not now";
+  - tap Connect: the internet panel opens over DexLens on the current API and on API 29/30. If it doesn't open on API 29/30, apply design D5's activity-result launcher fallback and re-run;
+  - turn airplane mode off in the panel and return: the offer switches to Download within a few seconds, without being reopened;
+  - airplane mode on again before tapping: the offer goes back to Connect;
+  - "Not now" while offline: no offer after a relaunch, and the list, search, an entry and the camera work with placeholders;
+  - Settings in airplane mode: Connect replaces Download; with an interrupted download, Connect replaces Resume and Delete stays (wrapping on the phone); turning airplane mode off brings Download or Resume back without leaving Settings.
+
+  Verify android-qa returns PASS.
+- [ ] 6.2 Ask the maintainer to check criterion 2 (Connect → the Internet panel) on one real Android 12+ device as well, since OEMs differ (issue risk). DexLens never installs to a physical device without asking first. Record the device and the result in the PR body.
+
+## Workflow follow-up
+
+- Open the PR with `Fixes #33` in the body and the ticked tasks.md.
+- After it merges, archive the change with `/opsx:archive` in its own `docs(openspec)` commit.
