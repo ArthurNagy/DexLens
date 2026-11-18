@@ -14,6 +14,8 @@ things side by side are confusing, and the detail's arrow adds nothing while the
 
 - A library's licence and a species entry hide their top-bar Back arrow while they show beside their list. On a phone
   in portrait, or whenever the detail fills the window on its own, the arrow shows as today and goes back.
+- An entry opened from another entry's evolution line keeps its arrow beside the list, so it can go back to the
+  previous species; only an entry directly above its list hides it.
 - When the window changes size (fold, unfold, resize) with a detail open, the arrow follows the layout: it appears once
   the detail fills the window on its own and disappears once it shows beside it, and the open library or species stays the same.
 - The signal "is this detail shown beside its list?" comes from the list-detail scene the adaptive Navigation 3 scene
@@ -48,6 +50,7 @@ _None._
   already on every feature impl through the `android-forge.feature.impl` convention), and a test-only dependency on
   `navigation3-ui` for its scene test. No new library, so no ADR.
 - `:feature:settings:impl`: `SettingsEntries` hides the licence's Back when it shows beside the list.
+- `:core:navigation`: `Navigator.entryBelow(key)`, the entry Back from `key` returns to.
 - `:feature:entry:impl`: `EntryContent` / `EntryScreen` take whether to show the top-bar arrow; `EntryEntries` passes it.
 - `:app`: `AppNavigationTest` stand-ins follow the entries; no production change in `AppNavigation`.
 - Goldens: tablet and foldable goldens of both detail screens are re-recorded without the arrow; phone goldens stay.
