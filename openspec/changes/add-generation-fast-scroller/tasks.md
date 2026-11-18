@@ -266,7 +266,7 @@ Implementation note: `PokedexScreenTest` was already 1,160 lines, so the screen 
 
 ## 8. Device check (:app, no code change)
 
-- [ ] 8.1 :app — install the debug build with `android install` / `android run` on `medium_phone` (camera on) and
+- [x] 8.1 :app — install the debug build with `android install` / `android run` on `medium_phone` (camera on) and
   `pixel_10_pro_fold`, not `medium_tablet` (its LiteRT crash with the camera on this host). Capture with
   `android screen capture`:
   - **Expanded sheet, phone portrait:** scroll and see the thumb fade in on the right and out about 1.5s later. Drag it
@@ -291,8 +291,29 @@ Implementation note: `PokedexScreenTest` was already 1,160 lines, so the screen 
 
   Note the results under this task.
 
-  Not done in this PR. The maintainer runs device QA separately (the `android-qa` agent on `medium_phone` and the
-  foldable), so this task stays open.
+  Results (2026-11-18, `android-qa` agent on emulators, debug build of PR #42):
+  - **Expanded sheet, phone portrait (`medium_phone`):** the thumb fades in on the right below the search field and out
+    after release. Held at 3, 4 and 5 it shows the bubble ("Generation 4 · Sinnoh") and ticks 1–9, with #0252, #0387
+    and #0494 at the top; 9 and 1 jump to #0906 and #0001. The drag handle didn't move in any layout dump.
+  - **Collapsed sheet, phone portrait:** Back after a jump to 6 kept #0650 at the top. The ticks stayed inside the
+    visible list, a drag reached #0906, and the handle and search field didn't move. From the top of the collapsed
+    list a swipe up expands the sheet, with no thumb.
+  - **Scanner off:** the track starts below the search field and a drag jumps to #0387.
+  - **Search and no results:** no thumb and no slider node while a query is typed or nothing matches; both return once
+    the query is cleared.
+  - **RTL (Force RTL):** the thumb and ticks are on the left with the bubble to the right; a drag to 4 gives #0387.
+  - **Still list:** tapping the end edge of a row where the hidden control sits opens that row's entry.
+  - **Unfolded foldable list pane with an entry open (`pixel_10_pro_fold`):** partly checked. The slider sits inside the
+    list pane and the Charmander entry stayed open through every scroll and swipe, but no drag landed while the thumb
+    was showing (the emulator was too slow with two AVDs running).
+  - **TalkBack:** partly checked. TalkBack ignores input while the Android CLI's UiAutomation is connected. From the
+    layout the control is an `android.widget.SeekBar` that exists while the thumb is hidden, follows the generation at
+    the top of the list and is gone in search and no results. The spoken text, focus order and swipe adjustment were not
+    heard on a device.
+  - **Covered by tests only:** phone landscape (the CLI can't rotate; `GenerationScrollerTest` w914dp-h411dp), the
+    scan-match state (the emulator camera can't produce a match), and the TalkBack wording and adjustment
+    (`GenerationScrollerTest`).
+  - Noted, as designed: pressing the thumb partway through generation 1 doesn't jump to #0001 until the slot changes.
 
 ## 9. Gate
 
