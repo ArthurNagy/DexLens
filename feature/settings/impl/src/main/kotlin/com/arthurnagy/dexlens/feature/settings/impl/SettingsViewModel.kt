@@ -6,6 +6,7 @@ import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.about.GetAppVersionUseCase
+import com.arthurnagy.dexlens.core.domain.connectivity.ObserveInternetAvailableUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentPackStateUseCase
@@ -31,12 +32,14 @@ internal class SettingsViewModel
         private val cancelDownload: CancelContentDownloadUseCase,
         private val deleteContent: DeleteContentPackUseCase,
         private val getAppVersion: GetAppVersionUseCase,
+        private val observeInternetAvailable: ObserveInternetAvailableUseCase,
     ) : ViewModel(),
         OrbitContainerHost<SettingsState, SettingsState, Nothing> {
         override val container = orbitContainer<SettingsState, Nothing>(SettingsState.Initial) {
             observeTheme()
             observeScannerSwitch()
             observeContentState()
+            observeConnectivity()
             loadVersion()
         }
 
@@ -55,6 +58,13 @@ internal class SettingsViewModel
 
         private fun observeContentState() = intent {
             observeContent().collect { content -> reduce { state.copy(content = content) } }
+        }
+
+        /** Only while settings is on screen, so the system network callback isn't held in the background. */
+        private fun observeConnectivity() = intent {
+            repeatOnSubscription {
+                observeInternetAvailable().collect { available -> reduce { state.copy(internetAvailable = available) } }
+            }
         }
 
         fun onThemeSelected(mode: ThemeMode) = intent {
@@ -84,6 +94,11 @@ internal class SettingsViewModel
         /** No app on the device could open the source code link. */
         fun onSourceLinkUnavailable() = intent {
             reduce { state.copy(pendingMessage = R.string.settings_source_unavailable) }
+        }
+
+        /** Neither the internet panel nor network settings could be opened on this device. */
+        fun onNetworkSettingsUnavailable() = intent {
+            reduce { state.copy(pendingMessage = R.string.settings_network_settings_unavailable) }
         }
 
         fun onMessageConsumed() = intent {

@@ -5,11 +5,14 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -45,8 +48,10 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -82,12 +87,14 @@ internal fun SettingsScreen(
         viewModel.onMessageConsumed()
     }
     val openSource = rememberOpenLink(stringResource(R.string.settings_source_url), onUnavailable = viewModel::onSourceLinkUnavailable)
+    val openNetworkSettings = rememberOpenNetworkSettings(onUnavailable = viewModel::onNetworkSettingsUnavailable)
     SettingsContent(
         state = state,
         snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         onThemeSelect = viewModel::onThemeSelected,
         onDownload = startWithNotifications,
+        onConnect = openNetworkSettings,
         onCancelDownload = viewModel::onCancelDownload,
         onDeleteContent = viewModel::onDeleteContent,
         onScannerEnabledChange = viewModel::onScannerEnabledChanged,
@@ -119,6 +126,29 @@ internal fun rememberOpenLink(
     }
 }
 
+/**
+ * Opens Android's internet connectivity panel over DexLens, or the device's network settings when the panel can't
+ * open, and calls [onUnavailable] when neither can. Nothing is sent: the screens follow the connection by themselves.
+ */
+@Composable
+internal fun rememberOpenNetworkSettings(onUnavailable: () -> Unit): () -> Unit {
+    val context = LocalContext.current
+    val currentOnUnavailable by rememberUpdatedState(onUnavailable)
+    return remember(context) {
+        {
+            try {
+                context.startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
+            } catch (_: ActivityNotFoundException) {
+                try {
+                    context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+                } catch (_: ActivityNotFoundException) {
+                    currentOnUnavailable()
+                }
+            }
+        }
+    }
+}
+
 /** Asks for the notification that shows download progress if it is not granted yet, then starts either way. */
 @Composable
 internal fun rememberNotificationAwareStart(onStart: () -> Unit): () -> Unit {
@@ -139,6 +169,7 @@ internal fun SettingsContent(
     onNavigateBack: () -> Unit,
     onThemeSelect: (ThemeMode) -> Unit,
     onDownload: () -> Unit,
+    onConnect: () -> Unit,
     onCancelDownload: () -> Unit,
     onDeleteContent: () -> Unit,
     onScannerEnabledChange: (Boolean) -> Unit,
@@ -165,6 +196,7 @@ internal fun SettingsContent(
     ) { innerPadding ->
         // Read once out here: the items then rerun only when their own part changes, not on every download progress step.
         val content = state.content
+        val internetAvailable = state.internetAvailable
         val scannerEnabled = state.scannerEnabled
         val themeMode = state.themeMode
         val versionName = state.versionName
@@ -176,7 +208,7 @@ internal fun SettingsContent(
             val sectionModifier = Modifier.widthIn(max = AppDimens.maxContentWidth).fillMaxWidth().padding(AppSpacing.md)
             item(key = "content") {
                 Section(stringResource(R.string.settings_content_title), sectionModifier) {
-                    ContentPackSection(content, onDownload, onCancelDownload, onDeleteContent)
+                    ContentPackSection(content, internetAvailable, onDownload, onConnect, onCancelDownload, onDeleteContent)
                 }
             }
             item(key = "scanner") {
@@ -208,11 +240,17 @@ private fun Section(
     }
 }
 
-/** The download's description, progress and actions. Shared with the first-launch offer. */
+/**
+ * The download's description, progress and actions. Offline, "Connect to a network" replaces Download and Resume: the
+ * download would only wait for a connection.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ContentPackSection(
     content: ContentPackState,
+    internetAvailable: Boolean,
     onDownload: () -> Unit,
+    onConnect: () -> Unit,
     onCancelDownload: () -> Unit,
     onDeleteContent: () -> Unit,
     modifier: Modifier = Modifier,
@@ -222,8 +260,15 @@ internal fun ContentPackSection(
         when (content) {
             ContentPackState.NotDownloaded -> {
                 SizeText()
-                Button(onClick = onDownload, modifier = Modifier.testTag("settings:download")) {
-                    Text(stringResource(R.string.settings_download))
+                if (internetAvailable) {
+                    Button(onClick = onDownload, modifier = Modifier.testTag("settings:download")) {
+                        Text(stringResource(R.string.settings_download))
+                    }
+                } else {
+                    OfflineText()
+                    Button(onClick = onConnect, modifier = Modifier.testTag("settings:connect")) {
+                        Text(stringResource(R.string.settings_connect))
+                    }
                 }
             }
 
@@ -237,12 +282,28 @@ internal fun ContentPackSection(
             is ContentPackState.Interrupted -> {
                 ProgressRow(content.completed, content.total)
                 Text(stringResource(R.string.settings_interrupted), style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-                    Button(onClick = onDownload, modifier = Modifier.testTag("settings:resume")) {
-                        Text(stringResource(R.string.settings_resume))
+                if (internetAvailable) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+                        Button(onClick = onDownload, modifier = Modifier.testTag("settings:resume")) {
+                            Text(stringResource(R.string.settings_resume))
+                        }
+                        OutlinedButton(onClick = onDeleteContent, modifier = Modifier.testTag("settings:delete")) {
+                            Text(stringResource(R.string.settings_delete))
+                        }
                     }
-                    OutlinedButton(onClick = onDeleteContent, modifier = Modifier.testTag("settings:delete")) {
-                        Text(stringResource(R.string.settings_delete))
+                } else {
+                    OfflineText()
+                    // Both labels don't fit side by side on a phone, so Delete wraps under Connect there.
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+                    ) {
+                        Button(onClick = onConnect, modifier = Modifier.testTag("settings:connect")) {
+                            Text(stringResource(R.string.settings_connect))
+                        }
+                        OutlinedButton(onClick = onDeleteContent, modifier = Modifier.testTag("settings:delete")) {
+                            Text(stringResource(R.string.settings_delete))
+                        }
                     }
                 }
             }
@@ -255,6 +316,16 @@ internal fun ContentPackSection(
             }
         }
     }
+}
+
+/** Says the device is offline. A polite live region, so TalkBack reads it when the connection drops on screen. */
+@Composable
+internal fun OfflineText(modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(R.string.settings_offline),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 @Composable

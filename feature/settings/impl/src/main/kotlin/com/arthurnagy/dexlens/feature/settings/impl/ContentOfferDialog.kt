@@ -16,6 +16,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -33,9 +35,16 @@ internal fun ContentOfferDialog(
 ) {
     val state by viewModel.collectAsState()
     val start = rememberNotificationAwareStart(viewModel::onDownload)
+    val openNetworkSettings = rememberOpenNetworkSettings(onUnavailable = viewModel::onNetworkSettingsUnavailable)
     ContentOfferContent(
         state = state.content,
+        internetAvailable = state.internetAvailable,
+        networkSettingsUnavailable = state.networkSettingsUnavailable,
         onDownload = start,
+        onConnect = {
+            viewModel.onConnectTapped()
+            openNetworkSettings()
+        },
         onSkip = onClose,
         onHide = onClose,
         modifier = modifier,
@@ -46,7 +55,10 @@ internal fun ContentOfferDialog(
 @Composable
 internal fun ContentOfferContent(
     state: ContentPackState,
+    internetAvailable: Boolean,
+    networkSettingsUnavailable: Boolean,
     onDownload: () -> Unit,
+    onConnect: () -> Unit,
     onSkip: () -> Unit,
     onHide: () -> Unit,
     modifier: Modifier = Modifier,
@@ -63,8 +75,25 @@ internal fun ContentOfferContent(
             when (state) {
                 ContentPackState.NotDownloaded -> {
                     SizeText()
-                    Button(onClick = onDownload, modifier = Modifier.fillMaxWidth().testTag("offer:download")) {
-                        Text(stringResource(R.string.settings_download))
+                    if (internetAvailable) {
+                        Button(onClick = onDownload, modifier = Modifier.fillMaxWidth().testTag("offer:download")) {
+                            Text(stringResource(R.string.settings_download))
+                        }
+                    } else {
+                        OfflineText()
+                        Button(onClick = onConnect, modifier = Modifier.fillMaxWidth().testTag("offer:connect")) {
+                            Text(stringResource(R.string.settings_connect))
+                        }
+                        if (networkSettingsUnavailable) {
+                            Text(
+                                text = stringResource(R.string.settings_network_settings_unavailable),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier
+                                    .testTag("offer:message")
+                                    .semantics { liveRegion = LiveRegionMode.Polite },
+                            )
+                        }
                     }
                     TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth().testTag("offer:skip")) {
                         Text(stringResource(R.string.settings_offer_skip))
