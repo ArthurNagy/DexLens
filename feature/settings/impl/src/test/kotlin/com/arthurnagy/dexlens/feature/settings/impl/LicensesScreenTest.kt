@@ -66,8 +66,11 @@ internal class LicensesScreenTest {
         composeRule.setContent { AppTheme { LicensesContent(state, SnackbarHostState(), onBack, onOpen) } }
     }
 
-    private fun showDetail(state: LicenseDetailState) {
-        composeRule.setContent { AppTheme { LicenseDetailContent(state, SnackbarHostState(), onNavigateBack = {}) } }
+    private fun showDetail(
+        state: LicenseDetailState,
+        onBack: (() -> Unit)? = {},
+    ) {
+        composeRule.setContent { AppTheme { LicenseDetailContent(state, SnackbarHostState(), onNavigateBack = onBack) } }
     }
 
     // Scenario: Libraries listed with their licences
@@ -105,6 +108,23 @@ internal class LicensesScreenTest {
     fun theRootListShowsNoBack() {
         showList(onBack = null)
         composeRule.onNodeWithTag("licenses:back").assertDoesNotExist()
+    }
+
+    // Scenario: Licence Back arrow on a phone
+    @Test
+    fun theLicenceBackArrowGoesBackWhenGiven() {
+        var back = false
+        showDetail(longNoticeState, onBack = { back = true })
+        composeRule.onNodeWithTag("licence:back").performClick()
+        assertTrue(back)
+    }
+
+    // Scenario: No Back arrow on a licence beside the list
+    @Test
+    fun theLicenceShowsNoBackArrowWithoutOne() {
+        showDetail(longNoticeState, onBack = null)
+        composeRule.onNodeWithText("LiteRT").assertExists()
+        composeRule.onNodeWithTag("licence:back").assertDoesNotExist()
     }
 
     @Test
@@ -225,7 +245,8 @@ internal class LicensesScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tabletDetail() {
-        showDetail(longNoticeState)
+        // Beside the licences list, the licence shows no Back arrow.
+        showDetail(longNoticeState, onBack = null)
         composeRule.onRoot().captureRoboImage()
     }
 
@@ -239,7 +260,7 @@ internal class LicensesScreenTest {
     @Test
     @Config(qualifiers = RobolectricDeviceQualifiers.MediumTablet)
     fun tabletNotFound() {
-        showDetail(notFoundState)
+        showDetail(notFoundState, onBack = null)
         composeRule.onRoot().captureRoboImage()
     }
 }
