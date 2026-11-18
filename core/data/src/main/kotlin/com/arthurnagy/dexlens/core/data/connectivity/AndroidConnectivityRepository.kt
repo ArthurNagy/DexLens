@@ -8,11 +8,13 @@ import com.arthurnagy.dexlens.core.data.catchStorage
 import com.arthurnagy.dexlens.core.domain.connectivity.ConnectivityRepository
 import com.github.michaelbull.result.onErr
 import com.github.michaelbull.result.onOk
+import com.github.michaelbull.result.runCatching
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -35,8 +37,14 @@ internal class AndroidConnectivityRepository
                 manager
             }
             registered.onErr { trySend(true) }
-            // Unregistering a callback that was never registered throws, so only undo a successful registration.
-            awaitClose { registered.onOk { manager -> manager.unregisterNetworkCallback(callback) } }
+            // Unregistering a callback that was never registered throws, so only undo a successful registration. Any
+            // other platform failure on teardown stops here too, so it never reaches the collector.
+            awaitClose {
+                registered.onOk { manager ->
+                    runCatching { manager.unregisterNetworkCallback(callback) }
+                        .onErr { e -> Timber.w(e, "unregisterNetworkCallback failed") }
+                }
+            }
         }.distinctUntilChanged()
     }
 
