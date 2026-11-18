@@ -109,11 +109,23 @@ The composable call is hoisted into a `val` at the top of the entry content, nev
 - `SettingsEntries`, `LicenseDetailKey`: `val besideList = isDetailShownBesideList()`, then
   `onNavigateBack = navigator.backOrNull(key).takeUnless { besideList }`. `LicenseDetailScreen` /
   `LicenseDetailContent` stay as they are: a null lambda already hides `licence:back`.
-- `EntryEntries`, `EntryKey`: `val besideList = isDetailShownBesideList()`, then a new `showBackArrow = !besideList`
-  to `EntryScreen`, which passes it to `EntryContent`. `EntryContent` draws `entry:back` only when
-  `showBackArrow && onNavigateBack != null`; the `Failed` message keeps using `onNavigateBack` for its Back action. The
-  issue asks only for the top-bar arrow, and the "Unknown species" scenario promises a way back, which stays on every
-  window size.
+- `EntryEntries`, `EntryKey`: `val besideList = isDetailShownBesideList()` and
+  `val openedFromAnEntry = navigator.entryBelow(key) is EntryKey`, then a new
+  `showBackArrow = !besideList || openedFromAnEntry` to `EntryScreen`, which passes it to `EntryContent`.
+  `EntryContent` draws `entry:back` only when `showBackArrow && onNavigateBack != null`; the `Failed` message keeps
+  using `onNavigateBack` for its Back action. The issue asks only for the top-bar arrow, and the "Unknown species"
+  scenario promises a way back, which stays on every window size.
+- Evolution-line entries: tapping a species in the evolution line pushes a new `EntryKey` on top of the current one
+  (`navigator.navigate`, not `navigateDetail`). Beside the list, hiding its arrow would leave no on-screen way back to
+  the previous species; the list's rows only replace the top entry. So the arrow is hidden only when the entry sits
+  directly above its list; when the entry below it is another `EntryKey`, the arrow stays and goes back to that species.
+  The question "what is below me?" is a small `Navigator.entryBelow(key)` query in `:core:navigation` (the entry
+  builder already holds the Navigator; screens still get only a Boolean and a lambda). Licences have no such chain:
+  `navigateDetail` always replaces a licence on top, so a licence is always directly above its list.
+
+Alternative for the evolution case: hide the arrow anyway and rely on system Back. Rejected: system Back is invisible,
+and the reviewer found the missing way back a usability regression. Alternative placement: compute it inside
+`EntryEntries` from the back stack directly. Rejected: entry builders don't see the back stack, only the Navigator.
 
 Alternative for the entry: pass `onNavigateBack = null` beside the list, like the licence. Rejected: it would also
 remove the failed message's Back action on wide windows, a behavior change outside the issue.
@@ -128,7 +140,13 @@ remove the failed message's Back action on wide windows, a behavior change outsi
 - Window size change as the app sees it: `:app` `AppNavigationTest` opens a licence or an entry at
   `w841dp-h701dp-xxhdpi`, then `RuntimeEnvironment.setQualifiers(…)` to a phone portrait size followed by
   `composeRule.activityRule.scenario.recreate()`, and back again, checking the back marker appears and disappears and
-  the same id stays shown. This is the path a real fold takes (recreation plus a restored back stack).
+  the same id stays shown. This is the path a real fold takes (recreation plus a restored back stack). The compose rule
+  only sets content on the first activity, so the test registers an `Application.ActivityLifecycleCallbacks` that sets
+  the same `AppNavigation` content on each recreated activity (`onActivityCreated` with a saved state); it keeps the
+  Application it registered with and unregisters there in `@After`, or before registering again.
+- Evolution line: `AppNavigationTest` on a foldable opens species 1 from the list, pushes species 2 on top (as the
+  evolution line does), checks species 2 shows its arrow beside the list and that tapping it shows species 1 with no
+  arrow. `NavigatorTest` covers `entryBelow`.
 - Wiring (wide and phone scenarios): `AppNavigationTest` drives the real `AppNavigation` at `w841dp-h701dp-xxhdpi`
   (foldable), `MediumTablet` and the default phone portrait size, with stand-in entries that copy the real entries'
   metadata and call `isDetailShownBesideList()` the same way (the existing `showLicencesFeature()` stand-ins, plus an
@@ -154,9 +172,12 @@ remove the failed message's Back action on wide windows, a behavior change outsi
 - [A phone in landscape (about 915dp wide) passes the 600dp breakpoint and shows two panes] → that is the strategy's
   existing layout, not changed here; the arrow follows it (hidden beside the list), which is why the scenarios say
   "phone in portrait".
-- [Robolectric recreation in `AppNavigationTest`: the compose rule's content must come back after `recreate()`] → if
-  `createAndroidComposeRule<ComponentActivity>()` does not re-run the content on the new activity, use a test-only
-  activity that calls `setContent { AppNavigation(…) }` in `onCreate`, so recreation re-composes and
-  `rememberNavBackStack` restores the stack.
+- [Robolectric recreation in `AppNavigationTest`: the compose rule does not re-run its content on a recreated
+  activity] → an Application activity-lifecycle callback sets the same content on each recreated activity, so
+  recreation re-composes and `rememberNavBackStack` restores the stack, with no test activity or manifest change. The
+  Navigator a stand-in returns belongs to the first activity, so tests never navigate through it after a resize.
+- [Evolution-line entries keep their arrow beside the list] → deliberate: it is the only on-screen way back to the
+  previous species. Back from there goes to the previous species, and that entry, now directly above the list, hides
+  its arrow again.
 - [Goldens] → tablet/foldable goldens of both detail screens change on purpose; reviewers compare them to confirm only
   the arrow went.
