@@ -7,6 +7,7 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.scene.DialogSceneStrategy
 import com.arthurnagy.dexlens.core.navigation.Navigator
+import com.arthurnagy.dexlens.core.ui.isDetailShownBesideList
 import com.arthurnagy.dexlens.feature.settings.api.ContentOfferKey
 import com.arthurnagy.dexlens.feature.settings.api.LicenseDetailKey
 import com.arthurnagy.dexlens.feature.settings.api.LicensesKey
@@ -36,9 +37,11 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(navigator: Navigator) {
         )
     }
     entry<LicenseDetailKey>(metadata = ListDetailSceneStrategy.detailPane(sceneKey = LicensesKey)) { key ->
+        // Beside the list, the list's Back is the way out: a second arrow next to it would only clear the licence.
+        val besideList = isDetailShownBesideList()
         LicenseDetailScreen(
             viewModel = hiltViewModel<LicenseDetailViewModel, LicenseDetailViewModel.Factory>(creationCallback = { it.create(key) }),
-            onNavigateBack = navigator.backOrNull(key),
+            onNavigateBack = navigator.backOrNull(key).takeUnless { besideList },
         )
     }
 }
