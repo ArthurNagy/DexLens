@@ -116,7 +116,8 @@ interfaces.
   Verify android-qa returns PASS.
 
   Status (2026-11-18): not ticked. On the phone (medium_phone, current API) all 6 journeys passed. On API 30 (dexlens_qa_api30) the offer, the panel and the switch back to Download passed. A plain `startActivity` opened `SettingsPanelActivity` there, so the activity-result launcher from design D5 isn't needed. The tablet journeys never ran: the medium_tablet emulator dropped off adb while the APK was installing and crashed twice on restart. The tablet layouts are covered by the `offerOfflineTablet`, `tabletOffline` and `tabletInterruptedOffline` goldens. Re-run the tablet journeys on a working tablet emulator before ticking.
-- [ ] 6.2 Ask the maintainer to check criterion 2 (Connect → the Internet panel) on one real Android 12+ device as well, since OEMs differ (issue risk). DexLens never installs to a physical device without asking first. Record the device and the result in the PR body.
+- [x] 6.2 Ask the maintainer to check criterion 2 (Connect → the Internet panel) on one real Android 12+ device as well, since OEMs differ (issue risk). DexLens never installs to a physical device without asking first. Record the device and the result in the PR body.
+  - Done 2026-11-18 by the maintainer on a Pixel 6 (Android 17 beta, CP31.260623.012), debug build of this branch: the offline offer, Connect opening the Internet panel, Download returning by itself after airplane mode off, Connect returning after airplane mode on, Not now, and Settings offline all behaved as expected.
 
   Status: not ticked. This check belongs to the maintainer, on a real device.
 
