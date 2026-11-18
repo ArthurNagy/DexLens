@@ -58,7 +58,7 @@ None.
 
 ## Impact
 
-- `:core:domain`: new `core.domain.connectivity` package (`ConnectivityRepository`, `ObserveInternetAvailableUseCase`).
+- `:core:domain`: new `core.domain.connectivity` package (`ConnectivityRepository`, `ObserveConnectivityUseCase`) and the `Connectivity` enum (`Online` / `Offline`) in `:core:model`.
 - `:core:data`: new internal `AndroidConnectivityRepository` in `core.data.connectivity`, bound in `DataModule`;
   `ACCESS_NETWORK_STATE` declared in its manifest (already in the merged release manifest through WorkManager, so the
   shipped permission set is unchanged).

@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
+import com.arthurnagy.dexlens.core.model.Connectivity
 import com.arthurnagy.dexlens.core.model.ContentPackState
 import org.orbitmvi.orbit.compose.collectAsState
 
@@ -42,7 +43,7 @@ internal fun ContentOfferDialog(
     )
     ContentOfferContent(
         state = state.content,
-        internetAvailable = state.internetAvailable,
+        connectivity = state.connectivity,
         networkSettingsUnavailable = state.networkSettingsUnavailable,
         onDownload = start,
         onConnect = openNetworkSettings,
@@ -56,7 +57,7 @@ internal fun ContentOfferDialog(
 @Composable
 internal fun ContentOfferContent(
     state: ContentPackState,
-    internetAvailable: Boolean,
+    connectivity: Connectivity,
     networkSettingsUnavailable: Boolean,
     onDownload: () -> Unit,
     onConnect: () -> Unit,
@@ -76,7 +77,7 @@ internal fun ContentOfferContent(
             when (state) {
                 ContentPackState.NotDownloaded -> {
                     SizeText()
-                    if (internetAvailable) {
+                    if (connectivity == Connectivity.Online) {
                         Button(onClick = onDownload, modifier = Modifier.fillMaxWidth().testTag("offer:download")) {
                             Text(stringResource(R.string.settings_download))
                         }

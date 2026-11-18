@@ -8,6 +8,7 @@ import android.net.NetworkCapabilities
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.cash.turbine.test
+import com.arthurnagy.dexlens.core.model.Connectivity
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,32 +42,32 @@ internal class AndroidConnectivityRepositoryTest {
     private val callback: ConnectivityManager.NetworkCallback get() = shadow.networkCallbacks.single()
 
     @Test
-    fun aValidatedActiveNetworkIsAvailable() = runTest {
+    fun aValidatedActiveNetworkIsOnline() = runTest {
         activeNetworkWith(validated)
 
-        AndroidConnectivityRepository(context).observeInternetAvailable().test {
-            assertEquals(true, awaitItem())
+        AndroidConnectivityRepository(context).observeConnectivity().test {
+            assertEquals(Connectivity.Online, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     // Scenario: Network that needs sign-in counts as offline
     @Test
-    fun internetWithoutValidationIsNotAvailable() = runTest {
+    fun internetWithoutValidationIsOffline() = runTest {
         activeNetworkWith(capabilities(NetworkCapabilities.NET_CAPABILITY_INTERNET))
 
-        AndroidConnectivityRepository(context).observeInternetAvailable().test {
-            assertEquals(false, awaitItem())
+        AndroidConnectivityRepository(context).observeConnectivity().test {
+            assertEquals(Connectivity.Offline, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun noActiveNetworkIsNotAvailable() = runTest {
+    fun noActiveNetworkIsOffline() = runTest {
         shadow.setDefaultNetworkActive(false)
 
-        AndroidConnectivityRepository(context).observeInternetAvailable().test {
-            assertEquals(false, awaitItem())
+        AndroidConnectivityRepository(context).observeConnectivity().test {
+            assertEquals(Connectivity.Offline, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -75,13 +76,13 @@ internal class AndroidConnectivityRepositoryTest {
     fun callbacksReportChangesWithoutRepeats() = runTest {
         val network = activeNetworkWith(capabilities(NetworkCapabilities.NET_CAPABILITY_INTERNET))
 
-        AndroidConnectivityRepository(context).observeInternetAvailable().test {
-            assertEquals(false, awaitItem())
+        AndroidConnectivityRepository(context).observeConnectivity().test {
+            assertEquals(Connectivity.Offline, awaitItem())
             callback.onCapabilitiesChanged(network, validated)
-            assertEquals(true, awaitItem())
+            assertEquals(Connectivity.Online, awaitItem())
             callback.onCapabilitiesChanged(network, validated)
             callback.onLost(network)
-            assertEquals(false, awaitItem())
+            assertEquals(Connectivity.Offline, awaitItem())
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
         }
@@ -91,8 +92,8 @@ internal class AndroidConnectivityRepositoryTest {
     fun losingAnotherNetworkChangesNothing() = runTest {
         activeNetworkWith(validated)
 
-        AndroidConnectivityRepository(context).observeInternetAvailable().test {
-            assertEquals(true, awaitItem())
+        AndroidConnectivityRepository(context).observeConnectivity().test {
+            assertEquals(Connectivity.Online, awaitItem())
             callback.onLost(otherNetwork)
             expectNoEvents()
             cancelAndIgnoreRemainingEvents()
@@ -100,16 +101,16 @@ internal class AndroidConnectivityRepositoryTest {
     }
 
     @Test
-    fun aBlockedNetworkIsNotAvailableUntilAnotherNetworkTakesOver() = runTest {
+    fun aBlockedNetworkIsOfflineUntilAnotherNetworkTakesOver() = runTest {
         val network = activeNetworkWith(validated)
 
-        AndroidConnectivityRepository(context).observeInternetAvailable().test {
-            assertEquals(true, awaitItem())
+        AndroidConnectivityRepository(context).observeConnectivity().test {
+            assertEquals(Connectivity.Online, awaitItem())
             callback.onBlockedStatusChanged(network, true)
-            assertEquals(false, awaitItem())
+            assertEquals(Connectivity.Offline, awaitItem())
             // A different default network starts unblocked.
             callback.onCapabilitiesChanged(otherNetwork, validated)
-            assertEquals(true, awaitItem())
+            assertEquals(Connectivity.Online, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -118,7 +119,7 @@ internal class AndroidConnectivityRepositoryTest {
     fun stoppingCollectionUnregistersTheCallback() = runTest {
         activeNetworkWith(validated)
 
-        AndroidConnectivityRepository(context).observeInternetAvailable().test {
+        AndroidConnectivityRepository(context).observeConnectivity().test {
             awaitItem()
             assertEquals(1, shadow.networkCallbacks.size)
             cancelAndIgnoreRemainingEvents()
@@ -127,15 +128,15 @@ internal class AndroidConnectivityRepositoryTest {
     }
 
     // Robolectric's registerDefaultNetworkCallback never throws, so a missing ConnectivityManager is the failed
-    // registration here: the flow reports available and stops without unregistering anything.
+    // registration here: the flow reports online and stops without unregistering anything.
     @Test
-    fun withoutAConnectivityManagerItReportsAvailable() = runTest {
+    fun withoutAConnectivityManagerItReportsOnline() = runTest {
         val noManager = object : ContextWrapper(context) {
             override fun getSystemService(name: String): Any? = if (name == CONNECTIVITY_SERVICE) null else super.getSystemService(name)
         }
 
-        AndroidConnectivityRepository(noManager).observeInternetAvailable().test {
-            assertEquals(true, awaitItem())
+        AndroidConnectivityRepository(noManager).observeConnectivity().test {
+            assertEquals(Connectivity.Online, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
         assertTrue(shadow.networkCallbacks.isEmpty())

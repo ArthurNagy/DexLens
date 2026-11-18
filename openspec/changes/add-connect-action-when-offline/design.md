@@ -30,8 +30,8 @@ See proposal.md for why. The current code, as read on `main` (cc38a09):
 
 **Goals:**
 
-- One connectivity signal, "the default network has INTERNET and VALIDATED and is not blocked", observed as a
-  `Flow<Boolean>` from the domain layer and read next to the download state by both screens.
+- One connectivity signal, "the default network has INTERNET and VALIDATED and is not blocked", observed as a typed
+  `Flow<Connectivity>` (`Online` / `Offline`) from the domain layer and read next to the download state by both screens.
 - One shared "open network settings" helper with a three-step fallback, used by the offer and Settings.
 - Offline branches only where the issue asks for them: offer `NotDownloaded`; Settings `NotDownloaded` and
   `Interrupted`.
@@ -44,11 +44,13 @@ See proposal.md for why. The current code, as read on `main` (cc38a09):
 
 ## Decisions
 
-### D1. Domain: `ConnectivityRepository` + `ObserveInternetAvailableUseCase` in `core.domain.connectivity`
+### D1. Model and domain: `Connectivity` in `:core:model`, `ConnectivityRepository` + `ObserveConnectivityUseCase` in `core.domain.connectivity`
 
-`interface ConnectivityRepository { fun observeInternetAvailable(): Flow<Boolean> }`: it never throws and emits the
-current value as soon as it is collected. `ObserveInternetAvailableUseCase @Inject constructor(repository) : UseCase`
-returns `repository.observeInternetAvailable()`. No `Result`, since nothing can fail that the caller could act on, and
+`enum class Connectivity { Online, Offline }` in `:core:model` (`Online` = a validated, unblocked default network).
+`interface ConnectivityRepository { fun observeConnectivity(): Flow<Connectivity> }`: it never throws and emits the
+current value as soon as it is collected. `ObserveConnectivityUseCase @Inject constructor(repository) : UseCase`
+returns `repository.observeConnectivity()`. A typed state rather than a `Boolean` (maintainer's review on PR #36):
+the call sites read `connectivity == Connectivity.Offline` instead of a negated flag. No `Result`, since nothing can fail that the caller could act on, and
 no `DomainError.Typed`.
 
 - *Alternative: fold connectivity into `ContentPackState`* (for example a `WaitingForNetwork` state). Rejected: the
@@ -58,7 +60,7 @@ no `DomainError.Typed`.
 
 ### D2. Data: internal `AndroidConnectivityRepository` in `core.data.connectivity`
 
-`@Inject constructor(@ApplicationContext context: Context)`, bound with `@Binds` in `DataModule`. `observeInternetAvailable()`
+`@Inject constructor(@ApplicationContext context: Context)`, bound with `@Binds` in `DataModule`. `observeConnectivity()`
 is a `callbackFlow`:
 
 1. A `NetworkCallback` tracks the current default `Network` with its last `usable` flag and `blocked` flag, and sends
@@ -74,7 +76,7 @@ is a `callbackFlow`:
    the manager. Exceptions stop here, as in `PackageAppInfoRepository`. `activeNetwork` and `getNetworkCapabilities`
    can throw `SecurityException` on some Android 11 builds, and registration can throw a `RuntimeException` when the
    app holds too many callbacks.
-3. On `Err`, the flow sends `true` and stays open until cancelled. The screens then fall back to today's behaviour:
+3. On `Err`, the flow sends `Connectivity.Online` and stays open until cancelled. The screens then fall back to today's behaviour:
    Download shows, and the worker still waits for a network. `catchStorage` has already logged the failure.
 4. `awaitClose { registered.onOk { manager -> manager.unregisterNetworkCallback(callback) } }`: the flow unregisters
    only if registration succeeded, because `unregisterNetworkCallback` throws `IllegalArgumentException` for a
@@ -99,27 +101,27 @@ The merged permission set stays the same (verified in task 5.3). `core.data.conn
 - *Alternative: a hand-written try/catch around the platform calls.* Rejected: `catchStorage` is the project's
   exception boundary. It already rethrows `CancellationException` and `Error`, and it logs.
 
-### D3. Presentation state: `internetAvailable` on both states, `true` initially (fail-open)
+### D3. Presentation state: `connectivity` on both states, `Online` initially (fail-open)
 
-`ContentOfferState` gains `internetAvailable: Boolean` and `networkSettingsUnavailable: Boolean` (persistent state, not
-a one-shot slot: see D4). `SettingsState` gains `internetAvailable: Boolean` (it already has `pendingMessage`). Both
-`Initial` values use `internetAvailable = true`, and the offer's `networkSettingsUnavailable = false`.
+`ContentOfferState` gains `connectivity: Connectivity` and `networkSettingsUnavailable: Boolean` (persistent state, not
+a one-shot slot: see D4). `SettingsState` gains `connectivity: Connectivity` (it already has `pendingMessage`). Both
+`Initial` values use `connectivity = Connectivity.Online`, and the offer's `networkSettingsUnavailable = false`.
 
-Both ViewModels collect `ObserveInternetAvailableUseCase` in an intent started from the on-create block, wrapped in
+Both ViewModels collect `ObserveConnectivityUseCase` in an intent started from the on-create block, wrapped in
 Orbit's `repeatOnSubscription { }`, so the system callback is registered only while the UI collects state and is
 removed while the screen is stopped. The existing `ContentPackState` collection stays as it is.
 
 **Trade-off:** an offline user sees Download for a frame, until the first emission arrives right after collection
 starts. Then the dialog or section reflows to the offline version (one added line, one button swapped).
 
-Starting at `true` is acceptable because it fails open:
+Starting at `Online` is acceptable because it fails open:
 - A tap in that frame does exactly what Download does today: it enqueues the job, which waits for a network. Nothing
   breaks, and nothing is lost.
 - Existing tests and goldens built on `Initial` don't change.
 - If connectivity can't be read at all (D2 step 3), the screens stay on today's behaviour instead of being stuck on
   "offline".
 
-*Alternatives:* `false` makes every online user, the common case, see the offline version briefly, and it fails
+*Alternatives:* `Offline` makes every online user, the common case, see the offline version briefly, and it fails
 closed when connectivity can't be read. A nullable "unknown" adds a third layout for one frame.
 
 ### D4. The "can't open network settings" message
@@ -138,7 +140,7 @@ closed when connectivity can't be read. A nullable "unknown" adds a third layout
     single intent: a failed retry keeps the line, and a try that opens the panel or settings removes it. (Orbit
     reduces off the main thread, so a "clear, then maybe set again" pair of intents could land out of order and hide
     the message after a failed retry. The implementation review caught this.) The ViewModel also clears the flag in
-    the same `reduce` that sets `internetAvailable = true`, so the line disappears when the connection returns.
+    the same `reduce` that sets `connectivity = Connectivity.Online`, so the line disappears when the connection returns.
   - The online branch never renders the line, so the existing online `offer` golden stays the same.
 - *Alternative: a `SnackbarHost` inside the dialog surface.* Rejected by the maintainer. It adds a host to a dialog
   window, a timed message that is easy to miss in a one-time offer, and a layout slot in the online branch too.
@@ -163,7 +165,7 @@ Context.
 
 ### D6. UI branches
 
-`ContentOfferContent(state: ContentPackState, internetAvailable: Boolean, networkSettingsUnavailable: Boolean,
+`ContentOfferContent(state: ContentPackState, connectivity: Connectivity, networkSettingsUnavailable: Boolean,
 onDownload, onConnect, onSkip, onHide, modifier)`:
 
 - `NotDownloaded` + offline: `SizeText()`, the no-connection line, a `Button` "Connect to a network"
@@ -171,8 +173,8 @@ onDownload, onConnect, onSkip, onHide, modifier)`:
   `TextButton` "Not now" (`offer:skip`). No `offer:download`.
 - `NotDownloaded` + online, and every other state whatever the connection: unchanged.
 
-`ContentPackSection(content, internetAvailable, onDownload, onConnect, onCancelDownload, onDeleteContent)`, with
-`SettingsContent` gaining `internetAvailable` (read from state) and `onConnect`:
+`ContentPackSection(content, connectivity, onDownload, onConnect, onCancelDownload, onDeleteContent)`, with
+`SettingsContent` gaining `connectivity` (read from state) and `onConnect`:
 
 - `NotDownloaded` + offline: `SizeText()`, the no-connection line, a `Button` "Connect to a network"
   (`settings:connect`).
@@ -213,7 +215,7 @@ exists in this project.
 
 ### D8. Layering check
 
-The feature `impl` gains a dependency only on `ObserveInternetAvailableUseCase` (`:core:domain`). `AndroidConnectivityRepository`
+The feature `impl` gains a dependency only on `ObserveConnectivityUseCase` (`:core:domain`) and `Connectivity` (`:core:model`). `AndroidConnectivityRepository`
 stays `internal` in `:core:data`. `FakeConnectivityRepository` goes in `:core:testing`. `FlowRow` comes from Compose
 foundation, already on the classpath. No new library, module or platform-wide decision, so no ADR, as the issue says.
 

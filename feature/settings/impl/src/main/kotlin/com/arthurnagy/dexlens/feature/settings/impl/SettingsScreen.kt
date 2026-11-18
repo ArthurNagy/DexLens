@@ -60,6 +60,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.arthurnagy.dexlens.core.designsystem.AppDimens
 import com.arthurnagy.dexlens.core.designsystem.AppSpacing
 import com.arthurnagy.dexlens.core.domain.content.ContentPackSizes
+import com.arthurnagy.dexlens.core.model.Connectivity
 import com.arthurnagy.dexlens.core.model.ContentPackState
 import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.ui.messageRes
@@ -204,7 +205,7 @@ internal fun SettingsContent(
     ) { innerPadding ->
         // Read once out here: the items then rerun only when their own part changes, not on every download progress step.
         val content = state.content
-        val internetAvailable = state.internetAvailable
+        val connectivity = state.connectivity
         val scannerEnabled = state.scannerEnabled
         val themeMode = state.themeMode
         val versionName = state.versionName
@@ -216,7 +217,7 @@ internal fun SettingsContent(
             val sectionModifier = Modifier.widthIn(max = AppDimens.maxContentWidth).fillMaxWidth().padding(AppSpacing.md)
             item(key = "content") {
                 Section(stringResource(R.string.settings_content_title), sectionModifier) {
-                    ContentPackSection(content, internetAvailable, onDownload, onConnect, onCancelDownload, onDeleteContent)
+                    ContentPackSection(content, connectivity, onDownload, onConnect, onCancelDownload, onDeleteContent)
                 }
             }
             item(key = "scanner") {
@@ -256,7 +257,7 @@ private fun Section(
 @Composable
 internal fun ContentPackSection(
     content: ContentPackState,
-    internetAvailable: Boolean,
+    connectivity: Connectivity,
     onDownload: () -> Unit,
     onConnect: () -> Unit,
     onCancelDownload: () -> Unit,
@@ -268,7 +269,7 @@ internal fun ContentPackSection(
         when (content) {
             ContentPackState.NotDownloaded -> {
                 SizeText()
-                if (internetAvailable) {
+                if (connectivity == Connectivity.Online) {
                     Button(onClick = onDownload, modifier = Modifier.testTag("settings:download")) {
                         Text(stringResource(R.string.settings_download))
                     }
@@ -290,7 +291,7 @@ internal fun ContentPackSection(
             is ContentPackState.Interrupted -> {
                 ProgressRow(content.completed, content.total)
                 Text(stringResource(R.string.settings_interrupted), style = MaterialTheme.typography.bodyMedium)
-                if (internetAvailable) {
+                if (connectivity == Connectivity.Online) {
                     Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
                         Button(onClick = onDownload, modifier = Modifier.testTag("settings:resume")) {
                             Text(stringResource(R.string.settings_resume))

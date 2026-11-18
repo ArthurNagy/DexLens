@@ -6,7 +6,7 @@ import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.about.GetAppVersionUseCase
-import com.arthurnagy.dexlens.core.domain.connectivity.ObserveInternetAvailableUseCase
+import com.arthurnagy.dexlens.core.domain.connectivity.ObserveConnectivityUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentPackStateUseCase
@@ -32,14 +32,14 @@ internal class SettingsViewModel
         private val cancelDownload: CancelContentDownloadUseCase,
         private val deleteContent: DeleteContentPackUseCase,
         private val getAppVersion: GetAppVersionUseCase,
-        private val observeInternetAvailable: ObserveInternetAvailableUseCase,
+        private val observeConnectivity: ObserveConnectivityUseCase,
     ) : ViewModel(),
         OrbitContainerHost<SettingsState, SettingsState, Nothing> {
         override val container = orbitContainer<SettingsState, Nothing>(SettingsState.Initial) {
             observeTheme()
             observeScannerSwitch()
             observeContentState()
-            observeConnectivity()
+            followConnectivity()
             loadVersion()
         }
 
@@ -61,9 +61,9 @@ internal class SettingsViewModel
         }
 
         /** Only while settings is on screen, so the system network callback isn't held in the background. */
-        private fun observeConnectivity() = intent {
+        private fun followConnectivity() = intent {
             repeatOnSubscription {
-                observeInternetAvailable().collect { available -> reduce { state.copy(internetAvailable = available) } }
+                observeConnectivity().collect { connectivity -> reduce { state.copy(connectivity = connectivity) } }
             }
         }
 

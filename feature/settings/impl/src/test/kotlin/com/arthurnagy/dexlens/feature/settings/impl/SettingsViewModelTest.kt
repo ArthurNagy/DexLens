@@ -6,12 +6,13 @@ import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.about.GetAppVersionUseCase
-import com.arthurnagy.dexlens.core.domain.connectivity.ObserveInternetAvailableUseCase
+import com.arthurnagy.dexlens.core.domain.connectivity.ObserveConnectivityUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.MarkContentOfferShownUseCase
 import com.arthurnagy.dexlens.core.domain.content.ObserveContentPackStateUseCase
 import com.arthurnagy.dexlens.core.domain.content.StartContentDownloadUseCase
+import com.arthurnagy.dexlens.core.model.Connectivity
 import com.arthurnagy.dexlens.core.model.ContentPackState
 import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.testing.FakeAppInfoRepository
@@ -43,14 +44,14 @@ class SettingsViewModelTest {
         CancelContentDownloadUseCase(content),
         DeleteContentPackUseCase(content),
         GetAppVersionUseCase(appInfo),
-        ObserveInternetAvailableUseCase(connectivity),
+        ObserveConnectivityUseCase(connectivity),
     )
 
     private fun offer() = ContentOfferViewModel(
         ObserveContentPackStateUseCase(content),
         StartContentDownloadUseCase(content),
         MarkContentOfferShownUseCase(preferences),
-        ObserveInternetAvailableUseCase(connectivity),
+        ObserveConnectivityUseCase(connectivity),
     )
 
     // Scenario: Theme choice applies
@@ -206,14 +207,14 @@ class SettingsViewModelTest {
     // Scenario: Offer goes back offline
     @Test
     fun offerFollowsTheConnection() = runTest {
-        connectivity.internetAvailable.value = false
+        connectivity.connectivity.value = Connectivity.Offline
         offer().testWithInternalState(this, ContentOfferState.Initial) {
             runOnCreate()
-            expectInternalState { copy(internetAvailable = false) }
-            connectivity.internetAvailable.value = true
-            expectInternalState { copy(internetAvailable = true) }
-            connectivity.internetAvailable.value = false
-            expectInternalState { copy(internetAvailable = false) }
+            expectInternalState { copy(connectivity = Connectivity.Offline) }
+            connectivity.connectivity.value = Connectivity.Online
+            expectInternalState { copy(connectivity = Connectivity.Online) }
+            connectivity.connectivity.value = Connectivity.Offline
+            expectInternalState { copy(connectivity = Connectivity.Offline) }
             cancelAndIgnoreRemainingItems()
         }
     }
@@ -221,10 +222,10 @@ class SettingsViewModelTest {
     // Scenario: Skip while offline
     @Test
     fun anOfflineOfferIsStillAnsweredAndStartsNothing() = runTest {
-        connectivity.internetAvailable.value = false
+        connectivity.connectivity.value = Connectivity.Offline
         offer().testWithInternalState(this, ContentOfferState.Initial) {
             runOnCreate()
-            expectInternalState { copy(internetAvailable = false) }
+            expectInternalState { copy(connectivity = Connectivity.Offline) }
             cancelAndIgnoreRemainingItems()
         }
         assertEquals(true, preferences.contentOfferShown.first())
@@ -234,18 +235,18 @@ class SettingsViewModelTest {
     // Scenario: Offer can't open network settings
     @Test
     fun offerSaysNetworkSettingsCantOpenUntilTheNextTryOrAConnection() = runTest {
-        connectivity.internetAvailable.value = false
+        connectivity.connectivity.value = Connectivity.Offline
         offer().testWithInternalState(this, ContentOfferState.Initial) {
             runOnCreate()
-            expectInternalState { copy(internetAvailable = false) }
+            expectInternalState { copy(connectivity = Connectivity.Offline) }
             containerHost.onNetworkSettingsUnavailable()
             expectInternalState { copy(networkSettingsUnavailable = true) }
             containerHost.onNetworkSettingsOpened()
             expectInternalState { copy(networkSettingsUnavailable = false) }
             containerHost.onNetworkSettingsUnavailable()
             expectInternalState { copy(networkSettingsUnavailable = true) }
-            connectivity.internetAvailable.value = true
-            expectInternalState { copy(internetAvailable = true, networkSettingsUnavailable = false) }
+            connectivity.connectivity.value = Connectivity.Online
+            expectInternalState { copy(connectivity = Connectivity.Online, networkSettingsUnavailable = false) }
             cancelAndIgnoreRemainingItems()
         }
     }
@@ -254,14 +255,14 @@ class SettingsViewModelTest {
     // Scenario: Settings download returns when connected
     @Test
     fun settingsFollowsTheConnection() = runTest {
-        connectivity.internetAvailable.value = false
+        connectivity.connectivity.value = Connectivity.Offline
         settings().testWithInternalState(this, loaded) {
             runOnCreate()
-            expectInternalState { copy(internetAvailable = false) }
-            connectivity.internetAvailable.value = true
-            expectInternalState { copy(internetAvailable = true) }
-            connectivity.internetAvailable.value = false
-            expectInternalState { copy(internetAvailable = false) }
+            expectInternalState { copy(connectivity = Connectivity.Offline) }
+            connectivity.connectivity.value = Connectivity.Online
+            expectInternalState { copy(connectivity = Connectivity.Online) }
+            connectivity.connectivity.value = Connectivity.Offline
+            expectInternalState { copy(connectivity = Connectivity.Offline) }
             cancelAndIgnoreRemainingItems()
         }
     }
