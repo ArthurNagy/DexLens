@@ -6,6 +6,7 @@ import com.arthurnagy.dexlens.core.domain.ObserveThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.SetScannerEnabledUseCase
 import com.arthurnagy.dexlens.core.domain.SetThemeModeUseCase
 import com.arthurnagy.dexlens.core.domain.about.GetAppVersionUseCase
+import com.arthurnagy.dexlens.core.domain.connectivity.ObserveInternetAvailableUseCase
 import com.arthurnagy.dexlens.core.domain.content.CancelContentDownloadUseCase
 import com.arthurnagy.dexlens.core.domain.content.DeleteContentPackUseCase
 import com.arthurnagy.dexlens.core.domain.content.MarkContentOfferShownUseCase
@@ -14,6 +15,7 @@ import com.arthurnagy.dexlens.core.domain.content.StartContentDownloadUseCase
 import com.arthurnagy.dexlens.core.model.ContentPackState
 import com.arthurnagy.dexlens.core.model.ThemeMode
 import com.arthurnagy.dexlens.core.testing.FakeAppInfoRepository
+import com.arthurnagy.dexlens.core.testing.FakeConnectivityRepository
 import com.arthurnagy.dexlens.core.testing.FakeContentPackRepository
 import com.arthurnagy.dexlens.core.testing.FakeUserPreferencesRepository
 import kotlinx.coroutines.flow.first
@@ -26,6 +28,7 @@ class SettingsViewModelTest {
     private val content = FakeContentPackRepository()
     private val preferences = FakeUserPreferencesRepository(ThemeMode.SYSTEM)
     private val appInfo = FakeAppInfoRepository(version = "0.1.0")
+    private val connectivity = FakeConnectivityRepository()
 
     /** The state once the version has loaded, so tests of other intents see only their own change. */
     private val loaded = SettingsState.Initial.copy(versionName = "0.1.0")
@@ -40,12 +43,14 @@ class SettingsViewModelTest {
         CancelContentDownloadUseCase(content),
         DeleteContentPackUseCase(content),
         GetAppVersionUseCase(appInfo),
+        ObserveInternetAvailableUseCase(connectivity),
     )
 
     private fun offer() = ContentOfferViewModel(
         ObserveContentPackStateUseCase(content),
         StartContentDownloadUseCase(content),
         MarkContentOfferShownUseCase(preferences),
+        ObserveInternetAvailableUseCase(connectivity),
     )
 
     // Scenario: Theme choice applies
@@ -142,7 +147,7 @@ class SettingsViewModelTest {
         offer().testWithInternalState(this, ContentOfferState.Initial) {
             runOnCreate()
             content.state.value = ContentPackState.Downloading(1, 2)
-            expectInternalState { ContentOfferState(ContentPackState.Downloading(1, 2)) }
+            expectInternalState { ContentOfferState.Initial.copy(content = ContentPackState.Downloading(1, 2)) }
             cancelAndIgnoreRemainingItems()
         }
     }
@@ -190,6 +195,84 @@ class SettingsViewModelTest {
             runOnCreate()
             containerHost.onSourceLinkUnavailable()
             expectInternalState { copy(pendingMessage = R.string.settings_source_unavailable) }
+            containerHost.onMessageConsumed()
+            expectInternalState { copy(pendingMessage = null) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Offer while offline
+    // Scenario: Offer shows Download once connected
+    // Scenario: Offer goes back offline
+    @Test
+    fun offerFollowsTheConnection() = runTest {
+        connectivity.internetAvailable.value = false
+        offer().testWithInternalState(this, ContentOfferState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(internetAvailable = false) }
+            connectivity.internetAvailable.value = true
+            expectInternalState { copy(internetAvailable = true) }
+            connectivity.internetAvailable.value = false
+            expectInternalState { copy(internetAvailable = false) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Skip while offline
+    @Test
+    fun anOfflineOfferIsStillAnsweredAndStartsNothing() = runTest {
+        connectivity.internetAvailable.value = false
+        offer().testWithInternalState(this, ContentOfferState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(internetAvailable = false) }
+            cancelAndIgnoreRemainingItems()
+        }
+        assertEquals(true, preferences.contentOfferShown.first())
+        assertEquals(0, content.started)
+    }
+
+    // Scenario: Offer can't open network settings
+    @Test
+    fun offerSaysNetworkSettingsCantOpenUntilTheNextTryOrAConnection() = runTest {
+        connectivity.internetAvailable.value = false
+        offer().testWithInternalState(this, ContentOfferState.Initial) {
+            runOnCreate()
+            expectInternalState { copy(internetAvailable = false) }
+            containerHost.onNetworkSettingsUnavailable()
+            expectInternalState { copy(networkSettingsUnavailable = true) }
+            containerHost.onConnectTapped()
+            expectInternalState { copy(networkSettingsUnavailable = false) }
+            containerHost.onNetworkSettingsUnavailable()
+            expectInternalState { copy(networkSettingsUnavailable = true) }
+            connectivity.internetAvailable.value = true
+            expectInternalState { copy(internetAvailable = true, networkSettingsUnavailable = false) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Download from settings while offline
+    // Scenario: Settings download returns when connected
+    @Test
+    fun settingsFollowsTheConnection() = runTest {
+        connectivity.internetAvailable.value = false
+        settings().testWithInternalState(this, loaded) {
+            runOnCreate()
+            expectInternalState { copy(internetAvailable = false) }
+            connectivity.internetAvailable.value = true
+            expectInternalState { copy(internetAvailable = true) }
+            connectivity.internetAvailable.value = false
+            expectInternalState { copy(internetAvailable = false) }
+            cancelAndIgnoreRemainingItems()
+        }
+    }
+
+    // Scenario: Connect from settings
+    @Test
+    fun unopenableNetworkSettingsShowAMessageOnce() = runTest {
+        settings().testWithInternalState(this, loaded) {
+            runOnCreate()
+            containerHost.onNetworkSettingsUnavailable()
+            expectInternalState { copy(pendingMessage = R.string.settings_network_settings_unavailable) }
             containerHost.onMessageConsumed()
             expectInternalState { copy(pendingMessage = null) }
             cancelAndIgnoreRemainingItems()
