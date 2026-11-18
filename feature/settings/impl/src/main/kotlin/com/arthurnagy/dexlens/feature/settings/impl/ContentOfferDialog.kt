@@ -35,16 +35,17 @@ internal fun ContentOfferDialog(
 ) {
     val state by viewModel.collectAsState()
     val start = rememberNotificationAwareStart(viewModel::onDownload)
-    val openNetworkSettings = rememberOpenNetworkSettings(onUnavailable = viewModel::onNetworkSettingsUnavailable)
+    // One outcome callback per tap, so a failed retry can't race a "cleared" update and hide the message.
+    val openNetworkSettings = rememberOpenNetworkSettings(
+        onUnavailable = viewModel::onNetworkSettingsUnavailable,
+        onOpen = viewModel::onNetworkSettingsOpened,
+    )
     ContentOfferContent(
         state = state.content,
         internetAvailable = state.internetAvailable,
         networkSettingsUnavailable = state.networkSettingsUnavailable,
         onDownload = start,
-        onConnect = {
-            viewModel.onConnectTapped()
-            openNetworkSettings()
-        },
+        onConnect = openNetworkSettings,
         onSkip = onClose,
         onHide = onClose,
         modifier = modifier,
