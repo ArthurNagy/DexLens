@@ -8,7 +8,7 @@ android-forge project rules apply here (the plugin's agents and skills check for
 - **Name:** DexLens
 - **Application ID / base package:** com.arthurnagy.dexlens
 - **minSdk:** 29 · compileSdk / targetSdk: `androidCompileSdk` / `androidTargetSdk` in `gradle/libs.versions.toml`
-- **One-liner:** Offline-first Pokémon reference with camera name recognition
+- **One-liner:** Offline-first Pokémon reference that recognises Pokémon through the camera, by name or by sprite
 - **Spec:** [docs/MVP_SPEC.md](docs/MVP_SPEC.md)
 - **Figma:** (none)
 
