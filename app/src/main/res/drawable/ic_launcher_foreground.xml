@@ -1,23 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- DexLens's own mark: a camera lens inside scanner brackets. -->
+<!-- DexLens's own mark: a viewfinder whose four corners are bent into an open ring, an equator line with a
+     centre lens, and a tilted question mark taking the place of the bottom-right corner. Every shape is a single
+     opaque path, so this drawable also serves as the themed-icon monochrome layer. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Three corner arcs of the ring (r 27, centred), open at the four compass points. -->
     <path
-        android:pathData="M54,37a17,17 0 1,1 0,34a17,17 0 1,1 0,-34"
-        android:strokeWidth="5"
-        android:strokeColor="#FFFFFFFF"
-        android:fillColor="#00000000" />
-    <path
-        android:fillColor="#FFA9EDFF"
-        android:pathData="M54,46a8,8 0 1,1 0,16a8,8 0 1,1 0,-16z" />
-    <path
-        android:strokeWidth="4.5"
+        android:fillColor="#00000000"
+        android:pathData="M44.77,79.37A27,27 0 0,1 28.63,63.23M28.63,44.77A27,27 0 0,1 44.77,28.63M63.23,28.63A27,27 0 0,1 79.37,44.77"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"
+        android:strokeWidth="6" />
+    <!-- Equator, broken around the centre button. -->
+    <path
         android:fillColor="#00000000"
-        android:pathData="M31,41v-10h10M67,31h10v10M77,67v10h-10M41,77h-10v-10" />
+        android:pathData="M33,54H45.2M62.8,54H75"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="5" />
+    <!-- Centre button ring and lens. -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,48.2a5.8,5.8 0 1,1 0,11.6a5.8,5.8 0 1,1 0,-11.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4.5" />
+    <path
+        android:fillColor="#FFFFD75E"
+        android:pathData="M54,52.1a1.9,1.9 0 1,1 0,3.8a1.9,1.9 0 1,1 0,-3.8z" />
+    <!-- Question mark, on the ring's 45° diagonal and tilted 15°. -->
+    <group
+        android:rotation="15"
+        android:translateX="73.09"
+        android:translateY="74.29">
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M-5.5,-6A5.5,5.5 0 1,1 2.75,-1.24L0,1.2L0,3.6"
+            android:strokeColor="#FFFFD75E"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:strokeWidth="4.6" />
+        <path
+            android:fillColor="#FFFFD75E"
+            android:pathData="M0,6.5a2.7,2.7 0 1,1 0,5.4a2.7,2.7 0 1,1 0,-5.4z" />
+    </group>
 </vector>
