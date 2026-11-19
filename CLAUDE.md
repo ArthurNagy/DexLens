@@ -104,6 +104,7 @@ the tests the gates expect) — they load when you work in that layer.
 
 - Atomics: use `kotlin.concurrent.atomics`, never `java.util.concurrent.atomic` ([ADR 0012](docs/DECISIONS/0012-kotlin-atomics.md)).
 - Hilt codegen: keep KSP at 2.3.14 or later, and never skip or unwire the `check<Variant>HiltAggregatedDeps` guard ([ADR 0015](docs/DECISIONS/0015-reliable-hilt-code-generation.md)).
+- Release notes: each release's GitHub Release body is the hand-written summary in `docs/releases/vX.Y.Z.md`, not git-cliff output. Write it in the `chore(release)` PR; git-cliff only suggests the version and lists the commits to summarise.
 
 ## Timeline
 

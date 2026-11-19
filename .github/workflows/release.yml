@@ -35,6 +35,11 @@ jobs:
             echo "::error title=Version mismatch::Tag $GITHUB_REF_NAME, but app/build.gradle.kts has versionName $version. Bump it in a chore(release) commit first."
             exit 1
           fi
+          # Checked here too, so a tag without notes fails before the long build rather than after it.
+          if [ ! -s "docs/releases/$GITHUB_REF_NAME.md" ]; then
+            echo "::error title=Missing release notes::Write docs/releases/$GITHUB_REF_NAME.md in the chore(release) pull request."
+            exit 1
+          fi
       - name: Signing secrets are set
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -100,30 +105,63 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  changelog-and-release:
+  release:
     needs: [android]
-    # Only a pushed tag publishes; a manual run (even from a tag) stays a dry run.
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # Runs on a dry run too, so the download and the file checks are exercised before a real tag; only the
+    # publishing steps are limited to a pushed v* tag.
     runs-on: ubuntu-latest
     # Creating a Release needs write access; new repos default GITHUB_TOKEN to read-only.
     permissions:
       contents: write
+    env:
+      PUBLISH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
-          path: artifacts
-      - name: Generate changelog
-        id: cliff
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --latest --strip header
+          name: android
+          path: dist
+      # v0.1.0 was published with no files: the upload pattern matched nothing and the release action only
+      # warned. Every expected file must be here before anything is published.
+      - name: Release files are all present
+        run: |
+          missing=""
+          for file in app-release.aab app-arm64-v8a-release.apk app-universal-release.apk app-mapping.txt; do
+            [ -s "dist/$file" ] || missing="$missing $file"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=Missing release files::Not in the downloaded artifact:$missing"
+            find dist -maxdepth 3 -exec ls -ld {} +
+            exit 1
+          fi
+          ls -lh dist
+      # The Release body is the hand-written summary in docs/releases/, not a list of commits.
+      - name: Release notes exist
+        run: |
+          version=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          notes="docs/releases/v$version.md"
+          if [ ! -s "$notes" ]; then
+            level=warning; [ "$PUBLISH" = true ] && level=error
+            echo "::$level title=Missing release notes::Write $notes in the chore(release) pull request."
+            [ "$PUBLISH" = true ] && exit 1
+          fi
+          echo "NOTES=$notes" >> "$GITHUB_ENV"
       - name: Create GitHub Release
+        if: env.PUBLISH == 'true'
         uses: softprops/action-gh-release@v3
         with:
-          body: ${{ steps.cliff.outputs.content }}
-          files: artifacts/android/*
+          body_path: ${{ env.NOTES }}
+          files: dist/*
+          fail_on_unmatched_files: true
           generate_release_notes: false
+      - name: Release has every file
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          expected=$(ls dist | wc -l)
+          attached=$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets | length')
+          if [ "$attached" -ne "$expected" ]; then
+            echo "::error title=Release incomplete::$GITHUB_REF_NAME has $attached of $expected files attached."
+            exit 1
+          fi
