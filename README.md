@@ -9,6 +9,12 @@ the home screen.
 `app-arm64-v8a-release.apk` for almost every phone from the last several years, or `app-universal-release.apk`, about
 twice the size, if that one doesn't install.
 
+The APK is large, about 44 MB, because recognition runs entirely on the phone and everything it needs ships inside:
+the image model and its reference set (about 16 MB), Google's text recognition (about 12 MB) and the LiteRT runtime
+that runs the model (about 6 MB). The versions in Google Play services would make the APK smaller, but scanning would
+then need Google Play services, could need a download before it works offline, and would send usage data to Google.
+The universal APK is twice the size because it holds native code for all four processor types.
+
 | Scan and browse | Search | Entry | In game |
 | --- | --- | --- | --- |
 | ![Home screen with the camera scanner above the list](docs/screenshots/home.png) | ![Search results, including names in other languages](docs/screenshots/search.png) | ![Charizard's entry with its forms](docs/screenshots/entry.png) | ![Moves learnt by level up in Scarlet / Violet](docs/screenshots/in-game.png) |
