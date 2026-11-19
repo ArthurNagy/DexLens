@@ -116,14 +116,16 @@ python3 tools/build_database.py              # fetches PokeAPI and writes the da
 
 ## Releasing
 
-1. Bump `versionName` and `versionCode` in `app/build.gradle.kts` in a `chore(release): vX.Y.Z` pull request.
-   `git cliff --bumped-version` suggests the next version from the commit messages.
+1. In a `chore(release): vX.Y.Z` pull request, bump `versionName` and `versionCode` in `app/build.gradle.kts` and
+   write the release notes in `docs/releases/vX.Y.Z.md`: a short summary of what changed for people using the app,
+   not a list of commits. `git cliff --bumped-version` suggests the next version, and `git cliff --unreleased` lists
+   the commits to summarise.
 2. Once it's merged, tag that commit and push the tag:
    `git tag -a vX.Y.Z -m "Release vX.Y.Z" && git push origin vX.Y.Z`.
 
-The tag runs `.github/workflows/release.yml`. It stops if the tag doesn't match `versionName` or a signing secret is
-missing. Otherwise it builds and signs the app and creates a GitHub Release with these files and release notes written
-by git-cliff from the commit messages:
+The tag runs `.github/workflows/release.yml`. It stops if the tag doesn't match `versionName`, the release notes file
+is missing or a signing secret is missing. Otherwise it builds and signs the app and creates a GitHub Release with
+the release notes and these files. It fails if any file is missing from the Release:
 
 | File | What |
 | --- | --- |
@@ -132,8 +134,12 @@ by git-cliff from the commit messages:
 | `app-universal-release.apk` | The APK for every device |
 | `app-mapping.txt` | The R8 mapping, to turn obfuscated stack traces back into readable ones |
 
-Running the workflow by hand from the Actions tab is a dry run: it builds and signs everything and keeps the files as a
-workflow artifact, but publishes no Release.
+GitHub also lists "Source code (zip)" and "Source code (tar.gz)" on every Release. GitHub adds those itself, and they
+can't be turned off.
+
+Running the workflow by hand from the Actions tab is a dry run: it builds and signs everything, checks every file is
+there, warns if the release notes for the current `versionName` are missing and keeps the files as a workflow
+artifact, but publishes no Release.
 
 Signing uses an upload key, provided through these repository secrets:
 
